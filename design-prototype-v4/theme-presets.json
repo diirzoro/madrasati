@@ -1,0 +1,80 @@
+{
+  "education-green": {
+    "name_ar": "الأخضر التعليمي",
+    "name_en": "Education Green",
+    "primary": "#1F5D46",
+    "primary_dark": "#174837",
+    "accent": "#B55A3C",
+    "background": "#FAF7F2",
+    "surface": "#FFFFFF",
+    "text": "#1F2937",
+    "muted": "#6B7280",
+    "border": "#E7DED3",
+    "hero": "assets/themes/education-green/hero.jpg"
+  },
+  "navy-gold": {
+    "name_ar": "الكحلي والذهبي",
+    "name_en": "Navy Gold",
+    "primary": "#18324A",
+    "primary_dark": "#102437",
+    "accent": "#C9A227",
+    "background": "#F8F6F0",
+    "surface": "#FFFFFF",
+    "text": "#1D2733",
+    "muted": "#6A7280",
+    "border": "#E4DDCF",
+    "hero": "assets/themes/navy-gold/hero.jpg"
+  },
+  "burgundy-sand": {
+    "name_ar": "الخمري والرملي",
+    "name_en": "Burgundy Sand",
+    "primary": "#6E2F3A",
+    "primary_dark": "#52222B",
+    "accent": "#C8A97E",
+    "background": "#F6F0E8",
+    "surface": "#FFFFFF",
+    "text": "#2B2527",
+    "muted": "#746A6D",
+    "border": "#E5D9CB",
+    "hero": "assets/themes/burgundy-sand/hero.jpg"
+  },
+  "teal-desert": {
+    "name_ar": "التركواز والصحراء",
+    "name_en": "Teal Desert",
+    "primary": "#176B6B",
+    "primary_dark": "#105454",
+    "accent": "#C79A63",
+    "background": "#F7F4ED",
+    "surface": "#FFFFFF",
+    "text": "#1E2E2E",
+    "muted": "#697777",
+    "border": "#E2DBCF",
+    "hero": "assets/themes/teal-desert/hero.jpg"
+  },
+  "plum-rose": {
+    "name_ar": "البنفسجي والوردي الترابي",
+    "name_en": "Plum Rose",
+    "primary": "#5B3A63",
+    "primary_dark": "#432B49",
+    "accent": "#B9787A",
+    "background": "#FAF4F1",
+    "surface": "#FFFFFF",
+    "text": "#2E2730",
+    "muted": "#756B77",
+    "border": "#E7DADF",
+    "hero": "assets/themes/plum-rose/hero.jpg"
+  },
+  "petrol-bronze": {
+    "name_ar": "البترولي والبرونزي",
+    "name_en": "Petrol Bronze",
+    "primary": "#164E63",
+    "primary_dark": "#103B4B",
+    "accent": "#A66A3F",
+    "background": "#F9F7F2",
+    "surface": "#FFFFFF",
+    "text": "#1E2930",
+    "muted": "#68777D",
+    "border": "#E3DDD3",
+    "hero": "assets/themes/petrol-bronze/hero.jpg"
+  }
+}

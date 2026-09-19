@@ -1,0 +1,76 @@
+﻿# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime / temporary
+tmp/
+temp/
+coverage/
+.cache/
+
+# Local databases / data
+*.sqlite
+*.sqlite3
+*.db
+
+# Backups
+*.bak
+*.backup
+
+# Local tooling, browser captures and runtime uploads
+.freebuff/
+.playwright-mcp/
+/opencode.json
+/monitor-hang.mjs
+/pg-error.txt
+/pg-output.txt
+/login-*.png
+/signup-*.png
+/server/uploads/
+
+# Superseded local frontend backups
+/design-prototype-v4/.*backup*/
+/design-prototype-v4/app.before-empty-state-fix.js
+
+# Database dumps and private key material
+*.dump
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime-focused repository: retain development material locally
+/AGENTS.md
+/docs/
+/theme-pack/
+/scripts/update_taher_reference.ps1
+/db/init_sqlite.sql
+/db/schema_current.sql
+/db/seed-test-users.js
+/db/seed_sample_users.sql
+/design-prototype-v4/README.md
+/design-prototype-v4/run.ps1
+/design-prototype-v4/assets/auth/README.txt
+/design-prototype-v4/assets/images/reference-*.png
+cache/
+build/
+dist/
