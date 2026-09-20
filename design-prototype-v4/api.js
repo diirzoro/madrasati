@@ -1,7 +1,11 @@
 // api.js — Minimal API client for Madarasati PostgreSQL backend
-// Uses credentials:'include' for HttpOnly session cookie support.
+// Uses same-origin /api routes in production and localhost:4003 in local development.
+// Credentials are included for HttpOnly session cookie support.
 
-const API_BASE = 'http://localhost:4003';
+const API_BASE =
+  (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ? ''
+    : 'http://localhost:4003';
 
 async function apiRequest(method, path, body) {
   const opts = {
