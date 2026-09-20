@@ -3,9 +3,8 @@
 //
 // Session + role/permission middleware for the PostgreSQL module foundation.
 //
-// NOTE: in-memory session store mirrors the current SQLite runtime behavior.
-// Session persistence in PostgreSQL (sessions table) is deferred to Phase 2D
-// when the runtime is switched; nothing here changes live runtime behavior.
+// NOTE: sessions are held in memory, so restarting the API process logs
+// every user out. Persisting sessions in PostgreSQL is still open work.
 
 const crypto = require('crypto');
 

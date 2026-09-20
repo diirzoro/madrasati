@@ -183,7 +183,7 @@
         '</b><span>'+esc(r.count)+'</span><small>'+t("موثق: ","Verified: ")+esc(r.verified_count)+'</small></button>'}).join("")+
       '</div></section><section class="panel"><div class="panel-title"><h2>'+t("آخر النشاطات","Recent activity")+
       '</h2><button class="btn" onclick="go(\'reports\')">'+t("عرض الكل","View all")+'</button></div><div class="ac-activity">'+
-      (d.recentAudit||[]).map(function(r){return '<div><span>'+esc(r.action)+'</span><b>'+esc(r.entity_type||"—")+
+      (d.recentAudit||[]).map(function(r){return '<div><span>'+esc(r.action)+'</span><b>'+esc(r.object_type||"—")+
         '</b><small>'+esc(r.actor_name||t("النظام","System"))+' · '+esc(fmt(r.created_at))+'</small></div>'}).join("")+
       '</div></section></div>';return adminShell(body)
   };

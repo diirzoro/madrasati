@@ -19,9 +19,11 @@ function mapMessage(row) {
 
 function mapNotification(row) {
   if (!row) return null;
-  return { id: row.id, userId: row.user_id, title: row.title, body: row.body,
-    notificationType: row.notification_type, entityType: row.entity_type, entityId: row.entity_id,
-    isRead: row.is_read, createdAt: row.created_at };
+  return { id: row.id, userId: row.user_id, organizationId: row.organization_id,
+    eventType: row.event_type, title: row.title, body: row.body,
+    channel: row.channel, deliveryState: row.delivery_state,
+    entityType: row.related_entity_type, entityId: row.related_entity_id,
+    isRead: Boolean(row.read_at), readAt: row.read_at, createdAt: row.created_at };
 }
 
 async function listConversations(userId, opts) { return (await repo.listConversations(userId, opts)).map(mapConversation); }

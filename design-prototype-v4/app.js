@@ -1769,7 +1769,7 @@ function ownUploadDoc(orgId){
  var btn=document.getElementById("doc-up-"+orgId);
  if(btn){btn.disabled=true}
  f.arrayBuffer().then(function(buf){
-  return fetch('http://localhost:4003/api/documents/upload?organizationId='+encodeURIComponent(orgId)+'&docType='+encodeURIComponent(typEl?typEl.value:"other"),{
+  return fetch(API_BASE+'/api/documents/upload?organizationId='+encodeURIComponent(orgId)+'&docType='+encodeURIComponent(typEl?typEl.value:"other"),{
    method:'POST',credentials:'include',
    headers:{'Content-Type':'application/octet-stream','X-File-Name':encodeURIComponent(f.name)},
    body:buf
@@ -1852,7 +1852,7 @@ function ownerDashboard(){
     docHtml=docs.length?'<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("docType"))+'</th><th>'+esc(tr("docFile"))+'</th><th>'+esc(tr("reqStatus"))+'</th><th></th></tr></thead><tbody>'+
      docs.map(function(d){
       return '<tr><td>'+esc(ownDocTypeLabel(d.docType))+'</td><td><b>'+esc(d.fileName)+'</b><div class="entity-sub">'+esc(d.mimeType)+' • '+Math.round(d.fileSize/1024)+'KB</div></td><td><span class="badge '+(d.status==="verified"?"ok":d.status==="rejected"?"bad":"wait")+'">'+esc(d.status==="verified"?tr("docVerified"):d.status==="rejected"?tr("docRejected"):tr("docPending"))+'</span></td>'+
-      '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" href="http://localhost:4003/api/documents/'+d.id+'/file" target="_blank" rel="noopener" title="'+esc(tr("downloadDoc"))+'">'+icon("eye",15)+'</a><button class="crud delete" onclick="ownDeleteDoc(\''+d.id+'\',\''+o.id+'\')" title="'+esc(tr("deleteDoc"))+'">'+icon("trash",15)+'</button></div></td></tr>';
+      '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" href="'+API_BASE+'/api/documents/'+d.id+'/file" target="_blank" rel="noopener" title="'+esc(tr("downloadDoc"))+'">'+icon("eye",15)+'</a><button class="crud delete" onclick="ownDeleteDoc(\''+d.id+'\',\''+o.id+'\')" title="'+esc(tr("deleteDoc"))+'">'+icon("trash",15)+'</button></div></td></tr>';
      }).join("")+'</tbody></table></div>':'<div class="empty-state">'+esc(tr("noDocuments"))+'</div>';
    }
    var typeOpts=["license","ownership","authorization","registration","accreditation","other"].map(function(t){return opt(t,ownDocTypeLabel(t))}).join("");
@@ -1970,7 +1970,7 @@ function verifyPage(){
   else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("docFile"))+'</th><th>'+esc(tr("myInstitutions"))+'</th><th></th></tr></thead><tbody>'+
    verData.docs.map(function(d){
     return '<tr><td><b>'+esc(d.file_name)+'</b><div class="entity-sub">'+esc(ownDocTypeLabel(d.doc_type))+' • '+esc(d.uploader_name||"")+'</div></td><td>'+esc(d.organization_name||"")+'</td>'+
-    '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" href="http://localhost:4003/api/documents/'+d.id+'/file" target="_blank" rel="noopener">'+icon("eye",15)+'</a><button class="crud verify" onclick="verDocReview(\''+d.id+'\',\'verified\')" title="'+esc(tr("approveBtn"))+'">'+icon("check",15)+'</button><button class="crud delete" onclick="verDocReview(\''+d.id+'\',\'rejected\')" title="'+esc(tr("rejectBtn"))+'">'+icon("x",15)+'</button></div></td></tr>';
+    '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" href="'+API_BASE+'/api/documents/'+d.id+'/file" target="_blank" rel="noopener">'+icon("eye",15)+'</a><button class="crud verify" onclick="verDocReview(\''+d.id+'\',\'verified\')" title="'+esc(tr("approveBtn"))+'">'+icon("check",15)+'</button><button class="crud delete" onclick="verDocReview(\''+d.id+'\',\'rejected\')" title="'+esc(tr("rejectBtn"))+'">'+icon("x",15)+'</button></div></td></tr>';
    }).join("")+'</tbody></table></div>';
  }
  return adminShell(body+'</div>');

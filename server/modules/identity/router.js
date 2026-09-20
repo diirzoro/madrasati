@@ -1,7 +1,6 @@
 // modules/identity/router.js
 // OWNING MODULE: identity
-// API routes for identity/auth. Runtime-safe: mounted on a separate
-// PostgreSQL-backed app; it does not affect the current SQLite server.
+// API routes for identity/auth, served by the PostgreSQL-backed API app.
 
 const { Router } = require('express');
 const service = require('./service');

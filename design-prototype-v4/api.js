@@ -1,11 +1,10 @@
 // api.js — Minimal API client for Madarasati PostgreSQL backend
-// Uses same-origin /api routes in production and localhost:4003 in local development.
+// Always uses same-origin /api routes: server/v4-static.js proxies /api and
+// /uploads to the API, and the Netlify redirect does the same in production.
+// Staying same-origin keeps the session cookie first-party, so no CORS is needed.
 // Credentials are included for HttpOnly session cookie support.
 
-const API_BASE =
-  (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-    ? ''
-    : 'http://localhost:4003';
+const API_BASE = '';
 
 async function apiRequest(method, path, body) {
   const opts = {

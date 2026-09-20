@@ -101,6 +101,14 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
     if (profile) {
       await saveRegistrationProfile(created.id, profile, client);
     }
+    // Written on the same client so the user row and its audit entry commit together.
+    await writeAudit({
+      actorUserId: actorUserId || created.id,
+      action: 'create',
+      entityType: 'user',
+      entityId: String(created.id),
+      newValues: { email: safeEmail, role: safeRole },
+    }, client);
     await client.query('COMMIT');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (e) { /* noop */ }
@@ -109,13 +117,6 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
     client.release();
   }
   const full = await repo.findUserById(created.id);
-  await writeAudit({
-    actorUserId: actorUserId || created.id,
-    action: 'create',
-    entityType: 'user',
-    entityId: String(created.id),
-    newValues: { email: safeEmail, role: safeRole },
-  });
   return mapUser(full);
 }
 

@@ -213,6 +213,6 @@ INSERT INTO locations_neighborhoods (district_id, name, code, sort_order, is_act
   ((SELECT d.id FROM locations_districts d JOIN locations_governorates g ON g.id = d.governorate_id WHERE g.code = 'IBB' AND d.name = 'المشنة'), 'الميدان', 'IBB-MSH-MAY', 2, true),
   ((SELECT d.id FROM locations_districts d JOIN locations_governorates g ON g.id = d.governorate_id WHERE g.code = 'HAD' AND d.name = 'المكلا'), 'فوة', 'HAD-MUK-FAW', 1, true),
   ((SELECT d.id FROM locations_districts d JOIN locations_governorates g ON g.id = d.governorate_id WHERE g.code = 'HAD' AND d.name = 'المكلا'), 'الشرج', 'HAD-MUK-SHA', 2, true)
-ON CONFLICT (district_id, name) DO NOTHING;
+ON CONFLICT (code) DO NOTHING;
 
 COMMIT;
