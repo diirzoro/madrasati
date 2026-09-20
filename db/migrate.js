@@ -14,6 +14,16 @@ const { Pool } = require('pg');
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
+async function ensureMigrationTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+}
+
 async function getAppliedMigrations(pool) {
   const res = await pool.query('SELECT name FROM schema_migrations ORDER BY id');
   return new Set(res.rows.map(r => r.name));
@@ -54,6 +64,7 @@ async function runMigration(pool, filePath, name) {
 async function migrateUp() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
+    await ensureMigrationTable(pool);
     const applied = await getAppliedMigrations(pool);
     const files = getMigrationFiles();
     const pending = files.filter(f => !applied.has(f));
@@ -77,6 +88,7 @@ async function migrateUp() {
 async function showStatus() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
+    await ensureMigrationTable(pool);
     const applied = await getAppliedMigrations(pool);
     const files = getMigrationFiles();
 
