@@ -1,5 +1,5 @@
 [build]
-  command = "echo Building Madrasati"
+  command = "node db/migrate.js up"
   publish = "design-prototype-v4"
 
 [functions]
