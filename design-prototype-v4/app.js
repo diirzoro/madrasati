@@ -45,7 +45,7 @@ const i18n={
   teachingLanguages:"لغات التدريس", teachingMethods:"طرق التدريس",
   locations:"المناطق", countries:"الدول", governorates:"المحافظات", districts:"المديريات", neighborhoods:"الأحياء",
   locationRequests:"طلبات إضافة المواقع", offers:"العروض", ads:"الإعلانات", slides:"شرائح الواجهة",
-  institutions:"المؤسسات التعليمية", fees:"الرسوم", marketing:"التسويق", payments:"المدفوعات (قريباً)",
+  institutions:"المؤسسات التعليمية", institutesAdmin:"إدارة المعاهد", collegesAdmin:"إدارة الكليات",
   reports:"التقارير والتحليلات", usersAccess:"المستخدمون والصلاحيات", users:"المستخدمون", roles:"الأدوار",
   permissions:"الصلاحيات", orgPermissions:"صلاحيات المؤسسات", teacherPermissions:"صلاحيات المدرسين",
   pageAccess:"صلاحيات الأقسام والصفحات", settings:"الإعدادات",
@@ -148,7 +148,7 @@ const i18n={
   teachingLanguages:"Teaching Languages", teachingMethods:"Teaching Methods",
   locations:"Locations", countries:"Countries", governorates:"Governorates", districts:"Districts", neighborhoods:"Neighborhoods",
   locationRequests:"Location Requests", offers:"Offers", ads:"Advertisements", slides:"Landing Slides",
-  institutions:"Educational Institutions", fees:"Fees", marketing:"Marketing", payments:"Payments (Coming Soon)",
+  institutions:"Educational Institutions", institutesAdmin:"Institute Management", collegesAdmin:"College Management",
   reports:"Reports & Analytics", usersAccess:"Users & Permissions", users:"Users", roles:"Roles",
   permissions:"Permissions", orgPermissions:"Organization Permissions", teacherPermissions:"Teacher Permissions",
   pageAccess:"Section & Page Access", settings:"Settings",
@@ -1335,20 +1335,24 @@ function sideMenu(){
  var user=getCurrentUser();
  var role=user?user.role:null;
  var allItems=[
+  // Exactly the 15 approved admin sections, in order. "Fees" is deliberately
+  // absent: fees are a property of the priced entity (stage, subject, course,
+  // service), never a standalone module with its own page.
   ["admin","home","home"],
-  ["institutions","school","institutions"],
+  ["schools","school","schools"],
+  ["institutesAdmin","school","institutesAdmin"],
+  ["collegesAdmin","college","collegesAdmin"],
   ["teachersAdmin","teacher","teachers"],
   ["students","users","students"],
   ["bookings","calendar","bookings"],
   ["verify","shield","verify"],
   ["academic","college","academic"],
   ["locations","school","locations"],
-  ["fees","edit","fees"],
-  ["marketing","chart","marketing"],
+  ["offers","chart","offers"],
+  ["ads","chart","ads"],
   ["reports","chart","reports"],
   ["access","shield","usersAccess"],
-  ["settings","settings","settings"],
-  ["payments","calendar","payments"]
+  ["settings","settings","settings"]
  ];
   var items;
   if(role==="admin"){
@@ -1977,7 +1981,7 @@ function verifyPage(){
 }
 
 var publicRoutes=["home","private","government","colleges","institutes","teachers","register"];
-var adminOnlyRoutes=["admin","institutions","schools","institutesAdmin","collegesAdmin","teachersAdmin","students","bookings","verify","academic","locations","fees","marketing","reports","access","settings","payments","offers","ads","slides"];
+var adminOnlyRoutes=["admin","institutions","schools","institutesAdmin","collegesAdmin","teachersAdmin","students","bookings","verify","academic","locations","reports","access","settings","offers","ads","slides"];
 
 function handleLogout(){
  logoutUser().then(function(){
@@ -2092,10 +2096,8 @@ function render(){
  else if(r==="teachers")html=teacherPage();
  else if(r==="admin")html=admin();
  else if(r==="schools"){
-  var schoolsTitle=tr("schools");
-  var schoolsNote=tr("genericNote");
-  if(typeof adminInstitutionsPage==="function")html=adminInstitutionsPage();
-  else html=adminShell('<div class="welcome"><div><h1>'+schoolsTitle+'</h1><p>'+schoolsNote+'</p></div></div><section class="panel"><div class="empty-state">'+(lang==="ar"?"وحدة المدارس غير متصلة بعد.":"The schools module is not connected yet.")+'</div></section>');
+  if(typeof adminInstitutionsPage==="function")html=adminInstitutionsPage("schools");
+  else html=adminShell('<div class="welcome"><div><h1>'+tr("schools")+'</h1><p>'+tr("genericNote")+'</p></div></div><section class="panel"><div class="empty-state">'+(lang==="ar"?"وحدة المدارس غير متصلة بعد.":"The schools module is not connected yet.")+'</div></section>');
  }
  else if(r==="detail")html=adminShell(detailBlock());
  else if(r==="academic")html=academicPage();
@@ -2143,7 +2145,7 @@ window.addEventListener("hashchange",function(){closeThemeMenu();closeLangMenu()
 var V4_ROUTES=["home","private","government","colleges","institutes","teachers",
  "login","register","admin","schools","access","settings","verify","owner",
  "detail","institutions","teachersAdmin","students","bookings","academic","locations",
- "fees","marketing","reports","payments","slides","ads","offers"];
+ "reports","slides","ads","offers"];
 function normalizeV4Url(){
  try{
   var path=location.pathname||"/";

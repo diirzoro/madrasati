@@ -430,12 +430,201 @@ Do not:
 If a change requires migration, backfill, production data changes, or an unresolved business decision:
 > **BLOCKED — REQUIRES APPROVAL**
 
-## 19. Current Explicitly Unresolved Decisions
+## 19. Previously Unresolved Decisions — Now Resolved
 
-Before schema implementation:
-1. Nullable `grade_id` uniqueness requires a PostgreSQL partial unique index or equivalent because ordinary UNIQUE constraints do not prevent duplicates when nullable values are NULL.
-2. Fee source of truth must be explicitly defined between stage fees, subject fees, service pricing, and any fee-record/detail structure to avoid ambiguity and double counting.
+Both items below were approved and implemented. See the appendix at the end of
+this document for the full decision log.
+
+1. ~~Nullable `grade_id` uniqueness requires a PostgreSQL partial unique index
+   or equivalent because ordinary UNIQUE constraints do not prevent duplicates
+   when nullable values are NULL.~~
+   **RESOLVED** — `db/migrations/023_academic_capacity_and_fee_uniqueness.sql`
+   adds one partial unique index per pricing scope
+   (`organization_fees_grade_scope_key`, `..._stage_scope_key`,
+   `..._org_scope_key`). Verified: duplicates are rejected in all three scopes
+   while distinct scopes coexist.
+
+2. ~~Fee source of truth must be explicitly defined between stage fees, subject
+   fees, service pricing, and any fee-record/detail structure to avoid ambiguity
+   and double counting.~~
+   **RESOLVED** — the priced entity is the single source of truth. A fee belongs
+   to exactly one scope (stage, grade, or organization), enforced by the partial
+   unique indexes above. There is no standalone fee module.
 
 ## 20. Final Reminder
 
 These documents define the approved business/architecture direction. They do not by themselves authorize runtime, API, database, migration, seed, or frontend implementation changes.
+
+---
+## ملحق القرارات المعمارية وقواعد الصلاحيات المعتمدة (Architectural Refinements)
+
+
+### أولاً: مصفوفة الصلاحيات (صاحب المؤسسة مقابل المدير العام)
+1. **صلاحيات مباشرة لصاحب المؤسسة (Owner Direct Powers):**
+   - تفعيل واختيار المراحل والصفوف الخاصة بمؤسسته من الكتالوج العام.
+   - إضافة وإدارة الباقات والخدمات (نقل، ترفيه، أنشطة) ورسومها.
+   - تحديد وتعديل الرسوم الخاصة بمؤسسته بحرية تامة.
+   - إضافة ونشر **عروض المؤسسة (School Offers)** وخصوماتها مباشرة دون الحاجة لموافقة مسبقة.
+   - حرية كتابة وإضافة اسم **الحي (Neighborhood)** الذي تقع فيه المؤسسة لتسهيل الوصول والتسجيل.
+
+2. **صلاحيات حصرية وموافقات المدير العام (Admin Approvals & Governance):**
+   - **الإعلانات والدعاية الممولة (Platform Ads):** يمكن لصاحب المؤسسة طلب إعلان، لكن نشره مشروط بموافقة المدير العام (Approval) وتحديد السعر وفترة العرض.
+   - **المحافظات والمديريات:** تدار مركزياً من المدير العام (مع وجود زر إضافة `+` للمدير العام لإدخال أي محافظة أو مديرية جديدة فوراً). وإذا احتاجت مؤسسة مديرية جديدة غير موجودة ترفع طلباً للمدير العام.
+   - **المواد والمراحل العامة:** اعتماد الكتالوج المرجعي للمنصة ومنع تكرار المسميات.
+
+### ثانياً: قواعد البيانات والتشغيل
+1. **سياق العام الدراسي (Academic Year Context):** ربط عروض المؤسسة بـ `academic_year_id` / `term_id` لحفظ الأرشيف ومنع تداخل أعداد الطلاب عبر السنوات.
+2. **مرونة العملات والرسوم:** دعم تحديد العملة (`currency`: YER, SAR, USD) ودورية السداد (سنوي، فصلي، شهري) مع بقاء الرسوم تابعة للكيان المسعر.
+3. **المسار الأكاديمي (Track / Section):** دعم المسار (عام، علمي، أدبي، مهني) على مستوى المرحلة أو الصف.
+4. **حساب السعة:** احتساب المقاعد المتبقية يعتمد حصراً على الطلاب المقيدين فعلياً (`Enrolled`):
+   `remaining = capacity - current_students`
+5. **فريق العمل (Staff Roles):** دعم رتبة `Staff / Manager` داخل المؤسسة لإدخال البيانات دون امتلاك صلاحيات المالك الحساسة (`Owner`).
+---
+
+## ملحق سجل القرارات المنفذة (Decision Log)
+
+هذا السجل يوثّق القرارات الثمانية التي كانت متوقفة (`BLOCKED — REQUIRES APPROVAL`)
+والحالة الفعلية لكل منها. القاعدة الحاكمة: **المذكرة والكود لا يفترقان أبداً.**
+
+| # | القرار | الحالة | المرجع في الكود |
+|---|--------|--------|-----------------|
+| 1 | حارس العضوية `requireOrgMember` على مسارات المؤسسات | ✅ منفذ | `server/modules/identity/auth.js`, `server/modules/academic/router.js` |
+| 2 | «المادة» هي الأساس الأكاديمي الوحيد؛ «المناهج» تصنيف لا نظام موازٍ | ✅ منفذ | `db/migrations/024_architectural_decision_markers.sql` |
+| 3 | الجداول المطبَّعة هي مصدر الحقيقة؛ JSONB كاش مؤقت | ✅ منفذ | `db/migrations/024_architectural_decision_markers.sql` |
+| 4 | حذف «الرسوم» من الشريط الجانبي والمسارات | ✅ منفذ | `design-prototype-v4/app.js`, `design-prototype-v4/admin-core.js` |
+| 5 | مواءمة الشريط الجانبي مع 15 بنداً | ✅ منفذ | `design-prototype-v4/app.js` |
+| 6 | فهرس جزئي لـ `grade_id` + الكيان المسعر كمصدر وحيد للرسوم | ✅ منفذ | `db/migrations/023_academic_capacity_and_fee_uniqueness.sql` |
+| 7 | إنشاء `AGENTS.md` وتصحيح `.gitignore` لتعقب `docs/` | ✅ منفذ | `AGENTS.md`, `.gitignore` |
+| 8 | هجرة `delivery_mode` / `capacity` / `current_students` | ✅ منفذ | `db/migrations/023_academic_capacity_and_fee_uniqueness.sql` |
+
+### الأول: عزل المؤسسات (Tenant Isolation)
+
+أُضيف `requireOrgMember` ويُطبَّق على المسارات الستة
+`/api/academic/org/:orgId/{stages,grades,subjects,curricula,languages,teaching-methods}`.
+
+قاعدة التخويل: يُسمح بالمرور لمن هو **مدير عام** (`admin`)، أو **مالك المؤسسة**،
+أو **عضو نشط** في المؤسسة. غير المصرح له يستلم `404` لا `403`، حتى لا يؤكد الرد
+وجود المؤسسة أصلاً.
+
+نتيجة التحقق الفعلي:
+
+| الحالة | النتيجة |
+|--------|---------|
+| مستخدم مسجّل غير عضو | `404` × 6 |
+| مدير النظام | `200` × 6 |
+| عضو نشط | `200` × 6 |
+| عضو موقوف | `404` × 6 |
+| زائر غير مسجّل | `401` |
+| الفهارس العامة (`/api/academic/:catalog`) | `200` (تبقى مفتوحة) |
+
+> **قاعدة دائمة:** أي مسار جديد تحت `/org/:orgId/` يجب أن يحمل
+> `requireOrgMember`. مسار يقرأ بيانات مؤسسة بـ `requireAuth` وحده يُعدّ خللاً.
+
+### الثاني: نموذج المناهج والمواد
+
+`subjects` هو الأساس الأكاديمي الوحيد. `curricula` هو **كتالوج تصنيف**
+(وزاري / أهلي / دولي) يتبع المادة والمرحلة، وليس نظاماً موازياً. لذلك:
+
+- لا يُنشأ نظام مواد ثانٍ.
+- `organization_subjects` هو مسار ربط المواد بالمؤسسة.
+- `organization_curricula` يكمّله ولا يستبدله.
+
+القرار مثبَّت كـ `COMMENT` على الجداول في الهجرة `024` ليجده أي مطوّر لاحق في مكانه.
+
+### الثالث: مصدر الحقيقة للبيانات الأكاديمية
+
+الجداول المطبَّعة (`organization_stages`, `organization_grades`,
+`organization_subjects`, `organization_curricula`, `organization_languages`)
+هي **مصدر الحقيقة**. حقول JSONB على جدول `organizations`
+(`subjects`, `stages`, `grades`, `languages`, `teaching_methods`, `fees`,
+`fee_details`, `curriculum`, `stage_availability`) هي **كاش انتقالي** فقط.
+
+المطلوب تدريجياً: نقل الواجهة للقراءة والكتابة من الجداول المطبَّعة، وعدم كتابة
+أي منطق جديد يستهدف JSONB. الحقول تحمل `COMMENT` صريحاً بذلك في الهجرة `024`.
+
+### الرابع والخامس: وحدة الرسوم والشريط الجانبي
+
+حُذف بند «الرسوم» ومساره (`fees`) وصفحته (`adminFeesPage`) بالكامل، لأن الرسوم
+خاصية تُدار داخل سياق الكيان المسعر (المرحلة، المادة، الدورة، الخدمة). كُذلك حُذف
+`payments` (وحدة مستقبلية بلا منطق مالي) و`marketing` بعد فكّه.
+
+الشريط الجانبي المعتمد — 15 بنداً بهذا الترتيب:
+
+| # | المسار | البند |
+|---|--------|-------|
+| 1 | `admin` | الرئيسية |
+| 2 | `schools` | إدارة المدارس |
+| 3 | `institutesAdmin` | إدارة المعاهد |
+| 4 | `collegesAdmin` | إدارة الكليات |
+| 5 | `teachersAdmin` | المعلمون |
+| 6 | `students` | الطلاب |
+| 7 | `bookings` | الحجوزات |
+| 8 | `verify` | التحقق والمراجعة |
+| 9 | `academic` | البيانات الأكاديمية |
+| 10 | `locations` | المناطق |
+| 11 | `offers` | العروض |
+| 12 | `ads` | الإعلانات |
+| 13 | `reports` | التقارير والتحليلات |
+| 14 | `access` | المستخدمون والصلاحيات |
+| 15 | `settings` | الإعدادات |
+
+البنود 2 و3 و4 تشترك في تنفيذ واحد (`adminInstitutionsPage(group)`) بحسب قاعدة
+«عدم بناء خمسة أنظمة مكررة»، وكل بند يعرض شريحته من الكتالوج:
+
+- `schools` → مدارس خاصة + مدارس حكومية
+- `institutes` → معاهد
+- `colleges` → كليات + جامعات
+
+### السادس والثامن: الفهارس الجزئية والسعة
+
+**الفهارس:** بما أن PostgreSQL يعتبر كل `NULL` قيمة مستقلة، فإن `UNIQUE` عادي لا
+يمنع تكرار رسوم على مستوى المؤسسة أو المرحلة. لذلك أُنشئ فهرس فريد جزئي لكل نطاق
+تسعير (`023`)، مع استثناء الصفوف المحذوفة منطقياً (`deleted_at IS NULL`).
+
+**السعة:** أُضيفت الأعمدة `delivery_mode` و`capacity` و`current_students` على
+`organization_stages` و`organization_grades`، مع عمود مُولَّد
+`remaining_seats = capacity - current_students`.
+
+- `remaining_seats` **مُولَّد دائماً** ولا يجوز كتابته مباشرة؛ هذا يمنع أي قيمة
+  تخالف المعادلة.
+- `capacity = NULL` تعني «غير محددة» وينتج عنها متبقٍ `NULL`.
+- تجاوز السعة واقع حقيقي، لذلك المتبقي يُسمح أن يكون **سالباً** ولا يُقيَّد بالصفر.
+- `delivery_mode` صفة على العرض: `on_site` | `online` | `hybrid`.
+
+نتيجة التحقق الفعلي (داخل معاملة أُلغيت بالكامل، ولم تبقَ أي بيانات اختبار):
+
+| الفحص | النتيجة |
+|-------|---------|
+| تكرار على مستوى المؤسسة | مرفوض |
+| تكرار على مستوى المرحلة | مرفوض |
+| تكرار على مستوى الصف | مرفوض |
+| نطاقات تسعير مختلفة | تتواجد معاً (3 صفوف) |
+| سعة 120 ومسجّل 45 | `remaining_seats = 75` |
+| سعة 120 ومسجّل 150 | `remaining_seats = -30` (مقبول) |
+| كتابة مباشرة لـ `remaining_seats` | مرفوضة (عمود مُولَّد) |
+| `delivery_mode` غير صالح | مرفوض |
+
+### السابع: ميثاق العمل المستمر
+
+أُنشئ `AGENTS.md` في الجذر ويحمل: الهوية التقنية، المذكرات الثلاث الحاكمة، قواعد
+المعمارية التسع، تجميد الشريط الجانبي، قواعد نظام التصميم، قواعد الأمان، وأسلوب
+التحقق. وحُذف استبعاد `/AGENTS.md` و`/docs/` من `.gitignore` ليُعتمد تعقّب
+المذكرات في Git بشكل دائم ورسمي.
+
+**قاعدة مستمرة:** في نهاية كل مرحلة، تُحدَّث المذكرة الحاكمة وتُودَع مع الكود في
+نفس الـ commit، ثم تُرفع. لا يفترق المستودع عن المذكرات أبداً.
+
+### بنود لم تُنفَّذ بعد (تحتاج قراراً أو مرحلة مستقلة)
+
+هذه البنود وردت في القرارات المعتمدة أعلاه ولم تُطلب في نطاق هذه المرحلة، وهي
+مسجّلة هنا حتى لا تُنسى:
+
+1. `academic_year_id` / `term_id` على عروض المؤسسة (سياق العام الدراسي).
+2. عمود `currency` (YER, SAR, USD) ودورية السداد — جزئياً موجود
+   (`organization_fees.currency` و`frequency`)، ويحتاج ربطاً بالواجهة.
+3. المسار الأكاديمي (عام، علمي، أدبي، مهني) على المرحلة أو الصف.
+4. رتبة `Staff / Manager` داخل المؤسسة (`organization_memberships.membership_role`
+   موجود، ويحتاج حوكمة صلاحيات).
+5. تعبئة الفهارس الأكاديمية العالمية (`subjects`, `academic_stages`,
+   `academic_grades`, `curricula`, `languages`, `teaching_methods`) — كلها فارغة حالياً.
+6. نقل الواجهة تدريجياً من حقول JSONB إلى الجداول المطبَّعة.

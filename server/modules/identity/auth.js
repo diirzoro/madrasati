@@ -9,6 +9,7 @@
 const crypto = require('crypto');
 
 const repo = require('./repository');
+const orgRepo = require('../organizations/repository');
 
 const sessions = new Map();
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24h, mirroring current runtime
@@ -108,6 +109,42 @@ function requireRole(...roles) {
   };
 }
 
+// Tenant isolation guard for organization-scoped routes.
+//
+// Organization-owned data is keyed by organization_id, and hiding a section in
+// the frontend is not authorization. A request may only reach a tenant's data
+// when the caller is a platform admin (governance over shared catalogs), that
+// organization's owner, or a member with an active membership row.
+//
+// Unauthorized callers get 404 rather than 403 so the response does not confirm
+// that the organization exists.
+function requireOrgMember(paramName = 'orgId') {
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (req.user.role === 'admin') {
+      return next();
+    }
+    const organizationId = req.params[paramName];
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization id is required' });
+    }
+    try {
+      const [isOwner, membership] = await Promise.all([
+        orgRepo.isOrganizationOwner(req.user.id, organizationId),
+        orgRepo.findMembership(req.user.id, organizationId),
+      ]);
+      if (isOwner || (membership && membership.status === 'active')) {
+        return next();
+      }
+      return res.status(404).json({ error: 'Organization not found' });
+    } catch (err) {
+      return next(err);
+    }
+  };
+}
+
 async function optionalAuth(req, _res, next) {
   const session = currentSession(req);
   if (session) {
@@ -134,5 +171,6 @@ module.exports = {
   clearSessionCookieHeader,
   requireAuth,
   requireRole,
+  requireOrgMember,
   optionalAuth,
 };

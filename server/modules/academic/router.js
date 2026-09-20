@@ -6,7 +6,7 @@
 const { Router } = require('express');
 const service = require('./service');
 const { asyncHandler } = require('../common/http');
-const { requireAuth } = require('../identity/auth');
+const { requireAuth, requireOrgMember } = require('../identity/auth');
 
 const router = Router();
 
@@ -18,12 +18,12 @@ router.get('/curricula',          asyncHandler(async (_r, res) => { res.json(awa
 router.get('/languages',          asyncHandler(async (_r, res) => { res.json(await service.listLanguages()); }));
 router.get('/teaching-methods',   asyncHandler(async (_r, res) => { res.json(await service.listTeachingMethods()); }));
 
-// org-scoped (require auth)
-router.get('/org/:orgId/stages',             requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgStages(r.params.orgId)); }));
-router.get('/org/:orgId/grades',             requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgGrades(r.params.orgId)); }));
-router.get('/org/:orgId/subjects',           requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgSubjects(r.params.orgId)); }));
-router.get('/org/:orgId/curricula',          requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgCurricula(r.params.orgId)); }));
-router.get('/org/:orgId/languages',          requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgLanguages(r.params.orgId)); }));
-router.get('/org/:orgId/teaching-methods',   requireAuth, asyncHandler(async (r, res) => { res.json(await service.listOrgTeachingMethods(r.params.orgId)); }));
+// org-scoped (require auth + tenant membership)
+router.get('/org/:orgId/stages',             requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgStages(r.params.orgId)); }));
+router.get('/org/:orgId/grades',             requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgGrades(r.params.orgId)); }));
+router.get('/org/:orgId/subjects',           requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgSubjects(r.params.orgId)); }));
+router.get('/org/:orgId/curricula',          requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgCurricula(r.params.orgId)); }));
+router.get('/org/:orgId/languages',          requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgLanguages(r.params.orgId)); }));
+router.get('/org/:orgId/teaching-methods',   requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgTeachingMethods(r.params.orgId)); }));
 
 module.exports = router;

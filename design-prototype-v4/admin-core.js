@@ -195,16 +195,27 @@
     req.then(function(){invalidate("institutions:");delete ac.cache.dashboard;render()}).catch(function(e){alert(errorText(e))})};
   window.acOrgArchive=function(id){if(!confirm(t("أرشفة هذه المؤسسة؟","Archive this institution?")))return;
     apiDelete("/api/organizations/"+id).then(function(){invalidate("institutions:");delete ac.cache.dashboard;render()}).catch(function(e){alert(errorText(e))})};
-  window.adminInstitutionsPage=function(){
+  // Each sidebar entry (schools / institutes / colleges) lands on its own slice
+  // of the catalog while all three keep sharing this one page implementation,
+  // so the tenant core is never duplicated per institution type.
+  var AC_TYPE_GROUPS={
+    schools:["private_school","government_school"],
+    institutes:["institute"],
+    colleges:["college","university"]
+  };
+  window.adminInstitutionsPage=function(group){
+    var allowed=(group&&AC_TYPE_GROUPS[group])||null;
+    if(allowed&&allowed.indexOf(ac.institutionType)<0)ac.institutionType=allowed[0];
     var key="institutions:"+ac.institutionType+":"+ac.institutionSearch;
     var url="/api/organizations?type="+encodeURIComponent(ac.institutionType)+"&limit=100";
     if(ac.institutionSearch)url+="&search="+encodeURIComponent(ac.institutionSearch);
     load(key,url,function(d){return{items:listOf(d),total:Number(d&&d.total||listOf(d).length)}});
-    var types=[["private_school",t("مدارس خاصة","Private schools")],["government_school",t("مدارس حكومية","Government schools")],
+    var allTypes=[["private_school",t("مدارس خاصة","Private schools")],["government_school",t("مدارس حكومية","Government schools")],
       ["college",t("كليات","Colleges")],["university",t("جامعات","Universities")],["institute",t("معاهد","Institutes")]];
+    var types=allowed?allTypes.filter(function(x){return allowed.indexOf(x[0])>-1}):allTypes;
     var body=head(t("المؤسسات التعليمية","Educational institutions"),t("إدارة المؤسسات من مصدر موحد.","Manage institutions through the shared organization core."),
       '<button class="btn green" onclick="acOrgFormOpen(\'add\',null)">'+icon("plus",15)+' '+t("إضافة","Add")+'</button>');
-    body+='<div class="section-tabs ac-tabs">'+types.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
+    if(types.length>1)body+='<div class="section-tabs ac-tabs">'+types.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
       '" onclick="acInstitutionType(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+'</div>';
     body+=adminOrgForm()+'<section class="panel">'+
       '<form class="toolbar" onsubmit="acInstitutionSearch(event)"><input id="ac-org-q" value="'+esc(ac.institutionSearch)+
@@ -302,22 +313,6 @@
       '</span></div>'+badge(r.isActive===false?"inactive":"active")+'</div>'}).join("")+'</div>';return adminShell(body+'</section>')
   };
 
-  window.adminFeesPage=function(){
-    load("fees","/api/marketplace/fees?limit=100",listOf);var rows=ac.cache.fees;
-    var body=head(t("الرسوم","Fees"),t("سجل الرسوم الموحد مع احترام صلاحيات العرض.","Unified fee records with visibility rules."));
-    if(!rows)body+=state("fees");else if(!rows.length)body+='<div class="empty-state">'+t("لا توجد رسوم.","No fees.")+'</div>';
-    else body+='<section class="panel"><div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المؤسسة","Institution")+
-      '</th><th>'+t("الرسم","Fee")+'</th><th>'+t("النوع","Type")+'</th><th>'+t("المبلغ","Amount")+'</th><th>'+
-      t("الحالة","Status")+'</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td>'+esc(r.orgName||r.organizationId)+
-      '</td><td><b>'+esc(r.title)+'</b><div class="entity-sub">'+esc(r.description||"")+'</div></td><td>'+esc(r.feeType)+
-      '</td><td dir="ltr">'+esc(r.amount==null?"—":r.amount+" "+r.currency)+'</td><td>'+badge(r.isActive?"active":"inactive")+
-      '</td></tr>'}).join("")+'</tbody></table></div></section>';return adminShell(body)
-  };
-  window.adminMarketingPage=function(){return adminShell(head(t("التسويق","Marketing"),t("العروض والإعلانات وشرائح الصفحة الرئيسية.","Offers, advertisements, and home slides."))+
-    '<div class="ac-module-grid"><button onclick="go(\'offers\')"><b>'+t("العروض","Offers")+'</b><span>'+t("إدارة عروض المؤسسات","Manage institution offers")+
-    '</span></button><button onclick="go(\'ads\')"><b>'+t("الإعلانات","Advertisements")+'</b><span>'+t("الإعلانات والجدولة","Ads and scheduling")+
-    '</span></button><button onclick="go(\'slides\')"><b>'+t("شرائح الرئيسية","Hero slides")+'</b><span>'+t("محتوى الواجهة الرئيسية","Home-page content")+
-    '</span></button></div>')};
   window.adminReportsPage=function(){
     load("dashboard","/api/admin/dashboard");load("audit","/api/admin/audit-logs?limit=100",listOf);var d=ac.cache.dashboard,logs=ac.cache.audit;
     var body=head(t("التقارير والتحليلات","Reports and analytics"),t("ملخصات مشتقة من البيانات التشغيلية الحالية.","Summaries derived from current operational data."));
@@ -358,14 +353,15 @@
       esc(JSON.stringify(r.value))+'</code></td><td>'+esc(fmt(r.updatedAt))+'</td><td><button class="btn" onclick="acSettingEdit(\''+
       r.key.replace(/'/g,"")+'\','+i+')">'+t("تعديل","Edit")+'</button></td></tr>'}).join("")+'</tbody></table></div></section>';return adminShell(body)
   };
-  window.adminPaymentsPage=function(){return adminShell(head(t("المدفوعات","Payments"),t("وحدة مستقبلية بدون منطق مالي نشط.","Future module with no active financial logic."))+
-    '<section class="panel"><div class="empty-state"><h3>'+t("قريباً","Coming soon")+'</h3><p>'+t("لن يتم عرض معاملات أو أرصدة وهمية.","No simulated transactions or balances are shown.")+'</p></div></section>')};
 
   var previousGeneric=window.generic;
   window.generic=function(title){var r=route();
-    if(["institutions","schools","institutesAdmin","collegesAdmin"].indexOf(r)>-1)return adminInstitutionsPage();
+    if(r==="schools")return adminInstitutionsPage("schools");
+    if(r==="institutesAdmin")return adminInstitutionsPage("institutes");
+    if(r==="collegesAdmin")return adminInstitutionsPage("colleges");
+    if(r==="institutions")return adminInstitutionsPage();
     if(r==="teachersAdmin")return adminTeachersPage();if(r==="students")return adminAccountsPage();if(r==="bookings")return adminBookingsPage();
-    if(r==="fees")return adminFeesPage();if(r==="marketing")return adminMarketingPage();if(r==="reports")return adminReportsPage();
-    if(r==="payments")return adminPaymentsPage();return previousGeneric(title)};
+    if(r==="reports")return adminReportsPage();
+    return previousGeneric(title)};
   try{if(adminOnlyRoutes.indexOf(route())>-1)render()}catch(e){console.error("[admin-core] render failed",e)}
 })();

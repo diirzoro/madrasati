@@ -83,6 +83,18 @@ Main sidebar:
 الإعدادات
 ```
 
+This list is frozen at 15 entries. `إدارة المدارس`، `إدارة المعاهد`، and
+`إدارة الكليات` are three sidebar entries backed by **one** page
+implementation, filtered by institution type:
+
+| Entry | Types shown |
+|---|---|
+| `إدارة المدارس` | مدارس خاصة، مدارس حكومية |
+| `إدارة المعاهد` | معاهد |
+| `إدارة الكليات` | كليات، جامعات |
+
+Never fork a separate management system per institution type.
+
 ### Academic Data
 
 One sidebar section: `البيانات الأكاديمية`
@@ -94,6 +106,22 @@ Internal tabs:
 - المناهج
 - لغات التدريس
 - طرق التدريس
+
+`المواد` (Subjects) is the only academic foundation. `المناهج` is **not** a
+parallel system: it is a curriculum **classification** — وزاري، أهلي، دولي —
+attached to a subject and a stage. Do not build a second subject catalog
+beside it.
+
+### What the sidebar deliberately does not contain
+
+- **No `الرسوم` entry.** Fees are not a module. They are a property of exactly
+  one priced entity — stage, subject, course, or service — and are managed and
+  displayed in that context. A standalone fees page or route must not exist.
+- **No payments module.** There is no active financial logic, and no simulated
+  balances or transactions are ever displayed.
+- **No `التسويق` grouping.** Offers and advertisements are separate sections,
+  because offers are published by the owner directly while ads require
+  admin approval and pricing.
 
 ### Locations
 

@@ -59,8 +59,6 @@ coverage/
 *.pfx
 
 # Runtime-focused repository: retain development material locally
-/AGENTS.md
-/docs/
 /theme-pack/
 /scripts/update_taher_reference.ps1
 /db/init_sqlite.sql
