@@ -71,15 +71,23 @@ async function migrateUp() {
 
     if (pending.length === 0) {
       console.log('All migrations are already applied.');
-      return;
+    } else {
+      console.log(`Running ${pending.length} pending migration(s)...\n`);
+      for (const file of pending) {
+        const filePath = path.join(MIGRATIONS_DIR, file);
+        await runMigration(pool, filePath, file);
+      }
+      console.log('\nDone.');
     }
 
-    console.log(`Running ${pending.length} pending migration(s)...\n`);
-    for (const file of pending) {
-      const filePath = path.join(MIGRATIONS_DIR, file);
-      await runMigration(pool, filePath, file);
-    }
-    console.log('\nDone.');
+    // Runs unconditionally, including when nothing was pending: the seven
+    // protected test accounts (db/seed-fixed-users.js) must exist in every
+    // environment, and re-seeding is what repairs a deleted or drifted one.
+    console.log('\nSeeding protected system accounts...');
+    const { seed } = require('./seed-fixed-users');
+    const summary = await seed(pool);
+    console.log(`  protected accounts: ${summary.accounts.length}`);
+    summary.links.forEach((link) => console.log(`  linked: ${link}`));
   } finally {
     await pool.end();
   }

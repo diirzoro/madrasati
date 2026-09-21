@@ -5,7 +5,7 @@
 
 const bcrypt = require('bcryptjs');
 const repo = require('./repository');
-const { ValidationError, UnauthorizedError, ConflictError, NotFoundError, AppError } = require('../common/errors');
+const { ValidationError, UnauthorizedError, ConflictError, NotFoundError, ForbiddenError, AppError } = require('../common/errors');
 const { writeAudit } = require('../common/audit');
 const { validatePhoneForCountry } = require('../common/phone');
 
@@ -196,7 +196,23 @@ async function loginUser({ email, password }) {
   return mapUser(row);
 }
 
+// Protected system accounts (db/seed-fixed-users.js, users.is_protected) exist
+// to be the permanent role fixtures every environment can rely on, so deleting
+// one silently breaks logins and the ownership demos. Deletion has two API
+// doors and both must be shut: DELETE /api/users/:id, and PATCH /api/users/:id
+// with status 'deleted' -- the latter is the same soft delete wearing a hat.
+async function assertDeletable(userId) {
+  const target = await repo.findUserById(userId);
+  if (!target) throw new NotFoundError('User not found');
+  if (target.is_protected) {
+    throw new ForbiddenError('This is a protected system account and cannot be deleted.');
+  }
+  return target;
+}
+
 async function updateUserByAdmin(userId, { name, email, phone, role, status, institutionType, actorUserId }) {
+  if (status === 'deleted') await assertDeletable(userId);
+
   if (status && !VALID_STATUS.includes(status)) throw new ValidationError('Invalid user status');
   const fields = {};
   if (name !== undefined) fields.name = sanitizeName(name);
@@ -230,6 +246,7 @@ async function updateUserByAdmin(userId, { name, email, phone, role, status, ins
 }
 
 async function deleteUser(userId, actorUserId) {
+  await assertDeletable(userId);
   const deleted = await repo.softDeleteUser(userId);
   if (!deleted) throw new NotFoundError('User not found');
   await writeAudit({

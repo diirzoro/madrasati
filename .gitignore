@@ -26,6 +26,8 @@ tmp/
 temp/
 coverage/
 .cache/
+# preview-up.sh pid files and server logs
+/.run/
 
 # Local databases / data
 *.sqlite

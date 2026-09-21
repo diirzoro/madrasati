@@ -351,6 +351,13 @@ Normal flow:
 
 Permanent purge is restricted and audited.
 
+Exception — protected system accounts: the seven permanent test accounts
+(`db/seed-fixed-users.js`, `users.is_protected`) never enter this flow. The API
+refuses `DELETE /api/users/:id` and `PATCH /api/users/:id` with
+`status: 'deleted'` with `403 FORBIDDEN`, and re-running the seed restores any
+account that was changed behind the API's back. See the appendix entry
+العاشر.
+
 ## 14. Tenant Isolation and Authorization
 
 Organization-owned data must be scoped by:
@@ -668,6 +675,46 @@ JSONB وحده. النتيجة: إعلان شريط متحرك أُنشئ فعل
 `prefers-reduced-motion`. بياناته من جدول الإعلانات المنشورة عبر
 `/api/advertisements?placement=ticker`، ويبقى ظاهراً برسالة دعوة عند غياب
 الإعلانات.
+
+### العاشر: الحسابات التجريبية الدائمة المحمية
+
+تُسكَّن سبعة حسابات تغطي كل رتبة، بكلمة مرور موحّدة واحدة: `Admin@123`.
+يُولّدها `db/seed-fixed-users.js` بـ `bcryptjs.hashSync('Admin@123', 10)` —
+نفس معامل التكلفة الذي يستخدمه مسار التسجيل، فيتطابق التحقق عند الدخول.
+
+| البريد | الرتبة | الربط بالمؤسسة |
+|---|---|---|
+| `admin@test.com` | `admin` | — (مدير المنصة) |
+| `private@test.com` | `owner` | مدرسة خاصة — مدارس النهضة الأهلية |
+| `gov@test.com` | `owner` | مدرسة حكومية — مدرسة الشهيد الحمدي الأساسية |
+| `collage@test.com` | `owner` | كلية — كلية العلوم الطبية - صنعاء |
+| `inst@test.com` | `owner` | معهد — معهد صنعاء التقني |
+| `teacher@test.com` | `teacher` | سجل في `teacher_profiles` (موثّق) |
+| `student@test.com` | `client` | — |
+
+**قواعد التثبيت:**
+
+1. التسكين بـ `ON CONFLICT (email) DO UPDATE`، فإعادة تشغيل السكربت لا تفشل ولا
+   تُكرّر، بل تُصلح أي انحراف: حساب محذوف أو موقوف أو كلمة مروره مُبدَّلة يعود
+   إلى حالة سليمة معروفة.
+2. ربط الملكية يذهب إلى أول مؤسسة من النوع المطلوب مرتّبة بالـ slug، فتستقر
+   إعادة التشغيل على نفس المؤسسة ولا تتنقل بين الصفوف.
+3. الحماية عبر العمود `users.is_protected` (الهجرة 032) وتُفرض داخل
+   `modules/identity/service.js` لا في المسار، فتغطي أي مستدعٍ مستقبلي. بابا
+   الحذف مغلقان معاً: `DELETE /api/users/:id` و`PATCH /api/users/:id` بالقيمة
+   `status: 'deleted'`، وكلاهما يُرجع `403 FORBIDDEN`.
+4. السكربت يعمل تلقائياً في نهاية `node db/migrate.js up` — حتى حين لا توجد
+   هجرة معلّقة — ويشغّله `scripts/preview-up.sh` أيضاً. هذا ما يضمن بقاء
+   الحسابات بعد إعادة بناء الحاوية.
+
+**دليل التنفيذ:** الدخول بالحسابات السبعة أُرجع `200` لكلٍّ منها؛ `DELETE` و
+`PATCH status=deleted` على حساب محمي أُرجعا `403`؛ حذف حساب عادي أُرجع `200`
+(فالحماية مُوجَّهة لا شاملة)؛ وحساب أُفسد مباشرة في SQL (حُذف منطقياً وصار
+`is_protected=false`) عاد سليماً بعد إعادة تشغيل البذرة بلا تكرار في
+`organization_memberships`.
+
+هذه حسابات تطوير محلية بكلمة مرور منشورة عن قصد؛ لا تُسكَّن في نشر حقيقي ولا
+تُستخدم فيه.
 
 ### بنود لم تُنفَّذ بعد (تحتاج قراراً أو مرحلة مستقلة)
 

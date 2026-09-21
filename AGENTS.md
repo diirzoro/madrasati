@@ -129,11 +129,17 @@ The repository and the memos must never drift apart.
 ```bash
 # database
 node db/migrate.js status          # what is applied / pending
-node db/migrate.js up              # apply pending migrations
+node db/migrate.js up              # apply pending migrations + reseed test accounts
 
 # services (dev)
 node server/pg-app.js              # API
 node server/v4-static.js           # static frontend + /api proxy
+
+# whole stack from a bare container (postgres install, migrations, servers)
+bash scripts/preview-up.sh         # idempotent; see section 10 for the accounts
+
+# the seven permanent test accounts (password in section 10)
+node db/seed-fixed-users.js
 
 # the two academic levels, side by side
 curl /api/academic/stages                      # global catalog, price-free
@@ -149,13 +155,18 @@ add a new one.
 ## 8. Security
 
 - Never commit secrets. `.env` stays ignored; keep `.env.example` current.
-- Never store a credential, token, or key in source or in a memo.
+- Never store a credential, token, or key in source or in a memo. The single
+  exception is the published password of the seven local fixtures in section 10;
+  no real user credential ever belongs in the repository.
 - Sessions live in memory today, so restarting the API logs everyone out.
   Persisting them in PostgreSQL is open work.
 - New organization-scoped routes must carry `requireOrgMember`. A route that
   reads tenant data with only `requireAuth` is a bug.
 - Validate and authorize on the server; never trust a client-supplied
   `organization_id` or role.
+- Protected system accounts (`users.is_protected`) are refused deletion by the
+  API. Keep it that way: deleting one breaks the role fixtures every environment
+  depends on.
 
 ## 9. Verification habit
 
@@ -163,3 +174,40 @@ Prove a change works before claiming it does: check the real endpoint with a
 real session, confirm the row in PostgreSQL, and exercise the failing case as
 well as the passing one. A guard is only done when the unauthorized path
 returns the refusal you expect.
+
+## 10. Permanent test accounts (protected)
+
+Seven accounts cover every role without hand-registering users. One shared
+password: `Admin@123`.
+
+| Email | Role | Institution link | Password |
+|---|---|---|---|
+| `admin@test.com` | `admin` | — (platform administrator) | `Admin@123` |
+| `private@test.com` | `owner` | private school — مدارس النهضة الأهلية | `Admin@123` |
+| `gov@test.com` | `owner` | government school — مدرسة الشهيد الحمدي الأساسية | `Admin@123` |
+| `collage@test.com` | `owner` | college — كلية العلوم الطبية - صنعاء | `Admin@123` |
+| `inst@test.com` | `owner` | institute — معهد صنعاء التقني | `Admin@123` |
+| `teacher@test.com` | `teacher` | `teacher_profiles` row (verified) | `Admin@123` |
+| `student@test.com` | `client` | — | `Admin@123` |
+
+Owned by `db/seed-fixed-users.js`, which:
+
+- hashes the password with `bcryptjs.hashSync('Admin@123', 10)` — the same cost
+  factor the register flow uses, so login verification matches;
+- upserts with `ON CONFLICT (email) DO UPDATE`, so re-running repairs drift
+  (deleted, suspended, renamed or password-changed accounts return to a
+  known-good state) instead of failing or duplicating;
+- links each owner to the first organization of its type ordered by slug, so a
+  re-run resolves to the same institution rather than drifting between rows.
+
+Protection (`users.is_protected`, migration 032) is enforced inside
+`modules/identity/service.js`, not in the route, so it also covers any future
+caller. Both deletion doors are shut: `DELETE /api/users/:id` and
+`PATCH /api/users/:id` with `status: 'deleted'` each return `403 FORBIDDEN`.
+
+The seed runs automatically at the end of `node db/migrate.js up` — including
+when no migration was pending — and `scripts/preview-up.sh` runs both. That is
+what keeps the accounts present across a container rebuild.
+
+These are local-development fixtures with a deliberately published password.
+They must never be seeded into, or used by, a real deployment.

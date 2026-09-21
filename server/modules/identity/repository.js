@@ -10,7 +10,7 @@ const { query } = require('../common/pool');
 async function findUserById(id) {
   const { rows } = await query(
     `SELECT u.id, u.name, u.email, u.phone, u.role_id, u.status, u.password_hash,
-            u.metadata, u.created_at, u.updated_at, u.deleted_at,
+            u.metadata, u.is_protected, u.created_at, u.updated_at, u.deleted_at,
             r.name AS role
      FROM users u
      LEFT JOIN roles r ON r.id = u.role_id
