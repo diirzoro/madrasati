@@ -40,6 +40,36 @@ router.get(
 );
 
 // ---------- admin-only direct catalog writes (A5 "+") ----------
+// Countries get the same treatment as the rest of the hierarchy. The public
+// read stays open; the admin read and both writes need the platform admin role,
+// because the country list is the root every other location hangs from.
+router.get(
+  '/countries/manage',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (_req, res) => {
+    res.json(await service.listAllCountries());
+  })
+);
+
+router.post(
+  '/countries',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await service.createCountry(req.body || {}, { actorUserId: req.user.id }));
+  })
+);
+
+router.patch(
+  '/countries/:id',
+  requireAuth,
+  requireRole('admin'),
+  asyncHandler(async (req, res) => {
+    res.json(await service.updateCountry(req.params.id, req.body || {}, { actorUserId: req.user.id }));
+  })
+);
+
 router.post(
   '/governorates',
   requireAuth,

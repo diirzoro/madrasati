@@ -1113,3 +1113,106 @@ handler.
 - The subjects table marks an institution-private subject with a «مادة خاصة بالمؤسسة» badge and shows its review state («معتمدة» / «قيد المراجعة»), so a school can see which of its own subjects the admin has approved. A catalog subject carries neither badge.
 - Gated pricing: a visitor with no session sees the structure with amounts replaced by «سجّل الدخول لعرض الرسوم والتسجيل», and facilities / services / documents read the same way instead of "none recorded".
 - Delivery is an attribute with exactly three values (حضوري / عن بُعد / مدمج). A legacy `ACTIVE` teaching-method row must never render as «نشط» in that list.
+
+## 37. Tenant Isolation, Location Countries and Teacher Promotions — Implementation Record (21 September 2026)
+
+Documents what changed in this phase so the memo and the code agree. It adds no
+new authority.
+
+### Migrations
+
+| Migration | Change |
+|---|---|
+| `036_locations_country_admin.sql` | Adds `locations_countries.name_en` so a country has a bilingual name, plus an index on `code`. Every pre-existing row keeps its Arabic `name` and gains a NULL `name_en` ("no English name declared yet"). |
+| `037_teacher_subject_promo.sql` | Adds `teacher_pricing.discount_percent` and `promo_label`, guarded by a 0–100 `CHECK`. NULL means "no promotion", which is what every existing row means. |
+
+Both are additive, nullable-only and re-runnable, per `AGENTS.md` section 7.
+
+### Isolation of a school's stages and fees
+
+The rule the memo already states is now enforced end to end:
+
+1. The platform catalog stays abstract and price-free; the money lives in the
+   institution's own offering (`organization_stages` / `organization_fees` /
+   `organization_subjects`).
+2. An **owner** may edit the offering of the institution they belong to and no
+   other. A read or write against another tenant returns `404`, not `403`, so its
+   existence is not confirmed. Verified: owner read of a foreign institution
+   `404`, owner write of a foreign institution `404`, owner write of their own
+   institution `200`.
+3. Changing one school's fee writes rows keyed to that organization only; the
+   other school's offering is untouched.
+4. The platform admin may edit any institution's offering, and remains the only
+   role that may edit the shared organization record.
+
+### Capacity stays derived
+
+`remaining_seats = capacity - current_students` is a generated column and is
+never written. The offering row shows the computed count, and the badge now
+carries it: «متوفر مقاعد (فاضي) · N», «مكتمل السعة (مليان)» when the remainder
+reaches zero, «السعة غير معلنة» when capacity is NULL. A negative remainder is a
+real over-enrolment and is not clamped.
+
+### The institution "+" and its supervision queue
+
+An institution that needs a subject the catalog lacks adds a row to the **same**
+`subjects` table with `organization_id` set and `review_status = 'pending'`.
+New in this phase, the platform admin finally has a queue to work from instead of
+only a badge:
+
+| Route | Guard | Purpose |
+|---|---|---|
+| `GET /api/academic/org-subjects` | `requireRole('admin')` | The proposals an institution filed, newest first, defaulting to the pending ones. |
+
+The `#/academic` screen gains a «مقترحات المؤسسات» tab listing each proposal
+with its institution and review state, with اعتماد / رفض actions that call the
+existing `PATCH /api/academic/subjects/:id/review`. Verified: an owner proposing
+gets `pending`; the owner reading the queue is `403`, the owner approving is
+`403`, an anonymous read is `401`, and the admin approving moves the row out of
+the queue.
+
+### Add Country
+
+`locations_countries` carried a single `name` next to `code` and `calling_code`.
+A country is the root of the location cascade, so it is now manageable:
+
+| Route | Guard | Purpose |
+|---|---|---|
+| `GET /api/locations/countries/manage` | `requireRole('admin')` | Every country including a deactivated one, so one can be re-enabled. |
+| `POST /api/locations/countries` | `requireRole('admin')` | Creates a country: Arabic name (required), English name, ISO 3166-1 alpha-2 code, calling code, order. |
+| `PATCH /api/locations/countries/:id` | `requireRole('admin')` | Edits the same fields, plus `isActive`. |
+
+The service upper-cases the ISO code and validates it as two Latin letters and
+the calling code as 1–4 digits (a leading `+` is stripped), checks both for
+clashes, and refuses to deactivate the `is_default` country because the
+governorate cascade falls back to it. `countryId` is now accepted when creating a
+governorate, alongside the ISO `countryCode` older callers send.
+
+### UI
+
+- `#/locations` is one cascade with five tabs, and **every level is added or
+  edited on its own dedicated route** through the shared `formPage()` builder
+  (`#/locations/countries/new`, `…/governorates/edit/:id`, and so on). The
+  parent select is always present and a child select resets when its parent
+  changes.
+- The teacher add/edit form is four horizontal tabs inside one card (basic info ·
+  subjects/pricing/offers · availability · qualifications); the draft sync runs
+  before a tab switch, so a value typed on one tab survives another tab's render.
+- The teacher subject row carries `discountPercent` and `promoLabel` on the same
+  priced row as the list price. The detail view keeps the list price visible and
+  shows the derived net figure plus the promo label, so a discounted subject
+  never looks like a cheaper list price. Both fields are pricing facts and are
+  stripped for an anonymous caller together with `amount` / `currency` /
+  `billingPeriod`.
+- Adding a stage carries its grades: a repeatable row per grade name, posted as
+  the `grades` array the service already accepts (a blank row is dropped, and
+  each grade code is derived from the stage code: `SEC` → `SEC1`, `SEC2`).
+- Tables are compact (30–32px rhythm, no fixed minimum width), and a whole row
+  and a whole institution card are the click target — with `stopPropagation` on
+  every action button inside and a `:focus-visible` outline.
+
+### Out of scope in this phase
+
+The advertisements and offers sections were deferred by the same instruction, so
+their forms keep the shape they had.
+

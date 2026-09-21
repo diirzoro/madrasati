@@ -2319,6 +2319,79 @@ img{max-width:100%}
  .uf-back{width:100%;min-height:44px}
 }
 
+/* =====================================================================
+   Compact, fully responsive tables.
+   The base table was built at 42px rows with 11px padding and a 900px minimum,
+   which forced horizontal scrolling on a 14" laptop and looked oversized next to
+   the rest of the shell. This layer tightens the row to a 32px rhythm, lets the
+   table shrink to its container instead of a fixed minimum, and scales the density
+   up again only on genuinely large desktop displays. Palette and fonts unchanged.
+   ===================================================================== */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tbl{width:100%;table-layout:auto}
+.tbl th,.tbl td{padding:6px 9px}
+.tbl th{height:30px;font-size:10px;line-height:1.25}
+.tbl td{height:auto;font-size:11px;line-height:1.4}
+.tbl tbody tr{min-height:0}
+.tbl code,.tbl .ltr-num{font-size:11px}
+/* A cell that does not need to wrap pushes the table wide; let long values break
+   instead so the layout stays inside its column on narrow screens. */
+.tbl td,.tbl th{overflow-wrap:anywhere}
+.tbl th{white-space:nowrap}
+
+/* --- The entity cell: a small square logo beside the name --- */
+.row-entity{display:flex;align-items:center;gap:9px;min-width:0}
+.row-entity>div{min-width:0}
+.row-entity b{font-size:11.5px;line-height:1.35}
+.row-logo{width:32px;height:32px;flex:0 0 32px;border-radius:8px;border:1px solid var(--line);
+ background:var(--cream);display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+.row-logo img{width:100%;height:100%;object-fit:contain}
+
+/* A whole row and a whole card are the target, so both need a pointer and a
+   visible hover/focus affordance — the eye icon is a shortcut, not the only way in. */
+.org-card{cursor:pointer}
+.org-card:focus-visible,.tbl tbody tr.row-click:focus-visible{outline:2px solid var(--theme-primary,#1f5d46);outline-offset:-2px}
+
+/* Large desktop (20"-30"): the extra room goes into density, not into a wider
+   single column, so a long catalog still shows more rows per screen. */
+@media (min-width:1700px){
+ .tbl th,.tbl td{padding:7px 11px}
+ .tbl td{font-size:11.5px}
+}
+@media (min-width:2100px){
+ .tbl th{padding:8px 13px;height:34px}
+ .tbl td{padding:8px 13px;font-size:12px}
+ .row-logo{width:36px;height:36px;flex:0 0 36px}
+}
+/* Tablet / small laptop: narrow the fixed content so the table fits without a
+   horizontal scrollbar for the common case. */
+@media (max-width:1200px){
+ .tbl{min-width:0}
+ .tbl th,.tbl td{padding:6px 8px}
+}
+@media (max-width:900px){
+ .tbl td{font-size:10.5px}
+ .row-logo{width:28px;height:28px;flex:0 0 28px;border-radius:7px}
+ .row-entity{padding:2px 0}
+ .contact-cell{font-size:10.5px}
+}
+
+/* --- The teacher form tab strip: four concerns, one card ---
+   The form was a single tall column; the four tabs split it into who the teacher
+   is, what they teach and for how much, when they are free, and what they are
+   qualified in. The strip spans both grid tracks so it sits above the fields. */
+.uf-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 14px;margin:0 0 4px;
+ border-bottom:1px solid var(--line)}
+.uf-tabs button{border:1px solid var(--line);background:var(--white);color:var(--muted);
+ border-radius:999px;padding:9px 16px;font:inherit;font-size:13px;font-weight:700;
+ cursor:pointer;min-height:40px;transition:.18s}
+.uf-tabs button:hover{border-color:var(--theme-primary,#1f5d46);color:var(--theme-primary,#1f5d46)}
+.uf-tabs button.active{background:var(--theme-primary,#1f5d46);border-color:var(--theme-primary,#1f5d46);color:#fff}
+@media (max-width:768px){
+ .uf-tabs{gap:6px}
+ .uf-tabs button{flex:1 1 auto;min-height:44px;padding:9px 12px;font-size:12.5px}
+}
+
 /* --- Print: the report is its own document, the app chrome is not printed --- */
 @media print{
  .admin-top,.public-top,.public-rail,.sidebar,.admin-side,.bottom-stats,.view-toggle,.toolbar,

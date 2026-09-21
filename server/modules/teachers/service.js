@@ -110,7 +110,10 @@ function mapTeacher(row, { canSeePricing = false } = {}) {
   if (!row) return null;
   const gated = !canSeePricing;
   const subjects = (Array.isArray(row.subject_list) ? row.subject_list : []).map((s) => (
-    gated ? Object.assign({}, s, { amount: null, currency: null, billingPeriod: null }) : s
+    // A discount is a pricing fact, so it is withheld with the price it modifies:
+    // an anonymous visitor must not be able to derive the amount from a percentage.
+    gated ? Object.assign({}, s, { amount: null, currency: null, billingPeriod: null,
+      discountPercent: null, promoLabel: null }) : s
   ));
   const verified = Boolean(row.verified);
   return {
@@ -299,6 +302,8 @@ function prepareSubjectEntries(rawEntries) {
       billingPeriod: (text(entry.billingPeriod) || 'hourly').toLowerCase(),
       languageCode: assertEnum(entry.languageCode, LANGUAGES, 'languageCode'),
       description: text(entry.description),
+      discountPercent: prepareDiscount(entry.discountPercent),
+      promoLabel: text(entry.promoLabel),
     };
   }).map((entry) => {
     if (!BILLING_PERIODS.includes(entry.billingPeriod)) {
@@ -306,6 +311,18 @@ function prepareSubjectEntries(rawEntries) {
     }
     return entry;
   });
+}
+
+// A promotional discount is optional and rides on the same priced row as the
+// list price. An empty value clears the promotion; anything outside 0-100 is
+// refused here so the form gets a readable message instead of a constraint 500.
+function prepareDiscount(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new ValidationError('discountPercent must be a number between 0 and 100.');
+  }
+  return Math.round(n * 100) / 100;
 }
 
 // A weekly slot is one (day, start, end, where) window. Overlapping slots are

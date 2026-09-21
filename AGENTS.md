@@ -144,24 +144,81 @@ absent by design.
 - Forbidden: corporate blues, legacy ERP look, heavy gradients, heavy shadows,
   small Arabic type, crowded dashboards.
 - Tables paginate/filter server-side; never render thousands of rows at once.
+- Tables are compact: a 30–32px row rhythm and a grid that shrinks into its
+  container instead of a fixed 900px minimum, growing denser again only at
+  ≥1700px / ≥2100px. Long values wrap in their own column.
+- **A whole row and a whole card are the click target**, not the action icon:
+  `row-click` on the row, `tabindex`/`role="link"` + Enter/Space on the card,
+  `stopPropagation` on every action button inside, and a `:focus-visible`
+  outline. The eye icon is a shortcut, never the only way in.
 - Entity rows open a full details view, not a small modal.
 - **Every add/edit form is a dedicated page, not an inline panel and not a
   pop-up over the table.** The route is the list route plus a second segment
   (`#/schools/new`, `#/schools/edit/:id`, `#/teachersAdmin/new`,
   `#/academic/stages/new`, `#/offers/new`, `#/ads/edit/:id`, `#/slides/new`,
-  `#/detail/offering/:stageId|new`, `#/detail/subject/new`). Only the first
-  segment picks the sidebar page, so a form never becomes a sidebar entry, and
-  a refresh or a shared link still opens it. Each one renders through the single
-  `formPage()` builder (`app.js`) and the single `.uf-page` block
-  (`styles.css`): a «← العودة إلى القائمة» back control, one white card centred
-  at `max-width: 760px`, fields at `height: 40px` / `border-radius: 8px` / light
-  grey border with a 16px rhythm, a 28%-label / 72%-control grid on desktop, one
-  column with 44px targets below 768px, and the [ إلغاء ] + [ حفظ البيانات ]
-  footer. Auth screens (login / sign-up) keep their current split layout and
-  side imagery, and only need to stay responsive. This is UI, CSS and routing
-  only — it may not add, remove or rename a column.
+  `#/locations/<level>/new|edit/:id`, `#/detail/offering/:stageId|new`,
+  `#/detail/subject/new`). Only the first segment picks the sidebar page, so a
+  form never becomes a sidebar entry, and a refresh or a shared link still opens
+  it. Each one renders through the single `formPage()` builder (`app.js`) and the
+  single `.uf-page` block (`styles.css`): a «← العودة إلى القائمة» back control,
+  one white card centred at `max-width: 760px`, fields at `height: 40px` /
+  `border-radius: 8px` / light grey border with a 16px rhythm, a 28%-label /
+  72%-control grid on desktop, one column with 44px targets below 768px, and the
+  [ إلغاء ] + [ حفظ البيانات ] footer. Auth screens (login / sign-up) keep their
+  current split layout and side imagery, and only need to stay responsive.
+- **A form with several concerns is tabbed, not stacked.** The teacher add/edit
+  screen is the reference: `.uf-tabs` inside the same card
+  (basic info · subjects/pricing/offers · availability · qualifications), and the
+  draft sync runs before a tab switch so nothing typed is lost.
+- **A repeatable list is a button that appends one row plus a delete button per
+  row** — never a count field that must be committed before the rows it describes
+  can appear. Used by teacher subjects, availability, qualifications and the
+  stage grade ladder.
 - Responsive down to 360px, 44×44 touch targets, no horizontal scrolling, RTL
   drawer from the right and LTR from the left. No separate mobile product.
+
+## 5A. Location cascade and the country form
+
+`#/locations` is one cascade — country → governorate → district → neighborhood —
+and every level is added/edited on its own dedicated route. The parent select is
+always present, and a child select resets when its parent changes so a district
+from another governorate can never be offered.
+
+A country is addable and editable by the platform admin: Arabic name, English
+name, ISO 3166-1 alpha-2 code and international calling code. The service
+upper-cases and validates the code (two Latin letters) and the calling code
+(1–4 digits), and checks both for clashes, so the form gets a readable message
+instead of a constraint error. The `is_default` country cannot be deactivated,
+because the governorate cascade falls back to it. The public country read stays
+open; `/api/locations/countries/manage` is the admin read that includes a
+deactivated country so it can be re-enabled.
+
+## 5B. The offering belongs to one institution
+
+The platform catalog is abstract and price-free; the money lives in the
+institution's own offering. An owner may edit the offering of **their own**
+institution only — every other institution renders exactly as a visitor sees it,
+and a direct write to another tenant returns `404`, not a confirmation that it
+exists (`requireOrgMember`, AGENTS.md rule 7). Changing one school's fees,
+capacity or delivery never touches another's.
+
+Capacity stays derived (`remaining_seats = capacity - current_students`) and the
+row shows the computed count next to the badge «متوفر مقاعد (فاضي) · N» /
+«مكتمل السعة (مليان)» / «السعة غير معلنة». A subject an institution invents for
+itself is a row in the same `subjects` table with `organization_id` set and
+`review_status = 'pending'`: the institution's "+" proposes, and only the platform
+admin approves or rejects it from the «مقترحات المؤسسات» tab of `#/academic`
+(`GET /api/academic/org-subjects`, `PATCH /api/academic/subjects/:id/review`, both
+admin-only). A global catalog row is never up for review.
+
+## 5C. Teacher promotions ride on the priced row
+
+A teacher's price already lives on the subject (`teacher_pricing`, one row per
+subject). A promotion is `discount_percent` + `promo_label` on that **same** row,
+never a second price that could contradict the first. The list price stays
+visible and the net figure is derived for display. Both fields are pricing facts,
+so `mapTeacher` strips them together with `amount`/`currency`/`billingPeriod` for
+an anonymous caller.
 
 ## 6. Continuous documentation rule
 

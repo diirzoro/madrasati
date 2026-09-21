@@ -147,6 +147,21 @@
     ["suspended","موقوف","Suspended"],["deletion_requested","طلب حذف","Deletion requested"],
     ["deletions","قائمة طلبات الحذف","Deletion queue"]];
 
+  // The teacher add/edit form is organised as four horizontal tabs, one concern
+  // each: who the teacher is, what they teach and for how much, when they are
+  // available, and what they are qualified in. Switching tabs syncs the visible
+  // fields into the in-memory draft first, so nothing typed on a previous tab is
+  // lost — the same draft mechanism the dynamic rows already relied on.
+  var TEACHER_FORM_TABS=[["basic","البيانات الأساسية"],["subjects","المواد والأسعار والعروض"],
+    ["availability","أوقات التوفر والجدول"],["qualifications","المؤهلات والخبرات"]];
+  var TEACHER_FORM_TABS_EN=[["basic","Basic info"],["subjects","Subjects, pricing and offers"],
+    ["availability","Availability and schedule"],["qualifications","Qualifications and experience"]];
+  window.acTeacherFormTab=function(tab){
+    var f=ac.teacherForm;if(!f)return;
+    acTeacherDraft();
+    f.tab=tab;render();
+  };
+
   function teacherCurrencyLabel(c){return c==="SAR"?t("ريال سعودي (SAR)","Saudi riyal (SAR)"):t("ريال يمني (YER)","Yemeni riyal (YER)")}
   function teacherLangLabel(c){return c==="EN"?t("إنجليزي","English"):t("عربي","Arabic")}
   function teacherPeriodLabel(p){return p==="monthly"?t("شهرياً","Monthly"):t("بالساعة","Hourly")}
@@ -235,6 +250,7 @@
     if(("#/"+target)===location.hash)render();else go(target)};
   function acTeacherFormInit(mode,r){
     ac.teacherForm={mode:mode,row:r||null,_error:null,draft:{},showPass:false,
+      tab:"basic",
       countryCode:"",countryId:"",govId:"",distId:"",hoodId:"",
       subjects:[],stages:[],quals:[],avails:[]};
     if(mode==="edit"&&r){
@@ -251,7 +267,8 @@
         return{title:q.title||"",institutionName:q.institutionName||"",degree:q.degree||"",year:q.year||""}});
       f.subjects=(r.subjects||[]).map(function(s){
         return{subjectId:String(s.subjectId||s.id),amount:s.amount==null?"":s.amount,
-          currency:s.currency||"YER",billingPeriod:s.billingPeriod||"hourly",languageCode:s.languageCode||"AR"}});
+          currency:s.currency||"YER",billingPeriod:s.billingPeriod||"hourly",languageCode:s.languageCode||"AR",
+          discountPercent:s.discountPercent==null?"":s.discountPercent,promoLabel:s.promoLabel||""}});
     }
     if(mode==="add"){
       // Countries come from the locations catalog: Yemen and Saudi Arabia are
@@ -294,7 +311,8 @@
     else{var list=(teacherCatalog()||{}).subjects||[];
       for(var i=0;i<list.length;i++){if(!used[String(list[i].id)]){pick=String(list[i].id);break}}}
     if(!pick){f._error=t("لا توجد مادة متاحة للإضافة. استخدم + لإضافة مادة جديدة.","No subject left to add. Use + to propose a new one.");return render()}
-    f.subjects.push({subjectId:pick,amount:"",currency:"YER",billingPeriod:"hourly",languageCode:"AR"});
+    f.subjects.push({subjectId:pick,amount:"",currency:"YER",billingPeriod:"hourly",languageCode:"AR",
+      discountPercent:"",promoLabel:""});
     f._error=null;render()};
   window.acTeacherSubjectRemove=function(index){
     var f=ac.teacherForm;if(!f)return;
@@ -307,6 +325,8 @@
       if(el("currency"))s.currency=el("currency").value;
       if(el("period"))s.billingPeriod=el("period").value;
       if(el("lang"))s.languageCode=el("lang").value;
+      if(el("discount"))s.discountPercent=String(el("discount").value||"").trim();
+      if(el("promo"))s.promoLabel=String(el("promo").value||"").trim();
       if(el("subject"))s.subjectId=el("subject").value})}
   window.acTeacherNewSubject=function(){
     var f=ac.teacherForm;if(!f||f._busy)return;
@@ -351,7 +371,11 @@
     body.stageIds=f.stages;
     body.subjects=f.subjects.map(function(s){
       return{subjectId:Number(s.subjectId),amount:s.amount===""?null:Number(s.amount),
-        currency:s.currency,billingPeriod:s.billingPeriod,languageCode:s.languageCode}});
+        currency:s.currency,billingPeriod:s.billingPeriod,languageCode:s.languageCode,
+        // An empty discount is "no promotion", which the server stores as NULL
+        // and reads back as undefined — never as a 0% discount.
+        discountPercent:(s.discountPercent==null||s.discountPercent==="")?null:Number(s.discountPercent),
+        promoLabel:s.promoLabel||null}});
     body.qualifications=f.quals.map(function(q){return{title:q.title,institutionName:q.institutionName,degree:q.degree,year:q.year}}) .filter(function(q){return q.title});
     var el2=function(id){return document.getElementById(id)};
     if(el2("ac-t-skill-input")){var extra=String(el2("ac-t-skill-input").value||"").trim();if(extra)body.skills=(body.skills?body.skills+", ":"")+extra}
@@ -496,6 +520,16 @@
         else if(k==="end")s.endTime=el.value;
         else s.locationMode=el.value})})}
 
+  // The tab strip sits at the top of the form card and spans both grid tracks.
+  function teacherFormTabBar(f){
+    var defs=lang==="ar"?TEACHER_FORM_TABS:TEACHER_FORM_TABS_EN;
+    return '<div class="ac-field-wide uf-wide"><div class="ac-tabs uf-tabs">'+
+      defs.map(function(x){
+        return '<button type="button" class="'+(f.tab===x[0]?"active":"")+
+          '" onclick="acTeacherFormTab(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+
+      '</div></div>';
+  }
+
   function adminTeacherForm(){
     var f=ac.teacherForm;if(!f)return "";
     var cat=teacherCatalog();
@@ -524,6 +558,10 @@
           TEACHER_PERIODS.map(function(p){return wOpt(p,teacherPeriodLabel(p),s.billingPeriod)}).join("")+'</select></div>'+
         '<div class="form-group"><label>'+t("لغة التدريس","Teaching language")+'</label><select id="ac-t-sub-'+i+'-lang">'+
           TEACHER_LANGUAGES.map(function(l){return wOpt(l,teacherLangLabel(l),s.languageCode)}).join("")+'</select></div>'+
+        // The promotion rides on the same priced row as the list price, so a
+        // discount can never contradict the amount it discounts.
+        '<div class="form-group"><label>'+t("الخصم %","Discount %")+'</label><input id="ac-t-sub-'+i+'-discount" type="number" min="0" max="100" step="0.01" dir="ltr" value="'+esc(s.discountPercent==null?"":s.discountPercent)+'" placeholder="—"></div>'+
+        '<div class="form-group"><label>'+t("عنوان العرض","Promo label")+'</label><input id="ac-t-sub-'+i+'-promo" value="'+esc(s.promoLabel||"")+'" placeholder="'+t("مثال: عرض بداية العام","e.g. Back-to-school offer")+'"></div>'+
         '<button type="button" class="crud delete" title="'+t("حذف المادة","Remove subject")+'" onclick="acTeacherSubjectRemove('+i+')">'+icon("trash",14)+'</button>'+
         '</div>'}).join("");
 
@@ -564,7 +602,8 @@
     return formPage({back:route(),error:f._error,busy:f._busy,onSave:"acTeacherSave()",onCancel:"acTeacherFormClose()",
       title:isAdd?t("إضافة معلم","Add teacher"):t("تعديل بيانات المعلم","Edit teacher"),
       subtitle:t("المعلم مستقل: حساب دخول، مواد بأسعارها، أوقات توفر، مؤهلات وموقع.","A teacher is independent: login account, per-subject prices, availability, qualifications and location."),
-      body:
+      body:teacherFormTabBar(f)+(
+        f.tab==="basic"?(
         wInput(t("الاسم الكامل (عربي) *","Full name (Arabic) *"),"ac-t-name",val("ac-t-name",row.userName),t("مثال: عبدالله الشامي","e.g. Abdullah Al-Shami"))+
         wInput(t("الاسم بالإنجليزية","Name in English"),"ac-t-name-en",val("ac-t-name-en",row.nameEn),"Abdullah Al-Shami")+
         wInput(t("البريد الإلكتروني *","Email *"),"ac-t-email",val("ac-t-email",row.userEmail),"teacher@example.com")+
@@ -608,20 +647,26 @@
           wOpt("suspended",t("موقوف","Suspended"),curStatus)))+
         (isAdd?"":wSel(t("التحقق","Verification"),"ac-t-verif",
           wOpt("pending",t("بانتظار التحقق","Pending"),curVerif)+wOpt("verified",t("موثق","Verified"),curVerif)+
-          wOpt("rejected",t("مرفوض","Rejected"),curVerif)))+
-      '</div>'+
+          wOpt("rejected",t("مرفوض","Rejected"),curVerif)))
+        ):"" )+(
+        f.tab==="subjects"?(
       '<div class="core-h3-row"><h3 class="core-h3">'+t("المواد الدراسية والأسعار","Subjects and pricing")+'</h3>'+
         '<div class="ac-row-actions"><button type="button" class="mini-plus" title="'+
         t("إضافة مادة غير موجودة في الكتالوج العام","Propose a subject missing from the global catalog")+'" '+
         (f._busy?"disabled":"")+' onclick="acTeacherNewSubject()">'+icon("plus",15)+'</button>'+
         '<button type="button" class="btn" onclick="acTeacherSubjectAdd()">'+icon("plus",14)+' '+t("إضافة مادة","Add subject")+'</button></div></div>'+
-      (subjectRows||'<div class="empty-state">'+t("لم تُضف مواد بعد. لكل مادة سعرها وعملتها ودوريتها ولغتها.","No subjects yet. Each subject carries its own price, currency, billing period and language.")+'</div>')+
+      (subjectRows||'<div class="empty-state">'+t("لم تُضف مواد بعد. لكل مادة سعرها وعملتها ودوريتها ولغتها.","No subjects yet. Each subject carries its own price, currency, billing period and language.")+'</div>')
+        ):"" )+(
+        f.tab==="availability"?(
       '<div class="core-h3-row"><h3 class="core-h3">'+t("أوقات التوفر","Weekly availability")+'</h3>'+
         '<button type="button" class="btn" onclick="acTeacherAvailAdd()">'+icon("plus",14)+' '+t("إضافة وقت","Add slot")+'</button></div>'+
-      (availRows||'<div class="empty-state">'+t("لم تُضف أوقات توفر بعد.","No availability added yet.")+'</div>')+
+      (availRows||'<div class="empty-state">'+t("لم تُضف أوقات توفر بعد.","No availability added yet.")+'</div>')
+        ):"" )+(
+        f.tab==="qualifications"?(
       '<div class="core-h3-row"><h3 class="core-h3">'+t("المؤهلات والخبرات","Qualifications and experience")+'</h3>'+
         '<button type="button" class="btn" onclick="acTeacherQualAdd()">'+icon("plus",14)+' '+t("إضافة مؤهل","Add qualification")+'</button></div>'+
-      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')})
+      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')
+        ):"" )})
   }
   // ---- detail ----
   function teacherBadgeRow(r){
@@ -717,8 +762,18 @@
 
     if(d.tab==="subjects"){
       var rows=(r.subjects||[]).map(function(s){
-        return '<tr><td><b>'+esc(s.name)+'</td>'+
-          '<td dir="ltr" class="ltr-num">'+esc(s.amount==null?"—":s.amount)+'</td>'+
+        // The list price stays visible and the promotion is shown next to it, so
+        // a discounted subject can never look like a cheaper list price.
+        var price='<span dir="ltr" class="ltr-num">'+(s.amount==null?"—":esc(s.amount))+'</span>';
+        var promo="";
+        if(s.discountPercent!=null&&Number(s.discountPercent)>0){
+          var net=Number(s.amount||0)*(1-Number(s.discountPercent)/100);
+          promo='<div class="entity-sub"><span class="badge ok">'+esc(String(s.discountPercent))+'%</span> '+
+            '<span dir="ltr" class="ltr-num">'+esc(net.toFixed(2))+'</span></div>'+
+            (s.promoLabel?'<div class="entity-sub">'+esc(s.promoLabel)+'</div>':"");
+        }
+        return '<tr><td><b>'+esc(s.name)+'</b></td>'+
+          '<td>'+price+promo+'</td>'+
           '<td>'+esc(s.currency||"—")+'</td>'+
           '<td>'+esc(teacherPeriodLabel(s.billingPeriod))+'</td>'+
           '<td>'+esc(teacherLangLabel(s.languageCode))+'</td>'+
@@ -1081,7 +1136,12 @@
     var place=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
     var wa=o.whatsapp||o.phone;
     var owner=orgOwnerName(o);
-    return '<article class="org-card">'+
+    // The whole card is the target: a click anywhere opens the institution, and
+    // the action buttons inside stop propagation so a verify or archive never
+    // doubles as a visit. tabindex + Enter keeps that reachable by keyboard.
+    var open="go('detail?id="+o.id+"')";
+    return '<article class="org-card" tabindex="0" role="link" onclick="'+open+
+      '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}" aria-label="'+esc(o.name)+'">'+
       '<div class="org-card-head"><div class="org-card-logo"><img src="'+esc(orgLogo(o))+'" alt="'+esc(o.name)+'" loading="lazy"></div>'+
       '<div class="org-card-id"><h3>'+esc(o.name)+'</h3><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div>'+
       '<div class="org-card-badges">'+badge(o.verified?"verified":o.verificationStatus||"pending")+
@@ -1093,9 +1153,9 @@
       contactLine(o)+
       '</div>'+
       '<div class="org-card-actions">'+
-      '<button class="btn green" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+' '+t("التفاصيل","Details")+'</button>'+
-      (wa?waButton(wa,{compact:true,size:14,label:t("واتساب","WhatsApp")}):"")+
-      '<button class="crud edit" title="'+t("تعديل","Edit")+'" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+'</button>'+
+      '<button class="btn green" onclick="event.stopPropagation();'+open+'">'+icon("eye",14)+' '+t("التفاصيل","Details")+'</button>'+
+      (wa?'<span onclick="event.stopPropagation()">'+waButton(wa,{compact:true,size:14,label:t("واتساب","WhatsApp")})+'</span>':"")+
+      '<button class="crud edit" title="'+t("تعديل","Edit")+'" onclick="event.stopPropagation();acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+'</button>'+
       '</div></article>';
   }
   window.acInstitutionsView=function(v){ac.institutionsView=v;render()};
@@ -1207,6 +1267,12 @@
   };
 
   window.acAcademicTab=function(tab){ac.academicTab=tab;ac.academicForm=null;render()};
+  // Only the platform admin approves an institution's own subject; the service
+  // refuses a global catalog row, so this can only ever act on a proposal.
+  window.acSubjectReview=function(id,status){
+    apiPatch("/api/academic/subjects/"+id+"/review",{status:status}).then(function(){
+      invalidate("academic:");render()}).catch(function(e){alert(errorText(e))});
+  };
 
   // ---- Global academic catalog (platform admin only) ----
   // This screen is the ABSTRACT, PRICE-FREE definition layer: stage names, the
@@ -1222,13 +1288,38 @@
     return {science:t("علمي","Science"),literary:t("أدبي","Literary"),general:t("عام","General")}[track]||track;
   }
   window.acCatalogFormOpen=function(kind){
-    ac.academicForm={kind:kind,_error:null,_busy:false};
+    ac.academicForm={kind:kind,_error:null,_busy:false,gradeNames:[]};
     var target="academic/"+(kind==="grade"?"grades":"stages")+"/new";
     if(("#/"+target)===location.hash)render();else go(target)};
   window.acCatalogFormClose=function(){ac.academicForm=null;
     var target="academic";if(("#/"+target)===location.hash)render();else go(target)};
+  // The grade ladder is typed here and posted with the stage in one call: the
+  // service already accepts `grades`, so a stage arrives with its grade names
+  // instead of the admin having to add each grade afterwards.
+  function acCatalogDraft(){
+    var f=ac.academicForm;if(!f)return;
+    f.gradeNames=(f.gradeNames||[]).map(function(_,i){
+      var el=document.getElementById("ac-cat-grade-"+i);return el?String(el.value||"").trim():""});
+  }
+  // The grade ladder uses the same repeatable-row pattern as the teacher form:
+  // a button appends one named row and a delete button removes it. That keeps the
+  // control identical across the platform and avoids a count field that has to be
+  // committed before the rows it describes can appear.
+  var AC_GRADE_MAX=20;
+  window.acCatalogGradeAdd=function(){
+    var f=ac.academicForm;if(!f)return;
+    acCatalogDraft();
+    if((f.gradeNames||[]).length>=AC_GRADE_MAX)return;
+    f.gradeNames.push("");render();
+  };
+  window.acCatalogGradeRemove=function(index){
+    var f=ac.academicForm;if(!f)return;
+    acCatalogDraft();
+    f.gradeNames.splice(index,1);render();
+  };
   window.acCatalogSave=function(){
     var f=ac.academicForm;if(!f||f._busy)return;
+    acCatalogDraft();
     var name=wVal("ac-cat-name"),code=wVal("ac-cat-code");
     if(!name){f._error=t("الاسم مطلوب.","Name is required.");render();return}
     if(!code){f._error=t("الرمز مطلوب.","Code is required.");render();return}
@@ -1239,6 +1330,10 @@
       var nameEn=wVal("ac-cat-name-en"),desc=wVal("ac-cat-desc");
       if(nameEn)payload.nameEn=nameEn;
       if(desc)payload.description=desc;
+      // A named row is what becomes a real grade; a blank row is ignored rather
+      // than rejected, so a half-typed ladder never blocks the stage.
+      var ladder=(f.gradeNames||[]).filter(function(n){return n!==""});
+      if(ladder.length)payload.grades=ladder;
     }
     var url="/api/academic/stages";
     if(f.kind==="grade"){
@@ -1267,9 +1362,21 @@
     var isGrade=f.kind==="grade";
     var stages=ac.cache["academic:stages"]||[];
     var stageOpts=stages.map(function(s){return wOpt(s.id,s.name)}).join("");
+    var names=f.gradeNames||[];
+    var gradeRows='<div class="ac-field-wide uf-wide"><div class="core-h3-row"><h3 class="core-h3">'+
+      t("أسماء الصفوف التابعة للمرحلة","Grade names in this stage")+'</h3>'+
+      '<button type="button" class="btn" onclick="acCatalogGradeAdd()">'+icon("plus",14)+' '+
+      t("إضافة صف","Add grade")+'</button></div>'+
+      (names.length?names.map(function(n,i){
+        return '<div class="ac-repeat-row">'+
+          '<div class="form-group"><label>'+esc(t("الصف","Grade")+" "+(i+1))+'</label>'+
+          '<input id="ac-cat-grade-'+i+'" value="'+esc(n)+'" placeholder="'+esc(t("مثال: الأول الثانوي","e.g. First Secondary"))+'"></div>'+
+          '<button type="button" class="crud delete" title="'+t("حذف الصف","Remove grade")+'" onclick="acCatalogGradeRemove('+i+')">'+icon("trash",14)+'</button>'+
+          '</div>';
+      }).join(""):'<div class="empty-state">'+esc(t("لم تُضف صفوف بعد. أضف صفاً واحداً لكل اسم صف تريد إنشاءه مع المرحلة.","No grades yet. Add one row for each grade you want created with the stage."))+'</div>')+
+      '</div>';
     return formPage({back:"academic",error:f._error,busy:f._busy,
       onSave:"acCatalogSave()",onCancel:"acCatalogFormClose()",
-      saveLabel:t("حفظ البيانات","Save data"),
       title:isGrade?t("إضافة صف","Add grade"):t("إضافة مرحلة","Add stage"),
       subtitle:t("كتالوج عام للمنصة — بدون أسعار ولا سعة.","Global platform catalog — no prices and no capacity."),
       body:wInput(isGrade?t("اسم الصف","Grade name"):t("اسم المرحلة","Stage name"),"ac-cat-name","",
@@ -1282,12 +1389,16 @@
         wInput(t("الاسم بالإنجليزية","English name"),"ac-cat-name-en","",t("مثال: Secondary stage","e.g. Secondary stage"))+
         wArea(t("الوصف","Description"),"ac-cat-desc",""))+
       (isGrade?wSel(t("المرحلة","Stage"),"ac-cat-stage",wOpt("",t("— اختر المرحلة —","— Select a stage —"))+stageOpts):"")+
-      (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")});
+      (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")+
+      (isGrade?"":
+        gradeRows)});
   }
   // The catalog add form owns a route of its own: #/academic/stages/new and
   // #/academic/grades/new. A refresh rebuilds the form state from the URL.
   function academicCatalogFormPage(kind){
-    if(!ac.academicForm||ac.academicForm.kind!==kind)ac.academicForm={kind:kind,_error:null,_busy:false};
+    if(!ac.academicForm||ac.academicForm.kind!==kind){
+      ac.academicForm={kind:kind,_error:null,_busy:false,gradeNames:[]}}
+    else if(!ac.academicForm.gradeNames)ac.academicForm.gradeNames=[];
     if(kind==="grade")load("academic:stages","/api/academic/stages",listOf);
     return acCatalogForm();
   }
@@ -1302,7 +1413,12 @@
       grades:["grades",t("الصفوف","Grades"),t("سلم الصفوف مع المسار: علمي / أدبي / عام.","The grade ladder with its track: science / literary / general.")],
       subjects:["subjects",t("المواد العامة","Subjects"),t("أسماء المواد العامة المشتركة.","Shared general subject names.")],
       languages:["languages",t("لغات التدريس","Teaching languages"),t("اللغات المتاحة للتدريس على مستوى المنصة.","Teaching languages available platform-wide.")],
-      curricula:["curricula",t("تصنيفات المناهج","Curriculum classifications"),t("وزاري / أهلي / دولي — تصنيف يُربط بالمادة والمرحلة.","National / private / international — attached to subject and stage.")]
+      curricula:["curricula",t("تصنيفات المناهج","Curriculum classifications"),t("وزاري / أهلي / دولي — تصنيف يُربط بالمادة والمرحلة.","National / private / international — attached to subject and stage.")],
+      // The institution proposals are not a catalog tab: they are the supervision
+      // queue for the "+" an institution used, so the admin reviews them here.
+      proposals:["org-subjects",t("مقترحات المؤسسات","Institution proposals"),
+        t("مواد أضافتها مؤسسة لنفسها. لا تُعتمد إلا من المدير العام، وقبل ذلك تبقى داخل عرض المؤسسة فقط.",
+          "Subjects an institution added for itself. Only the platform admin approves them; until then they stay inside that institution's offering.")]
     };
     if(!defs[ac.academicTab])ac.academicTab="stages";
     var def=defs[ac.academicTab],key="academic:"+ac.academicTab;
@@ -1323,6 +1439,15 @@
     var rows=ac.cache[key];
     if(!rows)body+=state(key);
     else if(!rows.length)body+='<div class="empty-state">'+t("لا توجد بيانات.","No records.")+'</div>';
+    else if(ac.academicTab==="proposals")body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+
+      t("المادة","Subject")+'</th><th>'+t("المؤسسة","Institution")+'</th><th>'+t("الحالة","Status")+
+      '</th><th></th></tr></thead><tbody>'+rows.map(function(r){
+        return '<tr><td><b>'+esc(r.name)+'</b>'+(r.slug?'<div class="entity-sub" dir="ltr">'+esc(r.slug)+'</div>':"")+
+          '</td><td>'+esc(r.organizationName||"—")+'</td><td>'+badge(r.reviewStatus||"pending")+'</td>'+
+          '<td class="crud-actions">'+
+          '<button class="crud verify" title="'+t("اعتماد","Approve")+'" onclick="acSubjectReview('+r.id+',\'approved\')">'+icon("check",14)+'</button>'+
+          '<button class="crud delete" title="'+t("رفض","Reject")+'" onclick="acSubjectReview('+r.id+',\'rejected\')">'+icon("x",14)+'</button>'+
+          '</td></tr>'}).join("")+'</tbody></table></div>';
     else if(ac.academicTab==="grades")body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+
       t("الصف","Grade")+'</th><th>'+t("الرمز","Code")+'</th><th>'+t("المرحلة","Stage")+
       '</th><th>'+t("المسار","Track")+'</th></tr></thead><tbody>'+rows.map(function(r){

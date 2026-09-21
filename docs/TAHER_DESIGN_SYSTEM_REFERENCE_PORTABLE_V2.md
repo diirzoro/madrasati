@@ -215,6 +215,41 @@ Use premium data-grid styling with:
 
 Large lists should not render thousands of rows at once.
 
+### Table density (implemented behaviour)
+
+The base grid was 42px rows with 11px padding and a 900px minimum width, which
+forced a horizontal scrollbar on a 14" laptop and read as oversized next to the
+rest of the shell. `.tbl` is now on a 30–32px rhythm with the table free to
+shrink into its container, and the density scales back up only where there is
+genuine room:
+
+- ≤ 900px: 10.5px cell type, 28px entity logo
+- ≤ 1200px: `min-width` removed so the grid fits without a sideways scroll
+- ≥ 1700px and ≥ 2100px: padding and type grow again, so a 20"–30" display
+  shows more information rather than a wider single column
+
+Long values wrap inside their own column instead of pushing the table wide.
+
+### Whole-row and whole-card click
+
+A row and a card are the target, not the action icon:
+
+- the institutions table row carries `row-click` and opens the detail screen;
+- the institution card itself carries `tabindex="0"`, `role="link"` and an
+  `aria-label`, and answers both click and Enter/Space;
+- every action button inside them stops propagation, so verify, archive or
+  WhatsApp never double as a visit;
+- both expose a `:focus-visible` outline, so the affordance is not mouse-only.
+
+The eye icon remains a shortcut, never the only way in.
+
+### The entity cell
+
+The first column shows a small square logo (`row-logo`, 8px radius, ~32px)
+beside the name, followed by the governorate · district · neighborhood line, the
+phone number and the owner with a verification badge — the same identity the
+card shows, so the two views never disagree about an institution.
+
 ### Tables on small screens (implemented behaviour)
 
 A data table does not scroll sideways on a phone. Below 760px each row becomes
@@ -310,14 +345,113 @@ Validation, `required`/optional marking, preserved draft values, cascading
 selects and inline error text are unchanged: the server still decides what is
 accepted, this system only decides how the form is presented.
 
-### 8.3 What this does not touch
+### 8.3 Locations: one cascade, one form per level
+
+The geographic catalog (`#/locations`) is a cascade — country → governorate →
+district → neighborhood — and every level is a row in one tree. Each level is
+added and edited on **its own dedicated route**, built by the same `formPage()`:
+
+```text
+#/locations/countries/new        #/locations/countries/edit/:id
+#/locations/governorates/new     #/locations/governorates/edit/:id
+#/locations/districts/new        #/locations/districts/edit/:id
+#/locations/neighborhoods/new    #/locations/neighborhoods/edit/:id
+#/locations/requests/new
+```
+
+- Every level except the missing-location request is admin-only; the server
+  enforces it and the screen only decides what is worth showing.
+- A parent select is always present, so a governorate is created under a
+  country, a district under a governorate, a neighborhood under a district —
+  and the child select resets when its parent changes, so a district belonging
+  to another governorate can never be offered.
+- **A country is addable and editable**: Arabic name, English name, ISO 3166-1
+  alpha-2 code, and international calling code. The code is upper-cased and
+  validated as two Latin letters, the calling code as 1–4 digits, and both are
+  checked for clashes in the service so the form gets a readable message instead
+  of a constraint error. The default country (`is_default`) cannot be
+  deactivated, because the governorate cascade falls back to it.
+- The public country read stays open; the admin read (`/countries/manage`)
+  includes a deactivated country so it can be re-enabled.
+
+### 8.4 Long forms are tabbed, not stacked
+
+A form that carries several unrelated concerns does not become one long column.
+The teacher add/edit screen is the reference: four horizontal tabs inside the
+same `.uf-card`, one concern each.
+
+```text
+البيانات الأساسية            Basic info
+المواد والأسعار والعروض      Subjects, pricing and offers
+أوقات التوفر والجدول         Availability and schedule
+المؤهلات والخبرات            Qualifications and experience
+```
+
+- The strip (`.uf-tabs`) spans both grid tracks and sits above the fields.
+- Switching a tab runs the form's own draft sync first, so a value typed on one
+  tab is never lost when another tab renders — the same draft map the dynamic
+  rows already used.
+- A repeatable list (priced subjects, weekly slots, qualifications, grade names)
+  is always **a button that appends one row plus a delete button per row**, never
+  a count field that has to be committed before the rows it describes can
+  appear. That is the pattern used for teacher subjects, availability,
+  qualifications, and the stage grade ladder.
+
+### 8.5 The stage grade ladder
+
+Adding a stage carries its grades with it, so the platform admin does not have to
+create each grade afterwards:
+
+- name (Arabic), English name, code, description;
+- a repeatable row per grade name — "إضافة صف" appends, the trash button removes;
+- a blank row is dropped rather than rejected, so a half-typed ladder never
+  blocks the stage, and the graded rows are posted as the `grades` array the
+  service already accepts, which derives each grade code from the stage code
+  (`SEC` → `SEC1`, `SEC2`, …).
+- The code field's example is a **stage-shaped** code (`مثال: SEC أو ثانوية`),
+  because that code is what an institution offering points at — never a subject
+  code such as `MATH`.
+
+### 8.6 What this does not touch
 
 The exception is the authentication screens. Login and sign-up keep their
 current split layout and side imagery (`auth-pages.css` / `auth-pages.js`);
-they are only required to stay responsive. No form in this system adds, removes
-or renames a database column — the change is UI, CSS and routing only.
+they are only required to stay responsive.
 
-### 8.4 General form capabilities
+The form system itself is UI, CSS and routing: it does not add, remove or rename
+a column, and it changes no endpoint's payload. Two **additive, re-runnable**
+migrations were needed by the features in this phase and are the only schema
+movement:
+
+| Migration | Why |
+|---|---|
+| `036_locations_country_admin.sql` | `locations_countries.name_en`, so a country has a bilingual name; plus an index on `code` |
+| `037_teacher_subject_promo.sql` | `teacher_pricing.discount_percent` + `promo_label`, so a promotion rides on the same priced row as the list price instead of contradicting it |
+
+Both are nullable-only additions, so every pre-existing row keeps its exact
+meaning. Never edit an applied migration — add a new numbered one.
+
+### 8.7 Tenant isolation of the priced offering
+
+The platform catalog (`#/academic`) is an abstract, price-free definition. The
+money lives in the institution's own offering, and that offering is per tenant:
+
+- an institution's fees, capacity, delivery mode and teaching language are its
+  own rows, so changing one school's amounts never touches another's;
+- the platform admin may edit any institution's offering;
+- an owner may edit **only** the institution they belong to. They see every
+  other institution exactly as a visitor does, and a direct write to another
+  tenant returns `404` rather than confirming it exists;
+- capacity stays derived: `remaining_seats = capacity - current_students`, the
+  row shows the computed number, and the badge reads
+  «متوفر مقاعد (فاضي) · 12» / «مكتمل السعة (مليان)» / «السعة غير معلنة»;
+- a subject an institution defines for itself is a row in the **same** `subjects`
+  table with `organization_id` set and `review_status = 'pending'`. The
+  institution's "+" proposes it; only the platform admin approves or rejects it,
+  from the «مقترحات المؤسسات» tab of `#/academic`. A global catalog row is never
+  up for review, and the review route is admin-only on the server.
+
+### 8.8 General form capabilities
 
 Forms should support:
 - comfortable inputs

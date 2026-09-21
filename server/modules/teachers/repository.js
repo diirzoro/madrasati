@@ -30,6 +30,8 @@ const TEACHER_SELECT = `
              'currency', p.currency,
              'billingPeriod', p.billing_period,
              'languageCode', p.language_code,
+             'discountPercent', p.discount_percent,
+             'promoLabel', p.promo_label,
              'isActive', p.is_active
            ) ORDER BY s.name)
            FROM teacher_subjects ts
@@ -265,21 +267,24 @@ async function unlinkSubject(teacherId, subjectId, client) {
   await run(`DELETE FROM teacher_pricing WHERE teacher_id = $1 AND subject_id = $2`, [teacherId, subjectId]);
 }
 
-async function insertTeacherSubject({ teacherId, subjectId, amount, currency, billingPeriod, languageCode, description }, client) {
+async function insertTeacherSubject({ teacherId, subjectId, amount, currency, billingPeriod, languageCode, description, discountPercent, promoLabel }, client) {
   const run = client ? client.query.bind(client) : query;
   const { rows } = await run(
     `INSERT INTO teacher_pricing
-       (teacher_id, subject_id, pricing_type, amount, currency, billing_period, language_code, description, is_active)
-     VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, true)
+       (teacher_id, subject_id, pricing_type, amount, currency, billing_period, language_code, description, discount_percent, promo_label, is_active)
+     VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8, $9, true)
      ON CONFLICT (teacher_id, subject_id) WHERE subject_id IS NOT NULL AND is_active
      DO UPDATE SET amount = EXCLUDED.amount,
                    currency = EXCLUDED.currency,
                    billing_period = EXCLUDED.billing_period,
                    language_code = EXCLUDED.language_code,
                    description = EXCLUDED.description,
+                   discount_percent = EXCLUDED.discount_percent,
+                   promo_label = EXCLUDED.promo_label,
                    updated_at = now()
      RETURNING id`,
-    [teacherId, subjectId, amount, currency || 'YER', billingPeriod || null, languageCode || null, description || null]
+    [teacherId, subjectId, amount, currency || 'YER', billingPeriod || null, languageCode || null,
+     description || null, discountPercent == null ? null : discountPercent, promoLabel || null]
   );
   return rows[0];
 }

@@ -188,6 +188,7 @@ const i18n={
    locAddTitle:"إضافة موقع جديد", locKind:"النوع", locNameAr:"الاسم بالعربية", locNameEn:"الاسم بالإنجليزية",
    locCode:"الرمز (اختياري)", locNotes:"ملاحظات", locSubmit:"إضافة", locRequestSubmit:"إرسال طلب إضافة",
    locRequestSent:"تم إرسال طلب الموقع للمراجعة", locAdded:"تمت إضافة الموقع",
+   locIsoCode:"رمز الدولة (ISO)", locCallingCode:"مفتاح الاتصال الدولي", sortOrderLabel:"الترتيب",
    reqBy:"بواسطة", reqAt:"بتاريخ", noLocationRows:"لا توجد بيانات بعد",
    ownerDashboardNeedLogin:"سجل الدخول للوصول إلى لوحة المالك",
    reLoginAfterApproval:"تم اعتماد طلبك — سجل الخروج والدخول مجدداً لتفعيل صلاحيات المالك",
@@ -317,6 +318,7 @@ checking:"Checking...", createAccountBtn:"Create account", alreadyHaveAccount:"H
    locAddTitle:"Add new location", locKind:"Kind", locNameAr:"Arabic name", locNameEn:"English name",
    locCode:"Code (optional)", locNotes:"Notes", locSubmit:"Add", locRequestSubmit:"Submit add request",
    locRequestSent:"Location request sent for review", locAdded:"Location added",
+   locIsoCode:"Country code (ISO)", locCallingCode:"International calling code", sortOrderLabel:"Order",
    reqBy:"By", reqAt:"On", noLocationRows:"No data yet",
    ownerDashboardNeedLogin:"Sign in to access the owner dashboard",
    reLoginAfterApproval:"Your request was approved — sign out and back in to activate owner permissions",
@@ -1493,46 +1495,52 @@ if(!locData.neighborhoods[filters.districtId]){
   nSel._syncedKey=filters.neighborhood;
  }
 }
+// The approved admin sidebar, in order, and the only routes it may render.
+// "Fees" is deliberately absent: fees are a property of the priced entity
+// (stage, subject, course, service), never a standalone module with its own page.
+//
+// Institutions are ONE entry. Private schools, government schools, colleges,
+// universities and institutes are five tabs of one screen over one shared
+// organization core, so "institutesAdmin" and "collegesAdmin" are NOT sidebar
+// entries — splitting them out duplicated the same catalog and made an
+// institution's type look like three products. They survive only as route
+// aliases so an old deep link still resolves to the unified screen, and the
+// filter below makes that structural: an entry that is not on this list cannot
+// render in the menu no matter what a caller passes in.
+var ADMIN_SIDEBAR=[
+ ["admin","home","home"],
+ ["schools","school","schools"],
+ ["teachersAdmin","teacher","teachers"],
+ ["students","users","students"],
+ ["bookings","calendar","bookings"],
+ ["verify","shield","verify"],
+ ["academic","college","academic"],
+ ["locations","school","locations"],
+ ["offers","chart","offers"],
+ ["ads","chart","ads"],
+ ["reports","chart","reports"],
+ ["access","shield","usersAccess"],
+ ["settings","settings","settings"]
+];
+var ADMIN_SIDEBAR_ROUTES=ADMIN_SIDEBAR.map(function(x){return x[0]});
 function sideMenu(){
  var user=getCurrentUser();
  var role=user?user.role:null;
- var allItems=[
-  // The approved admin sidebar, in order. "Fees" is deliberately absent: fees
-  // are a property of the priced entity (stage, subject, course, service), never
-  // a standalone module with its own page.
-  //
-  // Institutions are ONE entry. Private schools, government schools, colleges,
-  // universities and institutes are five tabs of one screen over one shared
-  // organization core, so splitting them into three sidebar links duplicated the
-  // same catalog three times and made an institution's type look like three
-  // different products. The per-group accessors still exist as route aliases so
-  // an old link resolves to the unified screen.
-  ["admin","home","home"],
-  ["schools","school","schools"],
-  ["teachersAdmin","teacher","teachers"],
-  ["students","users","students"],
-  ["bookings","calendar","bookings"],
-  ["verify","shield","verify"],
-  ["academic","college","academic"],
-  ["locations","school","locations"],
-  ["offers","chart","offers"],
-  ["ads","chart","ads"],
-  ["reports","chart","reports"],
-  ["access","shield","usersAccess"],
-  ["settings","settings","settings"]
- ];
-  var items;
-  if(role==="admin"){
-   items=allItems;
-  }else if(role==="owner"){
-   items=[["owner","home","myDashboard"]].concat(allItems.filter(function(x){return ["access","verify","offers","ads","slides"].indexOf(x[0])<0}));
-  }else if(role==="teacher"){
-   items=[["admin","home","home"],["students","users","students"],["bookings","calendar","bookings"]];
-  }else if(role==="client"){
-   items=[["admin","home","home"],["owner","home","myDashboard"]];
-  }else{
-   items=[["admin","home","home"]];
-  }
+ var items;
+ if(role==="admin"){
+  items=ADMIN_SIDEBAR;
+ }else if(role==="owner"){
+  items=[["owner","home","myDashboard"]].concat(ADMIN_SIDEBAR.filter(function(x){return ["access","verify","offers","ads","slides"].indexOf(x[0])<0}));
+ }else if(role==="teacher"){
+  items=[["admin","home","home"],["students","users","students"],["bookings","calendar","bookings"]];
+ }else if(role==="client"){
+  items=[["admin","home","home"],["owner","home","myDashboard"]];
+ }else{
+  items=[["admin","home","home"]];
+ }
+ // Belt and braces: every role's list is filtered against the frozen routes, so
+ // an institutions alias can never reintroduce a duplicate menu entry.
+ items=items.filter(function(x){return x[0]==="owner"||ADMIN_SIDEBAR_ROUTES.indexOf(x[0])>-1});
  return items.map(function(x){return '<button class="'+(route()===x[0]?"active":"")+'" onclick="go(\''+x[0]+'\');closeSidebar()"><span class="side-ico">'+icon(x[1],18)+'</span>'+tr(x[2])+'</button>'}).join("")
 }
 function adminShell(body){
@@ -1731,7 +1739,11 @@ function detailBlock(isPublic){
   '<div class="core-hero-actions">'+waButton(o.whatsapp||o.phone,{size:16})+
   (o.phone?'<a class="core-action" href="'+esc(telLink(o.phone))+'">'+icon("phone",15)+'<span class="ltr-num" dir="ltr">'+esc(o.phone)+'</span></a>':'')+
   (mapHref?'<a class="core-action" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("pin",15)+'<span>'+esc(tr("openMap"))+'</span></a>':'')+
-  (isPublic?"":'<button class="core-action" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+'<span>'+esc(tr("editLabel"))+'</span></button>')+
+  // Editing the institution record itself is a platform-admin action. An owner
+  // gets the offering action instead: their granted capability is the priced
+  // layer of their own institution, not the shared organization record.
+  (isPublic||!isAdmin())?'':'<button class="core-action" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+'<span>'+esc(tr("editLabel"))+'</span></button>'+
+  (isPublic?'':'<button class="core-action" onclick="orgStageFormOpen(null)">'+icon("plus",15)+'<span>'+esc(tr("addStageLabel"))+'</span></button>')+
   '<button class="core-action" onclick="printInstitution()">'+icon("printer",15)+'<span>'+esc(tr("printReport"))+'</span></button>'+
   '<span class="export-group">'+icon("download",15)+
    '<button class="core-action" onclick="exportInstitution(\'xlsx\')" title="'+esc(tr("exportXlsx"))+'">'+esc(tr("exportXlsx"))+'</button>'+
@@ -1848,11 +1860,12 @@ function detailBlock(isPublic){
    var cap=s.capacity==null?"—":esc(String(s.capacity));
    // Capacity is derived, never typed: remaining_seats is generated as
    // capacity - current_students, and a negative number is a real
-   // over-enrolment, not a value to clamp. The badge just names the state an
-   // administrator is looking for, "seats free" or "full".
+   // over-enrolment, not a value to clamp. The badge names the state and carries
+   // the computed count, so "متوفر مقاعد (فاضي) · 12" answers "how many seats are
+   // left" without the reader having to subtract two columns.
    var state;
    if(s.capacity==null)state='<span class="badge wait">'+esc(tr("seatsUndeclared"))+'</span>';
-   else if(s.remainingSeats>0)state='<span class="badge ok">'+esc(tr("seatsAvailableBadge"))+'</span>';
+   else if(s.remainingSeats>0)state='<span class="badge ok">'+esc(tr("seatsAvailableBadge"))+' · '+esc(String(s.remainingSeats))+'</span>';
    else state='<span class="badge stop">'+esc(tr("seatsFullBadge"))+'</span>';
    var rem=s.remainingSeats==null?"—":'<b'+(s.remainingSeats<0?' class="over-capacity"':"")+'>'+esc(String(s.remainingSeats))+'</b>';
    return '<tr><td><b>'+esc(s.stageName||s.stageCode||"—")+'</b><div class="entity-sub" dir="ltr">'+
@@ -1895,16 +1908,34 @@ function detailBlock(isPublic){
  return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+offeringSection+shared;
 }
 
+// A priced offering belongs to exactly one institution. The platform admin may
+// edit any institution's; an owner may edit only the institution they belong to,
+// and sees every other institution exactly as a visitor does. The server enforces
+// the same rule through requireOrgMember + requireRole('admin','owner') — this
+// only decides which controls are worth showing (AGENTS.md rule 7).
+function canEditOrg(org){
+ if(!org)return false;
+ var u=getCurrentUser();
+ if(!u)return false;
+ if(u.role==="admin")return true;
+ if(u.role!=="owner")return false;
+ return String(u.organizationId||"")===String(org.id);
+}
+
 // The same detail document serves the dashboard and the public directory. Only
 // the shell differs: visitors get the public chrome and no editing controls, and
 // the server has already withheld every priced field from their offering call.
 function detailPage(){
  var u=getCurrentUser();
  var sub=routeSub();
- // The priced offering writes live on their own routes now; only the platform
- // admin reaches them, and the server still enforces requireOrgMember.
- if(u&&u.role==="admin"&&(sub==="offering"||sub==="subject"))return offeringFormPage(sub);
- if(u&&u.role==="admin")return adminShell(detailBlock(false));
+ var editable=canEditOrg(currentOrg);
+ // The priced writes own a route each; only someone allowed to edit this
+ // institution reaches the editor, and everyone else gets the read-only document.
+ if(sub==="offering"||sub==="subject"){
+  if(!currentOrg)return adminShell('<div class="uf-page"><div class="loading-inline"><div class="loader"></div></div></div>');
+  if(editable)return offeringFormPage(sub);
+ }
+ if(editable)return adminShell(detailBlock(false));
  return publicShell(detailBlock(true));
 }
 
@@ -2195,24 +2226,59 @@ function tabBar(tabs,active){
 let sectionTab="overview";
 function setSectionTab(v){sectionTab=v;render()}
 
-/* ---------- Locations admin: live catalog + controlled adds (Phase A: A5) ---------- */
+/* ---------- Locations admin: one catalog, dedicated form pages (A5) ----------
+   The geography is a cascade — country -> governorate -> district -> neighborhood
+   — so every level is a row in one tree, and adding or editing any level happens
+   on its own dedicated route through the shared formPage() builder rather than in
+   a panel pressed into the list. That is the shape every other module uses
+   (#/schools/new, #/teachersAdmin/new, …), so a form is never "the one place the
+   system looks different".
+   Writes require the platform admin role; the server enforces that, and this
+   screen only decides which controls are worth showing. */
 var locAdmin={tab:"governorates",rows:[],counts:{},loading:false,loadedTab:null,error:null,
- govs:[],filterGov:"",nbGov:"",nbDist:"",showAdd:false,showReq:false,submitting:false,info:null};
-function locAdminSetTab(t){locAdmin.tab=t;locAdmin.showAdd=false;locAdmin.showReq=false;locAdmin.info=null;render()}
+ countries:[],govs:[],filterGov:"",nbGov:"",nbDist:"",submitting:false,info:null,
+ form:null,_error:null,_busy:false,draft:{}};
+
+// app.js has no t(ar,en) helper of its own (that one lives inside admin-core's
+// IIFE), so the locations module declares the same plain-language switch locally
+// instead of reaching across modules.
+function locT(ar,en){return lang==="ar"?ar:en}
+
+var LOC_TABS=[["countries","countries"],["governorates","governorates"],["districts","districts"],
+  ["neighborhoods","neighborhoods"],["requests","locationRequests"]];
+
+// The route segment for each level, and the level each segment means.
+var LOC_SEG_KIND={countries:"country",governorates:"governorate",districts:"district",
+  neighborhoods:"neighborhood",requests:"request"};
+var LOC_KIND_SEG={country:"countries",governorate:"governorates",district:"districts",
+  neighborhood:"neighborhoods",request:"requests"};
+
+function locAdminSetTab(tab){
+ locAdmin.tab=tab;locAdmin.info=null;locAdmin.loadedTab=null;
+ var target="locations";if(("#/"+target)===location.hash)render();else go(target);
+}
+
 function locAdminLoad(){
  if(locAdmin.loading||locAdmin.loadedTab===locAdmin.tab)return;
  locAdmin.loading=true;locAdmin.error=null;
- var url=locAdmin.tab==="countries"?'/api/locations/countries'
+ // The admin sees every country including a deactivated one, so the manage read
+ // is what this screen lists; the public read stays the filtered one.
+ var url=locAdmin.tab==="countries"?(isAdmin()?'/api/locations/countries/manage':'/api/locations/countries')
   :locAdmin.tab==="governorates"?'/api/locations/governorates'
   :locAdmin.tab==="districts"?'/api/locations/districts'+(locAdmin.filterGov?'?governorateId='+encodeURIComponent(locAdmin.filterGov):'')
   :locAdmin.tab==="neighborhoods"?'/api/locations/neighborhoods'+(locAdmin.nbDist?'?districtId='+encodeURIComponent(locAdmin.nbDist):'')
   :'/api/locations/requests';
  var p=apiGet(url);
+ // Countries are the root of the cascade on every level, not only on their own
+ // tab, so they are fetched once and cached here.
+ if(!locAdmin.countries.length){
+  apiGet('/api/locations/countries').then(function(c){locAdmin.countries=c||[];render()}).catch(function(){});
+ }
  if(locAdmin.tab==="governorates"&&!locAdmin.govs.length){
   p=p.then(function(rows){locAdmin.govs=rows||[];return rows});
  }
- // Neighborhoods without a district filter would dump the whole table:
- // require a district selection first.
+ // Neighborhoods without a district filter would dump the whole table: require a
+ // district selection first.
  if(locAdmin.tab==="neighborhoods"&&!locAdmin.nbDist){
   locAdmin.loading=false;locAdmin.loadedTab=null;locAdmin.rows=[];
   if(!locAdmin.govs.length){
@@ -2229,90 +2295,289 @@ function locAdminLoad(){
  });
 }
 function locAdminFilterGov(){
- var v=document.getElementById("la-fgov").value;
+ var v=(document.getElementById("la-fgov")||{}).value||"";
  locAdmin.filterGov=v;locAdmin.loadedTab=null;locAdminLoad();
 }
 function locAdminNbGov(){
- var v=document.getElementById("la-ngov").value;
+ var v=(document.getElementById("la-ngov")||{}).value||"";
  locAdmin.nbGov=v===""?null:Number(v);locAdmin.nbDist="";locAdmin.loadedTab=null;
  if(locAdmin.nbGov)regLoadDists(locAdmin.nbGov);
  render();
 }
 function locAdminNbDist(){
- var v=document.getElementById("la-ndist").value;
+ var v=(document.getElementById("la-ndist")||{}).value||"";
  locAdmin.nbDist=v;locAdmin.loadedTab=null;locAdminLoad();
 }
-function locAdminToggleAdd(){locAdmin.showAdd=!locAdmin.showAdd;locAdmin.info=null;render()}
-function locAdminToggleReq(){locAdmin.showReq=!locAdmin.showReq;locAdmin.info=null;render()}
-function locAdminAdd(e){
- e.preventDefault();
- if(locAdmin.submitting)return;
- var v=function(id){var el=document.getElementById(id);return el?el.value.trim():""};
- var kind=locAdmin.tab;
- var payload={name:v("la-name"),nameEn:v("la-nameen")||null,code:v("la-code")||null};
- var url="";
- if(kind==="governorates"){url='/api/locations/governorates'}
- else if(kind==="districts"){
-  var g=(locAdmin.govs||[]).filter(function(x){return String(x.id)===String(v("la-parent"))})[0];
-  if(!g){locAdmin.info=null;alert(tr("governorate"));return}
-  payload.governorateId=g.id;url='/api/locations/districts';
- }else{
-  var d=(regDists[locAdmin.nbGov]||[]).filter(function(x){return String(x.id)===String(v("la-parent"))})[0];
-  if(!d){alert(tr("district"));return}
-  payload.districtId=d.id;url='/api/locations/neighborhoods';
- }
- if(payload.name.length<2)return;
- locAdmin.submitting=true;
- apiPost(url,payload).then(function(){
-  locAdmin.submitting=false;locAdmin.showAdd=false;locAdmin.loadedTab=null;locAdmin.info=tr("locAdded");locAdminLoad();
- }).catch(function(err){locAdmin.submitting=false;locAdmin.info=msgErr(err);render()});
+function locTypeLabel(kind){
+ var map={country:"countries",governorate:"governorates",district:"districts",
+   neighborhood:"neighborhoods",request:"locRequestSubmit"};
+ return tr(map[kind]||kind);
 }
-function locAdminSubmitReq(e){
- e.preventDefault();
- if(locAdmin.submitting)return;
- var v=function(id){var el=document.getElementById(id);return el?el.value.trim():""};
- var kind=(document.getElementById("la-rkind")||{}).value||"neighborhood";
- var payload={kind:kind,nameAr:v("la-rname"),nameEn:v("la-rnameen")||null,code:v("la-rcode")||null,notes:v("la-rnotes")||null};
- if(kind==="governorate"){payload.countryCode="YE"}
- else{
-  var g=(locAdmin.govs||[]).filter(function(x){return String(x.id)===String((document.getElementById("la-rgov")||{}).value)})[0];
-  if(!g){alert(tr("governorate"));return}
-  payload.governorateId=g.id;
-  if(kind==="neighborhood"){
-   var dl=regDists[g.id]||[];
-   var d=dl.filter(function(x){return String(x.id)===String((document.getElementById("la-rdist")||{}).value)})[0];
-   if(!d){alert(tr("district"));return}
-   payload.districtId=d.id;
-  }
- }
- if(payload.nameAr.length<2)return;
- locAdmin.submitting=true;
- apiPost('/api/locations/requests',payload).then(function(){
-  locAdmin.submitting=false;locAdmin.showReq=false;locAdmin.loadedTab=null;locAdmin.info=tr("locRequestSent");locAdminLoad();
- }).catch(function(err){locAdmin.submitting=false;locAdmin.info=msgErr(err);render()});
+
+/* ---------- the dedicated form routes ----------
+   #/locations/countries/new      #/locations/countries/edit/:id
+   #/locations/governorates/new   #/locations/governorates/edit/:id
+   #/locations/districts/new      #/locations/districts/edit/:id
+   #/locations/neighborhoods/new  #/locations/neighborhoods/edit/:id
+   #/locations/requests/new
+   The level is routePath()[1], the mode routePath()[2] and the id routePath()[3]. */
+function locFormTarget(kind,row){
+ return "locations/"+LOC_KIND_SEG[kind]+"/"+(row?"edit/"+encodeURIComponent(row.id):"new");
 }
-function locAdminReqGov(){
- var sel=document.getElementById("la-rgov");if(!sel)return;
- locAdmin.reqGov=Number(sel.value)||null;
- if(locAdmin.reqGov)regLoadDists(locAdmin.reqGov);
+
+function locEnsureLookups(kind,row){
+ if(!locAdmin.countries.length){
+  apiGet('/api/locations/countries').then(function(c){locAdmin.countries=c||[];render()}).catch(function(){});
+ }
+ if((kind==="district"||kind==="neighborhood")&&!locAdmin.govs.length){
+  apiGet('/api/locations/governorates').then(function(g){locAdmin.govs=g||[];render()}).catch(function(){});
+ }
+ if(kind==="neighborhood"&&row&&row.governorateId)regLoadDists(row.governorateId);
+}
+
+function locFormOpen(kind,row){
+ locAdmin.form={kind:kind,row:row||null,mode:row?"edit":"add"};
+ locAdmin._error=null;locAdmin.draft={};
+ locEnsureLookups(kind,row);
+ var target=locFormTarget(kind,row);
+ if(("#/"+target)===location.hash)render();else go(target);
+}
+function locFormClose(){
+ locAdmin.form=null;locAdmin._error=null;
+ var target="locations";if(("#/"+target)===location.hash)render();else go(target);
+}
+// The draft survives the re-renders a cascading select triggers, so typed values
+// are read back off the DOM before each render and replayed after.
+function locDraft(){
+ var f=locAdmin.form;if(!f)return;
+ locDraftIds(f.kind).forEach(function(id){
+  var el=document.getElementById(id);if(el)locAdmin.draft[id]=el.value;});
+}
+function locDraftIds(kind){
+ if(kind==="country")return ["lc-name","lc-nameen","lc-code","lc-calling","lc-sort"];
+ if(kind==="governorate")return ["lc-country","lc-name","lc-nameen","lc-code"];
+ if(kind==="district")return ["lc-gov","lc-name","lc-nameen","lc-code"];
+ if(kind==="neighborhood")return ["lc-gov","lc-dist","lc-name","lc-nameen","lc-code"];
+ return ["lc-rkind","lc-rgov","lc-rdist","lc-rname","lc-rnameen","lc-rcode","lc-rnotes"];
+}
+function locVal(id,fallback){
+ var d=locAdmin.draft[id];
+ if(d!==undefined&&d!==null&&d!=="")return d;
+ var el=document.getElementById(id);
+ if(el)return el.value;
+ return fallback==null?"":fallback;
+}
+// Choosing a governorate resets the district beneath it: the cascade must never
+// offer a district that belongs to a different governorate.
+window.locGovChange=function(){
+ locDraft();
+ locAdmin.draft["lc-gov"]=(document.getElementById("lc-gov")||{}).value||"";
+ locAdmin.draft["lc-dist"]="";
+ if(locAdmin.draft["lc-gov"])regLoadDists(Number(locAdmin.draft["lc-gov"]));
  render();
+};
+
+/* ---------- field builders (the same .uf-grid shape as every other form) ---- */
+function locNameFields(nameAr,nameEn){
+ return '<div class="form-group"><label>'+tr("locNameAr")+'</label>'+
+  '<input id="lc-name" value="'+esc(nameAr)+'" placeholder="'+esc(locT("مثال: صنعاء","e.g. Sana'a"))+'"></div>'+
+  '<div class="form-group"><label>'+tr("locNameEn")+'</label>'+
+  '<input id="lc-nameen" dir="ltr" value="'+esc(nameEn)+'"></div>';
 }
+function locCodeField(value){
+ return '<div class="form-group"><label>'+tr("locCode")+'</label>'+
+  '<input id="lc-code" dir="ltr" value="'+esc(value)+'"></div>';}
+
+function locFormBody(f){
+ var kind=f.kind,row=f.row||{};
+ function v(id,fallback){return locVal(id,fallback)}
+ if(kind==="country"){
+  return locNameFields(v("lc-name",row.name||""),v("lc-nameen",row.nameEn||""))+
+   '<div class="form-group"><label>'+tr("locIsoCode")+'</label>'+
+   '<input id="lc-code" dir="ltr" maxlength="2" value="'+esc(v("lc-code",row.code||""))+'" placeholder="YE"></div>'+
+   '<div class="form-group"><label>'+tr("locCallingCode")+'</label>'+
+   '<input id="lc-calling" dir="ltr" inputmode="numeric" value="'+esc(v("lc-calling",row.callingCode||""))+'" placeholder="967">'+
+   '<small class="ac-hint">'+locT("مفتاح الاتصال الدولي بأرقام فقط.","The international calling code, digits only.")+'</small></div>'+
+   '<div class="form-group"><label>'+tr("sortOrderLabel")+'</label>'+
+   '<input id="lc-sort" type="number" dir="ltr" value="'+esc(v("lc-sort",row.sortOrder==null?0:row.sortOrder))+'"></div>'+
+   (row.isDefault?'<p class="uf-wide ac-hint">'+locT("هذا البلد الافتراضي ولا يمكن تعطيله، لأن بقية المواقع تتفرع منه.","This is the default country and cannot be deactivated, because the rest of the hierarchy hangs from it.")+'</p>':"");
+ }
+ if(kind==="governorate"){
+  var cur=v("lc-country",row.countryId==null?"":String(row.countryId));
+  var cOpts=opt("",locT("— بدون بلد —","— No country —"),cur==="");
+  locAdmin.countries.forEach(function(c){cOpts+=opt(String(c.id),c.name,String(c.id)===String(cur))});
+  return '<div class="form-group"><label>'+tr("countries")+'</label>'+
+   '<select id="lc-country">'+cOpts+'</select></div>'+
+   locNameFields(v("lc-name",row.name||""),v("lc-nameen",row.nameEn||""))+
+   locCodeField(v("lc-code",row.code||""));
+ }
+ if(kind==="district"){
+  var curG=v("lc-gov",row.governorateId==null?"":String(row.governorateId));
+  var gOpts=opt("",locT("— اختر المحافظة —","— Select a governorate —"),curG==="");
+  locAdmin.govs.forEach(function(g){gOpts+=opt(String(g.id),g.name,String(g.id)===String(curG))});
+  return '<div class="form-group"><label>'+tr("governorates")+'</label>'+
+   '<select id="lc-gov" onchange="locGovChange()">'+gOpts+'</select></div>'+
+   locNameFields(v("lc-name",row.name||""),v("lc-nameen",row.nameEn||""))+
+   locCodeField(v("lc-code",row.code||""));
+ }
+ if(kind==="neighborhood"){
+  var curGv=v("lc-gov",row.governorateId==null?"":String(row.governorateId));
+  var gOpts2=opt("",locT("— اختر المحافظة —","— Select a governorate —"),curGv==="");
+  locAdmin.govs.forEach(function(g){gOpts2+=opt(String(g.id),g.name,String(g.id)===String(curGv))});
+  var dl=curGv?(regDists[curGv]||[]):[];
+  var curD=v("lc-dist",row.districtId==null?"":String(row.districtId));
+  var dOpts='<option value="">'+esc(locT("— اختر المديرية —","— Select a district —"))+'</option>'+
+   dl.map(function(d){return opt(String(d.id),d.name,String(d.id)===String(curD))}).join("");
+  return '<div class="form-group"><label>'+tr("governorates")+'</label>'+
+   '<select id="lc-gov" onchange="locGovChange()">'+gOpts2+'</select></div>'+
+   '<div class="form-group"><label>'+tr("districts")+'</label>'+
+   '<select id="lc-dist"'+(curGv?"":" disabled")+'>'+dOpts+'</select></div>'+
+   (curGv?"":'<p class="uf-wide ac-hint">'+locT("اختر المحافظة أولاً لعرض مديرياتها.","Choose a governorate first to list its districts.")+'</p>')+
+   locNameFields(v("lc-name",row.name||""),v("lc-nameen",row.nameEn||""))+
+   locCodeField(v("lc-code",row.code||""));
+ }
+ // The missing-location request: any authenticated user may file one, only an
+ // admin reviews it, so this is the one level the screen does not gate.
+ var rk=v("lc-rkind",row.kind||"neighborhood");
+ var rGov=v("lc-rgov",locAdmin.govs[0]?String(locAdmin.govs[0].id):"");
+ if(rGov&&!regDists[rGov])regLoadDists(Number(rGov));
+ var rdl=rGov?(regDists[rGov]||[]):[];
+ var rGovOpts=locAdmin.govs.map(function(g){return opt(String(g.id),g.name,String(g.id)===String(rGov))}).join("");
+ var rDistOpts='<option value="">—</option>'+
+  rdl.map(function(d){return opt(String(d.id),d.name,String(d.id)===String(locVal("lc-rdist","")))}).join("");
+ return '<div class="form-group"><label>'+tr("locKind")+'</label>'+
+  '<select id="lc-rkind" onchange="render()">'+
+   opt("neighborhood",tr("neighborhoods"),rk==="neighborhood")+opt("district",tr("districts"),rk==="district")+
+   opt("governorate",tr("governorates"),rk==="governorate")+'</select></div>'+
+  (rk==="governorate"?"":
+   '<div class="form-group"><label>'+tr("governorates")+'</label>'+
+   '<select id="lc-rgov" onchange="render()">'+rGovOpts+'</select></div>')+
+  (rk==="neighborhood"?
+   '<div class="form-group"><label>'+tr("districts")+'</label>'+
+   '<select id="lc-rdist">'+rDistOpts+'</select></div>':"")+
+  '<div class="form-group"><label>'+tr("locNameAr")+'</label>'+
+  '<input id="lc-rname" value="'+esc(v("lc-rname",""))+'"></div>'+
+  '<div class="form-group"><label>'+tr("locNameEn")+'</label>'+
+  '<input id="lc-rnameen" dir="ltr" value="'+esc(v("lc-rnameen",""))+'"></div>'+
+  '<div class="form-group"><label>'+tr("locCode")+'</label>'+
+  '<input id="lc-rcode" dir="ltr" value="'+esc(v("lc-rcode",""))+'"></div>'+
+  '<div class="form-group"><label>'+tr("locNotes")+'</label>'+
+  '<input id="lc-rnotes" value="'+esc(v("lc-rnotes",""))+'"></div>';
+}
+
+function locFormPage(kind){
+ // A refresh or a pasted link arrives with no draft, so the row is re-resolved
+ // from whatever list is already cached before the form is built.
+ if(!locAdmin.form||locAdmin.form.kind!==kind)locFormInit(kind);
+ var f=locAdmin.form;
+ return formPage({back:"locations",error:locAdmin._error,busy:locAdmin._busy,
+  onSave:"locFormSave()",onCancel:"locFormClose()",
+  title:(f.mode==="edit"?locT("تعديل","Edit")+" ":"")+locTypeLabel(kind),
+  subtitle:locT("التسلسل الجغرافي: البلد ثم المحافظة ثم المديرية ثم الحي. كل مستوى يُدار من صفحته المستقلة.",
+    "The geographic cascade: country, then governorate, then district, then neighborhood. Each level is managed from its own page."),
+  body:locFormBody(f)});
+}
+function locFormInit(kind){
+ var path=routePath();
+ var mode=path[2]||"new";
+ var id=path[3]?decodeURIComponent(path[3]):"";
+ var row=null;
+ if(mode==="edit"&&id){
+  var list=kind==="country"?locAdmin.countries
+   :kind==="governorate"?locAdmin.govs
+   :(locAdmin.rows||[]);
+  for(var i=0;i<list.length;i++){if(String(list[i].id)===String(id))row=list[i]}
+ }
+ locAdmin.form={kind:kind,row:row,mode:mode==="edit"?"edit":"add"};
+ locAdmin._error=null;locAdmin.draft={};
+ locEnsureLookups(kind,row);
+}
+
+window.locFormSave=function(){
+ var f=locAdmin.form;if(!f||locAdmin._busy)return;
+ locDraft();
+ var v=function(id){var el=document.getElementById(id);return el?String(el.value||"").trim():""};
+ var payload,url,method="post",missing=null;
+ if(f.kind==="country"){
+  payload={name:v("lc-name"),nameEn:v("lc-nameen")||null,code:v("lc-code")||null,
+   callingCode:v("lc-calling")||null,sortOrder:Number(v("lc-sort")||0)};
+  url="/api/locations/countries";
+  if(f.mode==="edit"){url+="/"+f.row.id;method="patch"}
+ } else if(f.kind==="governorate"){
+  payload={name:v("lc-name"),nameEn:v("lc-nameen")||null,code:v("lc-code")||null,
+   countryId:v("lc-country")||null};
+  url="/api/locations/governorates";
+ } else if(f.kind==="district"){
+  payload={governorateId:v("lc-gov")||null,name:v("lc-name"),nameEn:v("lc-nameen")||null,code:v("lc-code")||null};
+  if(!payload.governorateId)missing=locT("اختر المحافظة.","Select a governorate.");
+  url="/api/locations/districts";
+ } else if(f.kind==="neighborhood"){
+  payload={districtId:v("lc-dist")||null,name:v("lc-name"),nameEn:v("lc-nameen")||null,code:v("lc-code")||null};
+  if(!payload.districtId)missing=locT("اختر المديرية.","Select a district.");
+  url="/api/locations/neighborhoods";
+ } else {
+  var rk=v("lc-rkind")||"neighborhood";
+  payload={kind:rk,nameAr:v("lc-rname"),nameEn:v("lc-rnameen")||null,
+   code:v("lc-rcode")||null,notes:v("lc-rnotes")||null};
+  if(rk==="governorate")payload.countryCode=(locAdmin.countries[0]||{}).code||"YE";
+  else{
+   payload.governorateId=v("lc-rgov")||null;
+   if(!payload.governorateId)missing=locT("اختر المحافظة.","Select a governorate.");
+   else if(rk==="neighborhood"){
+    payload.districtId=v("lc-rdist")||null;
+    if(!payload.districtId)missing=locT("اختر المديرية.","Select a district.");
+   }
+  }
+  url="/api/locations/requests";
+ }
+ var nameValue=payload.name!==undefined?payload.name:payload.nameAr;
+ if(!missing&&(!nameValue||nameValue.length<2))
+  missing=locT("الاسم بالعربية مطلوب (حرفان على الأقل).","The Arabic name is required (at least two characters).");
+ if(missing){locAdmin._error=missing;render();return}
+ locAdmin._busy=true;locAdmin._error=null;
+ var req=method==="patch"?apiPatch(url,payload):apiPost(url,payload);
+ req.then(function(){
+  locAdmin._busy=false;locAdmin.form=null;
+  locAdmin.info=tr(f.kind==="request"?"locRequestSent":"locAdded");
+  // Every cached level can hold a stale list after a write; drop them all.
+  locAdmin.loadedTab=null;locAdmin.rows=[];
+  if(f.kind==="country")locAdmin.countries=[];
+  if(f.kind==="governorate")locAdmin.govs=[];
+  var target="locations";if(("#/"+target)===location.hash)render();else go(target);
+ }).catch(function(e){locAdmin._busy=false;locAdmin._error=msgErr(e);render()});
+};
+
+/* ---------- the section page: tabs + one table, no inline forms ---------- */
 function locationsPage(){
+ // A form route renders the form; the list route renders the list. Nothing here
+ // ever puts the two on the screen at the same time.
+ var path=routePath();
+ var kind=LOC_SEG_KIND[path[1]];
+ if(kind){
+  var mode=path[2]||"";
+  if(mode==="new"||mode==="edit"){locAdmin.tab=LOC_KIND_SEG[kind];return locFormPage(kind)}
+ }
  var admin=isAdmin();
- var tabs=[["countries","countries"],["governorates","governorates"],["districts","districts"],["neighborhoods","neighborhoods"],["requests","locationRequests"]];
- if(!tabs.some(function(x){return x[0]===locAdmin.tab}))locAdmin.tab="governorates";
+ if(!LOC_TABS.some(function(x){return x[0]===locAdmin.tab}))locAdmin.tab="governorates";
  if(!locAdmin.govs.length&&locAdmin.tab!=="countries"){
   apiGet('/api/locations/governorates').then(function(g){locAdmin.govs=g||[];if(locAdmin.tab==="governorates")render()}).catch(function(){});
  }
  locAdminLoad();
- var titleKey={countries:"countries",governorates:"governorates",districts:"districts",neighborhoods:"neighborhoods",requests:"locationRequests"};
- var body='<div class="welcome"><div><h1>'+esc(tr("locations"))+'</h1><p>'+esc(tr("genericNote"))+'</p></div></div>'+
- '<div class="section-tabs">'+tabs.map(function(x){return '<button class="'+(locAdmin.tab===x[0]?"active":"")+'" onclick="locAdminSetTab(\''+x[0]+'\')">'+esc(tr(x[1]))+'</button>'}).join("")+'</div>';
- body+='<section class="panel"><div class="panel-title"><div><h2>'+esc(tr(titleKey[locAdmin.tab]))+'</h2>'+(locAdmin.info?'<p>'+esc(locAdmin.info)+'</p>':'')+'</div><div class="sp-actions">';
- if(admin&&(locAdmin.tab==="governorates"||locAdmin.tab==="districts"||locAdmin.tab==="neighborhoods"))
-  body+='<button class="btn brown" onclick="locAdminToggleAdd()">'+icon("plus",15)+' '+(lang==="ar"?"إضافة":"Add")+'</button>';
+ var titleKey={countries:"countries",governorates:"governorates",districts:"districts",
+  neighborhoods:"neighborhoods",requests:"locationRequests"};
+ var canAdd=admin&&locAdmin.tab!=="requests";
+ var body='<div class="welcome"><div><h1>'+esc(tr("locations"))+'</h1>'+
+  '<p>'+esc(locT("الكتالوج الجغرافي: البلد ثم المحافظة ثم المديرية ثم الحي. كل إضافة أو تعديل تُفتح في صفحة مستقلة.",
+    "The geographic catalog: country, then governorate, then district, then neighborhood. Every add or edit opens on its own page."))+'</p></div></div>'+
+  '<div class="section-tabs">'+LOC_TABS.map(function(x){return '<button class="'+(locAdmin.tab===x[0]?"active":"")+
+  '" onclick="locAdminSetTab(\''+x[0]+'\')">'+esc(tr(x[1]))+'</button>'}).join("")+'</div>';
+ body+='<section class="panel"><div class="panel-title"><div><h2>'+esc(tr(titleKey[locAdmin.tab]))+
+  '</h2>'+(locAdmin.info?'<p>'+esc(locAdmin.info)+'</p>':'')+'</div><div class="sp-actions">';
+ if(canAdd)
+  body+='<button class="btn brown" onclick="locFormOpen(\''+LOC_SEG_KIND[locAdmin.tab]+'\',null)">'+icon("plus",15)+' '+
+   locT("إضافة","Add")+'</button>';
  if(locAdmin.tab==="requests")
-  body+='<button class="btn brown" onclick="locAdminToggleReq()">'+icon("plus",15)+' '+esc(tr("locRequestSubmit"))+'</button>';
+  body+='<button class="btn brown" onclick="locFormOpen(\'request\',null)">'+icon("plus",15)+' '+esc(tr("locRequestSubmit"))+'</button>';
  body+='</div></div>';
  if(locAdmin.tab==="districts"){
   body+='<div class="toolbar"><select id="la-fgov" class="f-select" onchange="locAdminFilterGov()"><option value="">'+esc(tr("allGovernorates"))+'</option>'+
@@ -2324,58 +2589,82 @@ function locationsPage(){
    locAdmin.govs.map(function(g){return opt(g.id,g.name,locAdmin.nbGov===g.id)}).join("")+'</select>'+
    '<select id="la-ndist" class="f-select" onchange="locAdminNbDist()"'+(locAdmin.nbGov?"":" disabled")+'>'+(locAdmin.nbGov?opt("",tr("district")+"...",!locAdmin.nbDist)+nbDl.map(function(d){return opt(d.id,d.name,String(locAdmin.nbDist)===String(d.id))}).join(""):opt("",tr("district")+"...",true))+'</select></div>';
  }
- if(locAdmin.showAdd&&admin){
-  var parentOpts='';
-  if(locAdmin.tab==="districts")parentOpts='<div class="form-group"><label>'+esc(tr("governorate"))+'</label><select id="la-parent" class="f-select">'+locAdmin.govs.map(function(g){return opt(g.id,g.name)}).join("")+'</select></div>';
-  if(locAdmin.tab==="neighborhoods"){
-   var pdl=locAdmin.nbGov?(regDists[locAdmin.nbGov]||[]):[];
-   parentOpts='<div class="form-group"><label>'+esc(tr("district"))+'</label><select id="la-parent" class="f-select">'+pdl.map(function(d){return opt(d.id,d.name)}).join("")+'</select></div>';
-  }
-  body+='<form class="rg-section" onsubmit="locAdminAdd(event)"><h3>'+esc(tr("locAddTitle"))+'</h3>'+parentOpts+
-   '<div class="form-row2"><div class="form-group"><label>'+esc(tr("locNameAr"))+'</label><input id="la-name" required></div>'+
-   '<div class="form-group"><label>'+esc(tr("locNameEn"))+'</label><input id="la-nameen" dir="ltr"></div></div>'+
-   '<div class="form-group"><label>'+esc(tr("locCode"))+'</label><input id="la-code" dir="ltr"></div>'+
-   '<button type="submit" class="btn green"'+(locAdmin.submitting?" disabled":"")+'>'+esc(tr("locSubmit"))+'</button></form>';
- }
- if(locAdmin.showReq&&locAdmin.tab==="requests"){
-  var rGovId=locAdmin.reqGov||(locAdmin.govs[0]&&locAdmin.govs[0].id);
-  if(rGovId&&!regDists[rGovId])regLoadDists(rGovId);
-  var rDl=rGovId?(regDists[rGovId]||[]):[];
-  body+='<form class="rg-section" onsubmit="locAdminSubmitReq(event)"><h3>'+esc(tr("locRequestSubmit"))+'</h3>'+
-   '<div class="form-row2"><div class="form-group"><label>'+esc(tr("locKind"))+'</label><select id="la-rkind" class="f-select" onchange="render()">'+opt("neighborhood",tr("neighborhood"))+opt("district",tr("district"))+opt("governorate",tr("governorate"))+'</select></div>'+
-   '<div class="form-group"><label>'+esc(tr("governorate"))+'</label><select id="la-rgov" class="f-select" onchange="locAdminReqGov()">'+locAdmin.govs.map(function(g){return opt(g.id,g.name,rGovId===g.id)}).join("")+'</select></div></div>'+
-   '<div class="form-group"><label>'+esc(tr("district"))+' ('+esc(tr("neighborhood"))+' / '+esc(tr("district"))+')</label><select id="la-rdist" class="f-select"><option value="">—</option>'+rDl.map(function(d){return opt(d.id,d.name)}).join("")+'</select></div>'+
-   '<div class="form-row2"><div class="form-group"><label>'+esc(tr("locNameAr"))+'</label><input id="la-rname" required></div>'+
-   '<div class="form-group"><label>'+esc(tr("locNameEn"))+'</label><input id="la-rnameen" dir="ltr"></div></div>'+
-   '<div class="form-row2"><div class="form-group"><label>'+esc(tr("locCode"))+'</label><input id="la-rcode" dir="ltr"></div>'+
-   '<div class="form-group"><label>'+esc(tr("locNotes"))+'</label><input id="la-rnotes"></div></div>'+
-   '<button type="submit" class="btn green"'+(locAdmin.submitting?" disabled":"")+'>'+esc(tr("locRequestSubmit"))+'</button></form>';
- }
  if(locAdmin.loading)body+='<div class="loading-inline"><div class="loader"></div></div>';
  else if(locAdmin.error)body+='<div class="empty-state">'+esc(locAdmin.error)+'</div>';
  else{
   var rows=locAdmin.rows;
   if(!rows.length)body+='<div class="empty-state">'+esc(tr("noLocationRows"))+'</div>';
   else if(locAdmin.tab==="countries"){
-   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+(lang==="ar"?"الاسم":"Name")+'</th><th>'+(lang==="ar"?"الرمز":"Code")+'</th><th>'+esc(tr("countryCode"))+'</th></tr></thead><tbody>'+
-   rows.map(function(r){return '<tr><td><b>'+esc(r.name)+'</b></td><td dir="ltr">'+esc(r.code)+'</td><td dir="ltr">+'+esc(r.callingCode||"—")+'</td></tr>'}).join("")+'</tbody></table></div>';
-  }else if(locAdmin.tab==="requests"){
-   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("locKind"))+'</th><th>'+esc(tr("locNameAr"))+'</th><th>'+esc(tr("governorate"))+' / '+esc(tr("district"))+'</th><th>'+esc(tr("reqStatus"))+'</th>'+(admin?'<th></th>':'')+'</tr></thead><tbody>'+
+   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+(lang==="ar"?"الاسم":"Name")+
+   '</th><th>'+(lang==="ar"?"الإنجليزية":"English")+'</th><th>'+esc(tr("locIsoCode"))+'</th><th>'+esc(tr("countryCode"))+
+   '</th>'+(admin?'<th></th>':'')+'</tr></thead><tbody>'+
    rows.map(function(r){
-    var act=admin&&r.status==="pending"?'<td><div class="crud-actions"><button class="crud verify" onclick="verLocReviewAdmin('+r.id+',\'approved\')" title="'+esc(tr("approveBtn"))+'">'+icon("check",15)+'</button><button class="crud delete" onclick="verLocReviewAdmin('+r.id+',\'rejected\')" title="'+esc(tr("rejectBtn"))+'">'+icon("x",15)+'</button></div></td>':'';
-    return '<tr><td>'+esc(r.kind)+'</td><td><b>'+esc(r.name_ar)+'</b>'+(r.name_en?'<div class="entity-sub">'+esc(r.name_en)+'</div>':'')+'</td><td>'+esc(r.governorate_name||"—")+' / '+esc(r.district_name||"—")+'</td><td><span class="badge '+(r.status==="approved"?"ok":r.status==="rejected"?"bad":"wait")+'">'+esc(r.status)+'</span></td>'+(admin?act:'')+'</tr>';
+    var json=esc(JSON.stringify(r)).replace(/"/g,'&quot;');
+    var open="locRowEdit('country',"+json+")";
+    var acts=admin?'<td class="crud-actions"><button class="crud edit" title="'+esc(tr("editLabel"))+
+      '" onclick="event.stopPropagation();'+open+'">'+icon("edit",14)+'</button></td>':'';
+    return '<tr'+(admin?' class="row-click" onclick="'+open+'"':'')+
+      '><td><b>'+esc(r.name)+'</b>'+(r.isDefault?' <span class="badge ok">'+esc(locT("افتراضي","default"))+'</span>':"")+
+      (r.isActive===false?' <span class="badge wait">'+esc(locT("معطّل","inactive"))+'</span>':"")+'</td>'+
+      '<td dir="ltr">'+esc(r.nameEn||"—")+'</td><td dir="ltr">'+esc(r.code||"—")+'</td>'+
+      '<td dir="ltr">'+(r.callingCode?"+"+esc(r.callingCode):"—")+'</td>'+(admin?acts:'')+'</tr>';
+   }).join("")+'</tbody></table></div>';
+  }else if(locAdmin.tab==="requests"){
+   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("locKind"))+'</th><th>'+esc(tr("locNameAr"))+
+   '</th><th>'+esc(tr("governorate"))+' / '+esc(tr("district"))+'</th><th>'+esc(tr("reqStatus"))+
+   '</th>'+(admin?'<th></th>':'')+'</tr></thead><tbody>'+
+   rows.map(function(r){
+    var act="";
+    if(admin&&r.status==="pending"){
+     act='<td class="crud-actions">'+
+      '<button class="crud verify" onclick="verLocReviewAdmin('+r.id+',\'approved\')" title="'+esc(tr("approveBtn"))+'">'+icon("check",15)+'</button>'+
+      '<button class="crud delete" onclick="verLocReviewAdmin('+r.id+',\'rejected\')" title="'+esc(tr("rejectBtn"))+'">'+icon("x",15)+'</button>'+
+      '</td>';
+    }
+    return '<tr><td>'+esc(r.kind)+'</td><td><b>'+esc(r.name_ar)+'</b>'+
+     (r.name_en?'<div class="entity-sub">'+esc(r.name_en)+'</div>':'')+'</td><td>'+
+     esc(r.governorate_name||"—")+' / '+esc(r.district_name||"—")+'</td><td><span class="badge '+
+     (r.status==="approved"?"ok":r.status==="rejected"?"bad":"wait")+'">'+esc(r.status)+'</span></td>'+
+     (admin?act:'')+'</tr>';
    }).join("")+'</tbody></table></div>';
   }else{
-   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+(lang==="ar"?"الاسم":"Name")+'</th><th>'+(lang==="ar"?"الأصل/الرمز":"Parent / Code")+'</th><th>'+(lang==="ar"?"الإنجليزية":"English")+'</th></tr></thead><tbody>'+
+   // Governorates, districts and neighborhoods share one table shape: the row
+   // opens that level's own editor, exactly like the institutions catalog.
+   var kindName=LOC_SEG_KIND[locAdmin.tab];
+   var allDists=[];
+   Object.keys(regDists).forEach(function(k){allDists=allDists.concat(regDists[k]||[])});
+   body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+(lang==="ar"?"الاسم":"Name")+
+   '</th><th>'+(lang==="ar"?"الإنجليزية":"English")+'</th><th>'+(lang==="ar"?"الرمز":"Code")+
+   '</th><th>'+(lang==="ar"?"الأصل":"Parent")+'</th>'+(admin?'<th></th>':'')+'</tr></thead><tbody>'+
    rows.map(function(r){
-    var parent=r.governorateId?("gov:"+r.governorateId):r.districtId?("dist:"+r.districtId):(r.countryCode||"");
-    return '<tr><td><b>'+esc(r.name)+'</b></td><td dir="ltr">'+esc(r.code||r.pcode||"—")+'</td><td>'+esc(r.nameEn||"—")+'</td></tr>';
+    var parent=r.countryCode||"—";
+    if(r.governorateId){
+     var g=locAdmin.govs.filter(function(x){return String(x.id)===String(r.governorateId)})[0];
+     parent=(g&&g.name)||("gov:"+r.governorateId);
+    }
+    if(r.districtId){
+     var d=allDists.filter(function(x){return String(x.id)===String(r.districtId)})[0];
+     parent=(d&&d.name)||("dist:"+r.districtId);
+    }
+    var json=esc(JSON.stringify(r)).replace(/"/g,'&quot;');
+    var open="locRowEdit('"+kindName+"',"+json+")";
+    var acts=admin?'<td class="crud-actions"><button class="crud edit" title="'+esc(tr("editLabel"))+
+      '" onclick="event.stopPropagation();'+open+'">'+icon("edit",14)+'</button></td>':'';
+    return '<tr'+(admin?' class="row-click" onclick="'+open+'"':'')+
+      '><td><b>'+esc(r.name)+'</b></td><td dir="ltr">'+esc(r.nameEn||"—")+'</td>'+
+      '<td dir="ltr">'+esc(r.code||r.pcode||"—")+'</td><td>'+esc(parent)+'</td>'+(admin?acts:'')+'</tr>';
    }).join("")+'</tbody></table></div>';
   }
  }
  body+='</section>';
  return adminShell(body);
 }
+// A row clicked from a non-country table: open that level's editor, loading the
+// lookups it needs first.
+window.locRowEdit=function(kind,row){
+ locFormOpen(kind,row);
+};
+
 function verLocReviewAdmin(id,decision){
  var notes=prompt(lang==="ar"?"ملاحظات المراجعة (اختياري)":"Review notes (optional)","")||"";
  apiPatch('/api/locations/requests/'+id,{decision:decision,reviewNotes:notes}).then(function(){locAdmin.loadedTab=null;locAdminLoad()}).catch(function(e){alert((e.data&&e.data.error)||e.message)});
