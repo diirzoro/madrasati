@@ -254,11 +254,70 @@ Avoid tiny detail modals for complex entities.
 
 ## 8. Forms
 
-Large workflows:
-- guided wizard
+**Every add/edit form is a dedicated page, never an inline panel and never a
+pop-up over a table.** This supersedes the earlier "small additions use a
+modal/drawer" wording: a form squeezed between a table's header and its rows is
+where this system drifted, so the rule is now one shape for every entity
+(institution, teacher, student, stage, grade, fee, offer, advertisement, slide)
+and for anything added later.
 
-Small additions:
-- modal/drawer
+### 8.1 The route
+
+Each section keeps its list route and gains a form route beside it:
+
+```text
+#/schools                     list          #/schools/new        add
+#/schools/edit/:id            edit          #/teachersAdmin/new  add
+#/teachersAdmin/edit/:id      edit          #/academic/stages/new  add
+#/academic/grades/new         add           #/offers/new         add
+#/offers/edit/:id             edit          #/ads/new            add
+#/slides/new                  add           #/slides/edit/:id    edit
+#/detail/offering/:stageId|new?id=:orgId   institution stage + fee
+#/detail/subject/new?id=:orgId             institution-owned subject
+```
+
+Only the first path segment selects the sidebar page; the second (and third)
+tell that page to render its form instead of its table. A new form therefore
+never becomes a new sidebar entry, and a refresh or a shared link still opens
+the form. The form route carries the same authentication and role guards as its
+list route, and every write still carries `requireOrgMember` /
+`requireRole('admin')` on the server.
+
+### 8.2 The shape
+
+One implementation, `formPage()` in `app.js`, and one CSS block, `.uf-page` in
+`styles.css`, produce all of them:
+
+- a back control at the top reading **«← العودة إلى القائمة»** / "← Back to the
+  list", which returns to the section list;
+- one white card, centred (`max-width: 760px; margin: 0 auto;`), light border
+  and a soft shadow — no nested cards, no panel title with a close button;
+- footer actions: **[ إلغاء ]** and **[ حفظ البيانات ]**, the save button in the
+  primary theme colour.
+
+Fields are built by the existing `wInput` / `wSel` / `wArea` / `wCheck` helpers,
+so a field looks the same in every section:
+
+- controls are `height: 40px`, `border-radius: 8px`, with a light grey border
+  (`#d1d5db`, following the active theme in dark mode) and a uniform 16px
+  vertical rhythm;
+- on desktop the label occupies a 28% column at the right (RTL) and the control
+  the remaining column;
+- below 768px the row collapses to a single 100% column with 44px touch targets,
+  and the footer actions stack full width.
+
+Validation, `required`/optional marking, preserved draft values, cascading
+selects and inline error text are unchanged: the server still decides what is
+accepted, this system only decides how the form is presented.
+
+### 8.3 What this does not touch
+
+The exception is the authentication screens. Login and sign-up keep their
+current split layout and side imagery (`auth-pages.css` / `auth-pages.js`);
+they are only required to stay responsive. No form in this system adds, removes
+or renames a database column — the change is UI, CSS and routing only.
+
+### 8.4 General form capabilities
 
 Forms should support:
 - comfortable inputs

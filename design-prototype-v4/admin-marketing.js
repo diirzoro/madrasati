@@ -68,6 +68,17 @@ function mkStatusBadge(s) {
 }
 function mkConfirm(msg) { return window.confirm(msg); }
 
+// A deep link into an edit route can arrive with a list that was loaded earlier
+// and is now stale (a row created in another tab, or just before this page
+// loaded). Force exactly one refresh before declaring the record missing, so a
+// valid link is never a dead end while a genuinely absent id still stops.
+var mkEditRetry = {};
+function mkEditMiss(kind, id, state) {
+  var key = kind + ":" + String(id);
+  if (!state.loaded || mkEditRetry[key]) return false;
+  mkEditRetry[key] = true; state.loaded = false; return true;
+}
+
 // ----------------------------- loaders -----------------------------
 function mkSlidesLoad() {
   if (mkSlides.loading || mkSlides.loaded) return;
@@ -98,61 +109,67 @@ function mkOffersLoad() {
 }
 
 // ----------------------------- slides -----------------------------
+// Add/edit opens on its own route (#/slides/new, #/slides/edit/:id); the list
+// page never carries the form inline.
 function mkSlidesOpen(row) {
   mkSlides.form = row ? { open: true, mode: "edit", id: row.id, row: row } : { open: true, mode: "create", id: null, row: null };
-  mkSlides.info = null; render();
+  mkSlides.info = null;
+  var target = "slides/" + (row ? "edit/" + encodeURIComponent(row.id) : "new");
+  if (("#/" + target) === location.hash) render(); else go(target);
 }
-function mkSlidesClose() { mkSlides.form = { open: false, mode: "create", id: null, row: null }; render(); }
+function mkSlidesClose() {
+  mkSlides.form = { open: false, mode: "create", id: null, row: null };
+  var target = "slides"; if (("#/" + target) === location.hash) render(); else go(target);
+}
 function mkSlideForm(f) {
   var r = f.row || {};
   var typeOpts = mkPairs(MK_SLIDE_TYPES), statusOpts = mkPairs(MK_SLIDE_STATUS);
-  return '<form class="rg-section" onsubmit="mkSlideSubmit(event)"><h3>' + (f.mode === "edit" ? mkT("تعديل شريحة", "Edit slide") : mkT("شريحة جديدة", "New slide")) + '</h3>' +
-    '<div class="form-row2">' +
+  return formPage({ back: "slides", error: mkSlides.info || null, busy: mkSlides.saving,
+    onSave: "mkSlideSubmit()", onCancel: "mkSlidesClose()",
+    title: f.mode === "edit" ? mkT("تعديل شريحة", "Edit slide") : mkT("شريحة جديدة", "New slide"),
+    subtitle: mkT("شريحة واحدة من شرائح الواجهة الرئيسية (بحد أقصى 6).", "One landing hero slide (maximum 6)."),
+    body:
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("النوع", "Type"), '<select id="mk-s-type" class="f-select">' + typeOpts.map(function (p) { return opt(p[0], p[1], (r.type || "promotion") === p[0]); }).join("") + '</select>') +
       mkGroup(mkT("الحالة", "Status"), '<select id="mk-s-status" class="f-select">' + statusOpts.map(function (p) { return opt(p[0], p[1], (r.status || "draft") === p[0]); }).join("") + '</select>') +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("العنوان (عربي)", "Title (Arabic)"), mkInputF("mk-s-tar", r.titleAr)) +
       mkGroup(mkT("العنوان (إنجليزي)", "Title (English)"), mkInputF("mk-s-ten", r.titleEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("العنوان الفرعي (عربي)", "Subtitle (Arabic)"), mkInputF("mk-s-sar", r.subtitleAr)) +
       mkGroup(mkT("العنوان الفرعي (إنجليزي)", "Subtitle (English)"), mkInputF("mk-s-sen", r.subtitleEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("الشارة (عربي)", "Badge (Arabic)"), mkInputF("mk-s-bar", r.badgeAr)) +
       mkGroup(mkT("الشارة (إنجليزي)", "Badge (English)"), mkInputF("mk-s-ben", r.badgeEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("نص الصورة (عربي)", "Overlay (Arabic)"), mkArea("mk-s-oar", r.overlayTitleAr, "auto")) +
       mkGroup(mkT("نص الصورة (إنجليزي)", "Overlay (English)"), mkArea("mk-s-oen", r.overlayTitleEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("الموقع (عربي)", "Location (Arabic)"), mkInputF("mk-s-lar", r.locationAr)) +
       mkGroup(mkT("الموقع (إنجليزي)", "Location (English)"), mkInputF("mk-s-len", r.locationEn, "ltr")) +
     '</div>' +
-    mkUploadF("mk-s-image", mkT("صورة الشريحة (JPG/PNG/WEBP)", "Slide image (JPG/PNG/WEBP)"), r.image) +
-    '<div class="form-row2">' +
+    '<div class="ac-field-wide">' + mkUploadF("mk-s-image", mkT("صورة الشريحة (JPG/PNG/WEBP)", "Slide image (JPG/PNG/WEBP)"), r.image) + '</div>' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("موضع الصورة", "Image position"), mkSelectF("mk-s-ipos", [["center", mkT("وسط", "Center")], ["top", mkT("أعلى", "Top")], ["bottom", mkT("أسفل", "Bottom")]], r.imagePosition || "center")) +
       mkGroup(mkT("الترتيب", "Priority"), mkNumberF("mk-s-prio", r.priority == null ? 0 : r.priority)) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("نص الزر (عربي)", "CTA label (Arabic)"), mkInputF("mk-s-ctaar", r.ctaLabelAr)) +
       mkGroup(mkT("نص الزر (إنجليزي)", "CTA label (English)"), mkInputF("mk-s-ctaen", r.ctaLabelEn, "ltr")) +
     '</div>' +
-    mkGroup(mkT("وجهة الزر", "CTA route"), mkSelectF("mk-s-route", [[ "", "—" ]].concat(MK_CTA_ROUTES.map(function (x) { return [x, x]; })), r.ctaRoute || "")) +
-    '<div class="form-row2">' +
+    '<div class="ac-field-wide">' + mkGroup(mkT("وجهة الزر", "CTA route"), mkSelectF("mk-s-route", [[ "", "—" ]].concat(MK_CTA_ROUTES.map(function (x) { return [x, x]; })), r.ctaRoute || "")) + '</div>' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("يبدأ في", "Starts at"), mkDateF("mk-s-start", r.startAt)) +
       mkGroup(mkT("ينتهي في", "Ends at"), mkDateF("mk-s-end", r.endAt)) +
     '</div>' +
-    mkCheckF("mk-s-active", mkT("نشط", "Active"), r.active !== false) +
-    '<div class="sp-actions"><button type="submit" class="btn green"' + (mkSlides.saving ? " disabled" : "") + '>' + mkT("حفظ", "Save") + '</button>' +
-    '<button type="button" class="btn" onclick="mkSlidesClose()">' + mkT("إلغاء", "Cancel") + '</button></div>' +
-    (mkSlides.info ? '<p class="mk-note">' + esc(mkSlides.info) + '</p>' : '') +
-  '</form>';
+    '<div class="ac-field-wide">' + mkCheckF("mk-s-active", mkT("نشط", "Active"), r.active !== false) + '</div>' });
 }
-function mkSlideSubmit(e) {
-  e.preventDefault();
+function mkSlideSubmit() {
   if (mkSlides.saving) return;
   var f = mkSlides.form;
   var payload = {
@@ -175,7 +192,8 @@ function mkSlideSubmit(e) {
   var req = f.mode === "edit" ? apiPut('/api/admin/hero-slides/' + f.id, payload) : apiPost('/api/admin/hero-slides', payload);
   req.then(function () {
     mkSlides.saving = false; mkSlides.form = { open: false, mode: "create", id: null }; mkSlides.loaded = false;
-    mkSlides.info = mkT("تم الحفظ.", "Saved."); mkSlidesLoad();
+    var target = "slides"; if (("#/" + target) === location.hash) render(); else go(target);
+    mkSlidesLoad();
   }).catch(function (err) { mkSlides.saving = false; mkSlides.info = mkErr(err); render(); });
 }
 function mkSlideStatus(id, status) {
@@ -198,12 +216,14 @@ function mkSlideDelete(id) {
   }).catch(function (e) { alert(mkErr(e)); });
 }
 function slidesAdminPage() {
+  // Add/edit is a dedicated page now, so the list never renders the form.
+  var sub = routeSub();
+  if (sub === "new" || sub === "edit") return mkSlideFormPage();
   mkSlidesLoad();
   var ar = lang === "ar";
   var body = '<div class="welcome"><div><h1>' + esc(tr("slides")) + '</h1><p>' + (ar ? "إدارة شرائح الواجهة الرئيسية (بحد أقصى 6)." : "Manage landing hero slides (maximum 6).") + '</p></div>' +
     '<div class="sp-actions"><button class="btn brown" onclick="mkSlidesOpen()">' + icon("plus", 15) + ' ' + (ar ? "شريحة جديدة" : "New slide") + '</button></div></div>';
   body += '<section class="panel"><div class="panel-title"><div><h2>' + esc(tr("slides")) + '</h2><p>' + mkSlides.rows.length + ' / 6</p></div></div>';
-  if (mkSlides.form.open) body += mkSlideForm(mkSlides.form);
   if (mkSlides.loading) body += '<div class="loading-inline"><div class="loader"></div></div>';
   else if (mkSlides.error) body += '<div class="empty-state">' + esc(mkSlides.error) + '</div>';
   else if (!mkSlides.rows.length) body += '<div class="empty-state">' + (ar ? "لا توجد شرائح بعد." : "No slides yet.") + '</div>';
@@ -227,51 +247,79 @@ function slidesAdminPage() {
   return adminShell(body);
 }
 
+// Dedicated slide form page. A refresh re-finds the row from the list once it
+// has loaded; a link to a missing id reports it instead of spinning forever.
+function mkSlideFormPage() {
+  var id = routeSubId();
+  if (routeSub() === "edit" && id) {
+    if (!(mkSlides.form.open && String(mkSlides.form.id) === String(id))) {
+      var row = mkSlides.rows.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (row) { mkEditRetry["slides:" + id] = false; mkSlides.form = { open: true, mode: "edit", id: row.id, row: row }; }
+      else if (mkSlides.error) return formPage({ back: "slides", title: mkT("تعديل شريحة", "Edit slide"),
+        error: mkSlides.error, body: "", onSave: "", busy: true });
+      else if (!mkSlides.loaded || mkEditMiss("slides", id, mkSlides)) {
+        mkSlides.form = { open: false, mode: "edit", id: id, row: null }; mkSlidesLoad();
+        return formPage({ back: "slides", title: mkT("تعديل شريحة", "Edit slide"),
+          body: '<div class="loading-inline"><div class="loader"></div></div>', onSave: "", busy: true });
+      }
+      else return formPage({ back: "slides", title: mkT("تعديل شريحة", "Edit slide"),
+        error: mkT("لم يتم العثور على الشريحة.", "Slide not found."), body: "", onSave: "", busy: true });
+    }
+  } else if (!mkSlides.form.open || mkSlides.form.mode !== "create") {
+    mkSlides.form = { open: true, mode: "create", id: null, row: null };
+  }
+  return mkSlideForm(mkSlides.form);
+}
+
 // ----------------------------- advertisements -----------------------------
 function mkAdsOpen(row) {
   mkAds.form = row ? { open: true, mode: "edit", id: row.id, row: row } : { open: true, mode: "create", id: null, row: null };
-  mkAds.info = null; render();
+  mkAds.info = null;
+  var target = "ads/" + (row ? "edit/" + encodeURIComponent(row.id) : "new");
+  if (("#/" + target) === location.hash) render(); else go(target);
 }
-function mkAdsClose() { mkAds.form = { open: false, mode: "create", id: null, row: null }; render(); }
+function mkAdsClose() {
+  mkAds.form = { open: false, mode: "create", id: null, row: null };
+  var target = "ads"; if (("#/" + target) === location.hash) render(); else go(target);
+}
 function mkAdForm(f) {
   var r = f.row || {};
   var pl = r.placement || ["ticker"];
-  return '<form class="rg-section" onsubmit="mkAdSubmit(event)"><h3>' + (f.mode === "edit" ? mkT("تعديل إعلان", "Edit advertisement") : mkT("إعلان جديد", "New advertisement")) + '</h3>' +
-    '<div class="form-row2">' +
+  return formPage({ back: "ads", error: mkAds.info || null, busy: mkAds.saving,
+    onSave: "mkAdSubmit()", onCancel: "mkAdsClose()",
+    title: f.mode === "edit" ? mkT("تعديل إعلان", "Edit advertisement") : mkT("إعلان جديد", "New advertisement"),
+    subtitle: mkT("إعلان الشريط المتحرك والبانرات. الإعلان النشط داخل نافذته الزمنية فقط هو ما يظهر.", "Ticker and banner advertising. Only an active ad inside its window is shown."),
+    body:
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("الاسم", "Name"), mkInputF("mk-a-name", r.name)) +
       mkGroup(mkT("المعلن", "Advertiser"), mkInputF("mk-a-adv", r.advertiser)) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("النوع", "Type"), mkSelectF("mk-a-type", mkPairs(MK_AD_TYPES), r.adType || "general")) +
       mkGroup(mkT("الفوترة", "Billing"), mkSelectF("mk-a-bill", mkPairs(MK_AD_BILLING), r.billingMode || "free")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("الحالة", "Status"), mkSelectF("mk-a-status", mkPairs(MK_AD_STATUS), r.status || "active")) +
       mkGroup(mkT("الترتيب", "Priority"), mkNumberF("mk-a-prio", r.priority == null ? 0 : r.priority)) +
     '</div>' +
-    '<div class="form-group"><label>' + mkT("أماكن العرض", "Placements") + '</label><div class="mk-checks">' +
+    '<div class="form-group ac-field-wide"><label>' + mkT("أماكن العرض", "Placements") + '</label><div class="mk-checks">' +
       MK_PLACEMENTS.map(function (p) { return mkCheckF("mk-a-p-" + p, p, pl.indexOf(p) > -1); }).join("") + '</div></div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("نص الإعلان (عربي)", "Message (Arabic)"), mkArea("mk-a-mar", r.messageAr)) +
       mkGroup(mkT("نص الإعلان (إنجليزي)", "Message (English)"), mkArea("mk-a-men", r.messageEn, "ltr")) +
     '</div>' +
-    mkUploadF("mk-a-image", mkT("صورة (اختياري)", "Image (optional)"), r.image) +
-    '<div class="form-row2">' +
+    '<div class="ac-field-wide">' + mkUploadF("mk-a-image", mkT("صورة (اختياري)", "Image (optional)"), r.image) + '</div>' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("رابط خارجي (https)", "External URL (https)"), mkInputF("mk-a-url", r.targetUrl, "ltr")) +
       mkGroup(mkT("وجهة داخلية", "Internal route"), mkSelectF("mk-a-route", [[ "", "—" ]].concat(MK_CTA_ROUTES.map(function (x) { return [x, x]; })), r.targetRoute || "")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("يبدأ في", "Starts at"), mkDateF("mk-a-start", r.startAt)) +
       mkGroup(mkT("ينتهي في", "Ends at"), mkDateF("mk-a-end", r.endAt)) +
     '</div>' +
-    mkGroup(mkT("ملاحظات", "Notes"), mkInputF("mk-a-notes", r.notes)) +
-    '<div class="sp-actions"><button type="submit" class="btn green"' + (mkAds.saving ? " disabled" : "") + '>' + mkT("حفظ", "Save") + '</button>' +
-    '<button type="button" class="btn" onclick="mkAdsClose()">' + mkT("إلغاء", "Cancel") + '</button></div>' +
-    (mkAds.info ? '<p class="mk-note">' + esc(mkAds.info) + '</p>' : '') +
-  '</form>';
+    '<div class="ac-field-wide">' + mkGroup(mkT("ملاحظات", "Notes"), mkInputF("mk-a-notes", r.notes)) + '</div>' });
 }
-function mkAdSubmit(e) {
-  e.preventDefault();
+function mkAdSubmit() {
   if (mkAds.saving) return;
   var f = mkAds.form;
   var placement = MK_PLACEMENTS.filter(function (p) { return mkChecked("mk-a-p-" + p); });
@@ -289,7 +337,8 @@ function mkAdSubmit(e) {
   var req = f.mode === "edit" ? apiPut('/api/admin/advertisements/' + f.id, payload) : apiPost('/api/admin/advertisements', payload);
   req.then(function () {
     mkAds.saving = false; mkAds.form = { open: false, mode: "create", id: null }; mkAds.loaded = false;
-    mkAds.info = mkT("تم الحفظ.", "Saved."); mkAdsLoad();
+    var target = "ads"; if (("#/" + target) === location.hash) render(); else go(target);
+    mkAdsLoad();
   }).catch(function (err) { mkAds.saving = false; mkAds.info = mkErr(err); render(); });
 }
 function mkAdStatus(id, status) {
@@ -304,12 +353,14 @@ function mkAdDelete(id) {
   }).catch(function (e) { alert(mkErr(e)); });
 }
 function adsAdminPage() {
+  // Add/edit is a dedicated page; the list never renders the form inline.
+  var sub = routeSub();
+  if (sub === "new" || sub === "edit") return mkAdFormPage();
   mkAdsLoad();
   var ar = lang === "ar";
   var body = '<div class="welcome"><div><h1>' + esc(tr("ads")) + '</h1><p>' + (ar ? "إعلانات الشريط المتحرك والبانرات. تظهر الإعلانات النشطة داخل النافذة الزمنية فقط." : "Ticker and banner advertisements. Only active, in-window ads are shown.") + '</p></div>' +
     '<div class="sp-actions"><button class="btn brown" onclick="mkAdsOpen()">' + icon("plus", 15) + ' ' + (ar ? "إعلان جديد" : "New ad") + '</button></div></div>';
   body += '<section class="panel"><div class="panel-title"><div><h2>' + esc(tr("ads")) + '</h2></div></div>';
-  if (mkAds.form.open) body += mkAdForm(mkAds.form);
   if (mkAds.loading) body += '<div class="loading-inline"><div class="loader"></div></div>';
   else if (mkAds.error) body += '<div class="empty-state">' + esc(mkAds.error) + '</div>';
   else if (!mkAds.rows.length) body += '<div class="empty-state">' + (ar ? "لا توجد إعلانات بعد." : "No advertisements yet.") + '</div>';
@@ -331,40 +382,67 @@ function adsAdminPage() {
   return adminShell(body);
 }
 
+// Dedicated advertisement form page: refresh-safe and never inline.
+function mkAdFormPage() {
+  var id = routeSubId();
+  if (routeSub() === "edit" && id) {
+    if (!(mkAds.form.open && String(mkAds.form.id) === String(id))) {
+      var row = mkAds.rows.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (row) { mkEditRetry["ads:" + id] = false; mkAds.form = { open: true, mode: "edit", id: row.id, row: row }; }
+      else if (mkAds.error) return formPage({ back: "ads", title: mkT("تعديل إعلان", "Edit advertisement"),
+        error: mkAds.error, body: "", onSave: "", busy: true });
+      else if (!mkAds.loaded || mkEditMiss("ads", id, mkAds)) {
+        mkAds.form = { open: false, mode: "edit", id: id, row: null }; mkAdsLoad();
+        return formPage({ back: "ads", title: mkT("تعديل إعلان", "Edit advertisement"),
+          body: '<div class="loading-inline"><div class="loader"></div></div>', onSave: "", busy: true });
+      }
+      else return formPage({ back: "ads", title: mkT("تعديل إعلان", "Edit advertisement"),
+        error: mkT("لم يتم العثور على الإعلان.", "Advertisement not found."), body: "", onSave: "", busy: true });
+    }
+  } else if (!mkAds.form.open || mkAds.form.mode !== "create") {
+    mkAds.form = { open: true, mode: "create", id: null, row: null };
+  }
+  return mkAdForm(mkAds.form);
+}
+
 // ----------------------------- offers -----------------------------
 function mkOffersOpen(row) {
   mkOffers.form = row ? { open: true, mode: "edit", id: row.id, row: row } : { open: true, mode: "create", id: null, row: null };
-  mkOffers.info = null; render();
+  mkOffers.info = null;
+  var target = "offers/" + (row ? "edit/" + encodeURIComponent(row.id) : "new");
+  if (("#/" + target) === location.hash) render(); else go(target);
 }
-function mkOffersClose() { mkOffers.form = { open: false, mode: "create", id: null, row: null }; render(); }
+function mkOffersClose() {
+  mkOffers.form = { open: false, mode: "create", id: null, row: null };
+  var target = "offers"; if (("#/" + target) === location.hash) render(); else go(target);
+}
 function mkOfferForm(f) {
   var r = f.row || {};
   var orgOpts = [[ "", mkT("اختر مؤسسة", "Select organization") ]].concat(mkOffers.orgs.map(function (o) { return [o.id, o.name]; }));
-  return '<form class="rg-section" onsubmit="mkOfferSubmit(event)"><h3>' + (f.mode === "edit" ? mkT("تعديل عرض", "Edit offer") : mkT("عرض جديد", "New offer")) + '</h3>' +
-    mkGroup(mkT("المؤسسة", "Organization"), mkSelectF("mk-o-org", orgOpts, r.organizationId || "")) +
-    '<div class="form-row2">' +
+  return formPage({ back: "offers", error: mkOffers.info || null, busy: mkOffers.saving,
+    onSave: "mkOfferSubmit()", onCancel: "mkOffersClose()",
+    title: f.mode === "edit" ? mkT("تعديل عرض", "Edit offer") : mkT("عرض جديد", "New offer"),
+    subtitle: mkT("عرض مؤسسة. العرض النشط داخل نافذته الزمنية فقط هو ما يظهر على البطاقات.", "An institution offer. Only an active offer inside its window appears on the cards."),
+    body:
+    '<div class="ac-field-wide">' + mkGroup(mkT("المؤسسة", "Organization"), mkSelectF("mk-o-org", orgOpts, r.organizationId || "")) + '</div>' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("العنوان (عربي)", "Title (Arabic)"), mkInputF("mk-o-tar", r.title)) +
       mkGroup(mkT("العنوان (إنجليزي)", "Title (English)"), mkInputF("mk-o-ten", r.titleEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("الوصف (عربي)", "Description (Arabic)"), mkArea("mk-o-dar", r.description)) +
       mkGroup(mkT("الوصف (إنجليزي)", "Description (English)"), mkArea("mk-o-den", r.descriptionEn, "ltr")) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("نسبة الخصم %", "Discount %"), mkNumberF("mk-o-disc", r.discountPercent == null ? "" : r.discountPercent)) +
       mkCheckF("mk-o-active", mkT("نشط", "Active"), r.active !== false) +
     '</div>' +
-    '<div class="form-row2">' +
+    '<div class="form-row2 ac-field-wide">' +
       mkGroup(mkT("يبدأ في", "Starts at"), mkDateF("mk-o-start", r.startAt)) +
       mkGroup(mkT("ينتهي في", "Ends at"), mkDateF("mk-o-end", r.endAt)) +
-    '</div>' +
-    '<div class="sp-actions"><button type="submit" class="btn green"' + (mkOffers.saving ? " disabled" : "") + '>' + mkT("حفظ", "Save") + '</button>' +
-    '<button type="button" class="btn" onclick="mkOffersClose()">' + mkT("إلغاء", "Cancel") + '</button></div>' +
-    (mkOffers.info ? '<p class="mk-note">' + esc(mkOffers.info) + '</p>' : '') +
-  '</form>';
+    '</div>' });
 }
-function mkOfferSubmit(e) {
-  e.preventDefault();
+function mkOfferSubmit() {
   if (mkOffers.saving) return;
   var f = mkOffers.form;
   var disc = mkVal("mk-o-disc");
@@ -381,7 +459,8 @@ function mkOfferSubmit(e) {
   var req = f.mode === "edit" ? apiPut('/api/admin/offers/' + f.id, payload) : apiPost('/api/admin/offers', payload);
   req.then(function () {
     mkOffers.saving = false; mkOffers.form = { open: false, mode: "create", id: null }; mkOffers.loaded = false;
-    mkOffers.info = mkT("تم الحفظ.", "Saved."); mkOffersLoad();
+    var target = "offers"; if (("#/" + target) === location.hash) render(); else go(target);
+    mkOffersLoad();
   }).catch(function (err) { mkOffers.saving = false; mkOffers.info = mkErr(err); render(); });
 }
 function mkOfferDelete(id) {
@@ -396,12 +475,14 @@ function mkOfferToggle(id, active) {
   }).catch(function (e) { alert(mkErr(e)); });
 }
 function offersAdminPage() {
+  // Add/edit is a dedicated page; the list never renders the form inline.
+  var sub = routeSub();
+  if (sub === "new" || sub === "edit") return mkOfferFormPage();
   mkOffersLoad();
   var ar = lang === "ar";
   var body = '<div class="welcome"><div><h1>' + esc(tr("offers")) + '</h1><p>' + (ar ? "عروض المؤسسات. تظهر العروض النشطة داخل النافذة الزمنية على البطاقات." : "Institution offers. Active, in-window offers appear on cards.") + '</p></div>' +
     '<div class="sp-actions"><button class="btn brown" onclick="mkOffersOpen()">' + icon("plus", 15) + ' ' + (ar ? "عرض جديد" : "New offer") + '</button></div></div>';
   body += '<section class="panel"><div class="panel-title"><div><h2>' + esc(tr("offers")) + '</h2></div></div>';
-  if (mkOffers.form.open) body += mkOfferForm(mkOffers.form);
   if (mkOffers.loading) body += '<div class="loading-inline"><div class="loader"></div></div>';
   else if (mkOffers.error) body += '<div class="empty-state">' + esc(mkOffers.error) + '</div>';
   else if (!mkOffers.rows.length) body += '<div class="empty-state">' + (ar ? "لا توجد عروض بعد." : "No offers yet.") + '</div>';
@@ -420,6 +501,31 @@ function offersAdminPage() {
     }).join("") + '</tbody></table></div>';
   body += '</section>';
   return adminShell(body);
+}
+
+// Dedicated offer form page. The organization picker and the existing rows come
+// from the same load the list uses, so a refresh re-finds everything.
+function mkOfferFormPage() {
+  var id = routeSubId();
+  if (routeSub() === "edit" && id) {
+    if (!(mkOffers.form.open && String(mkOffers.form.id) === String(id))) {
+      var row = mkOffers.rows.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (row) { mkEditRetry["offers:" + id] = false; mkOffers.form = { open: true, mode: "edit", id: row.id, row: row }; }
+      else if (mkOffers.error) return formPage({ back: "offers", title: mkT("تعديل عرض", "Edit offer"),
+        error: mkOffers.error, body: "", onSave: "", busy: true });
+      else if (!mkOffers.loaded || mkEditMiss("offers", id, mkOffers)) {
+        mkOffers.form = { open: false, mode: "edit", id: id, row: null }; mkOffersLoad();
+        return formPage({ back: "offers", title: mkT("تعديل عرض", "Edit offer"),
+          body: '<div class="loading-inline"><div class="loader"></div></div>', onSave: "", busy: true });
+      }
+      else return formPage({ back: "offers", title: mkT("تعديل عرض", "Edit offer"),
+        error: mkT("لم يتم العثور على العرض.", "Offer not found."), body: "", onSave: "", busy: true });
+    }
+  } else if (!mkOffers.form.open || mkOffers.form.mode !== "create") {
+    mkOffers.form = { open: true, mode: "create", id: null, row: null };
+  }
+  mkOffersLoad();
+  return mkOfferForm(mkOffers.form);
 }
 
 // Re-render once so a direct deep link to one of these routes picks up the

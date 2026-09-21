@@ -2253,6 +2253,72 @@ img{max-width:100%}
  .org-type-tabs button,.ac-tabs button{padding:9px 12px;font-size:12.5px}
 }
 
+/* =====================================================================
+   Universal dedicated form system (UI / CSS / routing only — no schema).
+   Every add/edit screen is its own page: a back link to the list, one white
+   card centred at max-width 760px, a label/control grid that collapses to a
+   single column under 768px, and the two footer actions. Field chrome is the
+   memo's: 6-8px radius, a light grey 1px border that defaults to #d1d5db and
+   follows the active theme in dark mode, a 38-40px control height and a
+   uniform 16px vertical rhythm. The six themes and the palette are untouched.
+   ===================================================================== */
+.uf-page{max-width:760px;margin:0 auto;display:grid;gap:14px}
+.uf-back{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;
+ min-height:40px;padding:0 16px;border:1px solid var(--line);border-radius:8px;background:var(--white);
+ color:var(--theme-primary,#1f5d46);font-weight:700;font-size:13px;cursor:pointer}
+.uf-back:hover{border-color:var(--theme-primary,#1f5d46)}
+.uf-head h1{margin:0;font-size:20px;font-weight:800;color:var(--ink)}
+.uf-head p{margin:6px 0 0;font-size:13px;line-height:1.7;color:var(--muted)}
+.uf-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:22px;
+ box-shadow:0 1px 2px rgba(30,55,45,.05),0 12px 30px rgba(30,55,45,.06)}
+.uf-grid{display:grid;gap:16px;--uf-border:#d1d5db}
+:root[data-theme="dark"] .uf-grid{--uf-border:#324039}
+.uf-grid>*{min-width:0}
+.uf-grid .form-group{display:grid;grid-template-columns:minmax(0,28%) minmax(0,1fr);
+ gap:4px 16px;align-items:center;margin:0}
+.uf-grid .form-group>label{margin:0;align-self:center;font-size:13.5px;font-weight:600;
+ color:var(--ink);text-align:start}
+.uf-grid .form-group input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),
+.uf-grid .form-group select{width:100%;height:40px;min-height:40px;padding:0 12px;
+ border:1px solid var(--uf-border);border-radius:8px;background:var(--white);color:var(--ink);
+ font:inherit;font-size:13.5px}
+.uf-grid .form-group textarea{width:100%;min-height:104px;padding:10px 12px;line-height:1.7;
+ border:1px solid var(--uf-border);border-radius:8px;background:var(--white);color:var(--ink);
+ font:inherit;font-size:13.5px;resize:vertical}
+.uf-grid .form-group input:focus,.uf-grid .form-group select:focus,.uf-grid .form-group textarea:focus{
+ border-color:var(--theme-primary,#1f5d46);outline:none;box-shadow:0 0 0 3px rgba(31,93,70,.13)}
+/* A field that is structurally full-width — a textarea, a repeatable row's
+   group, a section heading — spans both grid tracks instead of being squeezed
+   into the control column. */
+.uf-grid .ac-form-error,.uf-grid .ac-field-wide,.uf-grid .ac-repeat-row,
+.uf-grid .core-h3-row,.uf-grid .ac-checkgrid,.uf-grid .core-chips,.uf-grid .uf-wide{grid-column:1/-1}
+/* Helper text and secondary rows sit under the control, not in the label gutter. */
+.uf-grid .form-group>.ac-hint,.uf-grid .form-group>p,.uf-grid .form-group>small{grid-column:1/-1}
+.uf-grid .ac-repeat-row{margin-bottom:0;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.uf-grid .ac-repeat-row .form-group{grid-template-columns:1fr}
+/* Two-up field pairs keep their own two columns inside a full-width row, so the
+   label sits above its control rather than in the 28% gutter. */
+.uf-grid .form-row2{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.uf-grid .form-row2 .form-group{grid-template-columns:1fr;gap:6px;align-items:start}
+.uf-grid .core-h3-row{margin-top:4px}
+.uf-grid .uf-help{font-size:12px;color:var(--muted)}
+.uf-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;
+ margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.uf-actions .btn{display:inline-flex;align-items:center;justify-content:center;
+ min-height:40px;padding:0 24px;border-radius:8px}
+@media (max-width:768px){
+ .uf-card{padding:16px;border-radius:10px}
+ .uf-grid{gap:14px}
+ .uf-grid .form-group{grid-template-columns:1fr;gap:6px;align-items:start}
+ .uf-grid .form-group>label{align-self:start}
+ .uf-grid .form-group input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),
+ .uf-grid .form-group select{height:44px;min-height:44px;font-size:14px}
+ .uf-grid .form-group textarea{min-height:112px;font-size:14px}
+ .uf-actions{flex-direction:column-reverse}
+ .uf-actions .btn{width:100%;min-height:44px}
+ .uf-back{width:100%;min-height:44px}
+}
+
 /* --- Print: the report is its own document, the app chrome is not printed --- */
 @media print{
  .admin-top,.public-top,.public-rail,.sidebar,.admin-side,.bottom-stats,.view-toggle,.toolbar,

@@ -44,10 +44,16 @@
   var orgTypeOps=[["private_school"],["government_school"],["college"],["university"],["institute"]];
   window.acOrgEdit=function(id){var key="institutions:"+ac.institutionType+":"+ac.institutionSearch;
     var rows=(ac.cache[key]||{}).items||[];for(var i=0;i<rows.length;i++){if(rows[i].id===id){acOrgFormOpen("edit",rows[i]);return}}};
-  window.acOrgFormOpen=function(mode,o){ac.orgForm={mode:mode,row:o||null,gov:"",govId:"",dist:"",_error:null,draft:{}};
+  window.acOrgFormOpen=function(mode,o){acOrgFormInit(mode,o);
+    var target=route()+(mode==="edit"?"/edit/"+encodeURIComponent(o.id):"/new");
+    if(("#/"+target)===location.hash)render();else go(target)};
+  // Adding or editing happens on its own route (#/schools/new, #/schools/edit/:id),
+  // never inside the list and never in a squeezed pop-up.
+  function acOrgFormInit(mode,o){ac.orgForm={mode:mode,row:o||null,gov:"",govId:"",dist:"",_error:null,draft:{}};
     if(mode==="edit"&&o){ac.orgForm.gov=o.governorate||"";ac.orgForm.dist=o.district||""}
-    if(!ac.cache.locGovs)load("locGovs","/api/locations/governorates");render()};
-  window.acOrgFormClose=function(){ac.orgForm=null;render()};
+    if(!ac.cache.locGovs)load("locGovs","/api/locations/governorates")};
+  window.acOrgFormClose=function(){ac.orgForm=null;
+    var target=route();if(("#/"+target)===location.hash)render();else go(target)};
   window.acOrgGov=function(code){ac.orgForm.gov=code||"";ac.orgForm.govId="";ac.orgForm.dist="";
     invalidate("locDist:");var list=ac.cache.locGovs||[];
     for(var i=0;i<list.length;i++){if(list[i].code===code){ac.orgForm.govId=list[i].id;break}}
@@ -59,6 +65,7 @@
     var out=wOpt("",t("— بدون مديرية —","— No district —"),ac.orgForm.dist);
     (ac.cache["locDist:"+ac.orgForm.govId]||[]).forEach(function(d){out+=wOpt(d.code,d.name||d.code,ac.orgForm.dist)});return out}
   window.acOrgSave=function(){var f=ac.orgForm;if(!f||f._busy)return;
+    if(f.mode==="edit"&&!f.row){f._error=t("تعذر تحميل المؤسسة. أعد المحاولة من القائمة.","Could not load the institution. Retry from the list.");render();return}
     if(f.gov&&!f.govId){var list=ac.cache.locGovs||[];for(var i=0;i<list.length;i++){if(list[i].code===f.gov){f.govId=list[i].id;break}}}
     if(f.govId)load("locDist:"+f.govId,"/api/locations/districts?governorateId="+f.govId);
     f._error=null;var name=wVal("ac-org-name");
@@ -69,7 +76,8 @@
       registration_open:(wVal("ac-org-reg")||"open")==="open"};
     var gov=wVal("ac-org-gov");if(gov){payload.governorate_code=gov;var dis=wVal("ac-org-dist");if(dis)payload.district_code=dis}
     f._busy=true;var req=f.mode==="edit"?apiPut("/api/organizations/"+f.row.id,payload):apiPost("/api/organizations",payload);
-    req.then(function(){ac.orgForm=null;invalidate("institutions:");delete ac.cache.dashboard;render()})
+    req.then(function(){ac.orgForm=null;invalidate("institutions:");delete ac.cache.dashboard;
+      var target=route();if(("#/"+target)===location.hash)render();else go(target)})
       .catch(function(e){f._busy=false;f._error=errorText(e);render()})};
   function adminOrgForm(){var f=ac.orgForm;if(!f)return "";
     ["ac-org-name","ac-org-email","ac-org-phone","ac-org-website","ac-org-desc","ac-org-address",
@@ -87,9 +95,10 @@
       '<div class="loading-inline"><div class="loader"></div></div>':
       '<select id="ac-org-dist" onchange="acOrgDist(this.value)">'+acOrgDistOptions()+'</select>'):
       '<small class="ac-hint">'+t("اختر المحافظة أولاً.","Choose a governorate first.")+'</small>';
-    return '<section class="panel ac-form-panel">'+formError(f)+'<div class="panel-title"><h2>'+t("إضافة مؤسسة","Add institution")+
-      (f.mode==="edit"?t(" · تعديل"," · edit"):"")+'</h2><button class="btn" onclick="acOrgFormClose()">'+t("إغلاق","Close")+'</button></div>'+
-      '<div class="ac-form-grid">'+wInput(t("الاسم *","Name *"),"ac-org-name",fd("ac-org-name"),t("اسم المؤسسة","Institution name"))+
+    return formPage({back:route(),error:formError(f)?f._error:null,busy:f._busy,onSave:"acOrgSave()",onCancel:"acOrgFormClose()",
+      title:f.mode==="edit"?t("تعديل مؤسسة","Edit institution"):t("إضافة مؤسسة","Add institution"),
+      subtitle:t("بيانات المؤسسة الأساسية. تُحدَّد الرسوم والسعة لاحقاً داخل عرض المؤسسة لا هنا.","Core institution record. Fees and capacity live in the institution offering, not here."),
+      body:wInput(t("الاسم *","Name *"),"ac-org-name",fd("ac-org-name"),t("اسم المؤسسة","Institution name"))+
       wSel(t("النوع","Type"),"ac-org-type",typeStr)+wInput(t("البريد الإلكتروني","Email"),"ac-org-email",fd("ac-org-email"),"")+
       wInput(t("الهاتف","Phone"),"ac-org-phone",fd("ac-org-phone"),t("+967...","+967..."))+
       wInput(t("الموقع الإلكتروني","Website"),"ac-org-website",fd("ac-org-website"),"https://")+
@@ -99,10 +108,29 @@
       '<div class="form-group ac-field-wide"><label>'+t("المديرية","District")+'</label>'+distSlot+'</div>'+
       wInput(t("الحي","Neighborhood"),"ac-org-neigh",fd("ac-org-neigh"),"",true)+
       wInput(t("العنوان","Address"),"ac-org-address",fd("ac-org-address"),"",true)+
-      wArea(t("الوصف","Description"),"ac-org-desc",fd("ac-org-desc"))+
-      '</div><div class="ac-form-actions"><button class="btn green" '+((f._busy)?"disabled":"")+' onclick="acOrgSave()">'+
-      (f._busy?t("جاري الحفظ...","Saving..."):t("حفظ","Save"))+'</button><button class="btn" onclick="acOrgFormClose()">'+t("إلغاء","Cancel")+
-      '</button></div></section>'
+      wArea(t("الوصف","Description"),"ac-org-desc",fd("ac-org-desc"))})
+  }
+  // The dedicated route is also the entry point on a refresh or a shared link, so
+  // "edit" resolves its row from whatever list is already cached and falls back
+  // to the single-institution endpoint when the list was never loaded.
+  function adminOrgFormPage(){
+    if(!ac.orgForm){
+      var id=routeSubId();
+      if(routeSub()==="edit"&&id){
+        var row=null;
+        Object.keys(ac.cache).forEach(function(k){if(k.indexOf("institutions:")===0){
+          ((ac.cache[k]||{}).items||[]).forEach(function(x){if(String(x.id)===String(id))row=x})}});
+        if(row)acOrgFormInit("edit",row);
+        else{ac.orgForm={mode:"edit",row:null,gov:"",govId:"",dist:"",_error:null,draft:{},_loading:true};
+          apiGet("/api/organizations/"+encodeURIComponent(id)).then(function(r){ac.orgForm.row=r;
+            ac.orgForm.gov=r.governorate||"";ac.orgForm.dist=r.district||"";ac.orgForm._loading=false;render()})
+            .catch(function(e){ac.orgForm._error=errorText(e);ac.orgForm._loading=false;render()})}
+      } else acOrgFormInit("add",null);
+    }
+    var f=ac.orgForm;
+    if(f&&f._loading)return formPage({back:route(),title:t("إضافة مؤسسة","Add institution"),
+      body:'<div class="loading-inline"><div class="loader"></div></div>',onSave:"",busy:true});
+    return adminOrgForm();
   }
 
   // ---- teachers ----
@@ -202,7 +230,10 @@
   window.acTeacherNeighborhood=function(){var f=ac.teacherForm;if(!f)return;
     f.hoodId=wVal("ac-t-hood");render()};
 
-  window.acTeacherFormOpen=function(mode,r){
+  window.acTeacherFormOpen=function(mode,r){acTeacherFormInit(mode,r);
+    var target=route()+(mode==="edit"?"/edit/"+encodeURIComponent(r.id):"/new");
+    if(("#/"+target)===location.hash)render();else go(target)};
+  function acTeacherFormInit(mode,r){
     ac.teacherForm={mode:mode,row:r||null,_error:null,draft:{},showPass:false,
       countryCode:"",countryId:"",govId:"",distId:"",hoodId:"",
       subjects:[],stages:[],quals:[],avails:[]};
@@ -235,8 +266,9 @@
     if(!f2.countryCode&&!(teacherCatalog()||null))teacherLoadCatalog();
     if(f2.govId)load("locDist:"+f2.govId,"/api/locations/districts?governorateId="+f2.govId,listOf);
     if(f2.distId)load("locHood:"+f2.distId,"/api/locations/neighborhoods?districtId="+f2.distId,listOf);
-    render()};
-  window.acTeacherFormClose=function(){ac.teacherForm=null;render()};
+  };
+  window.acTeacherFormClose=function(){ac.teacherForm=null;
+    var target=route();if(("#/"+target)===location.hash)render();else go(target)};
   window.acTeacherEdit=function(id){
     var source=ac.teacherDetail?[ac.teacherDetail.row]:(teacherRows()||[]);
     for(var i=0;i<source.length;i++){if(source[i]&&source[i].id===id){acTeacherFormOpen("edit",source[i]);return}}
@@ -302,6 +334,7 @@
 
   window.acTeacherSave=function(){
     var f=ac.teacherForm;if(!f||f._busy)return;f._error=null;
+    if(f.mode==="edit"&&!f.row){f._error=t("تعذر تحميل المعلم. أعد المحاولة من القائمة.","Could not load the teacher. Retry from the list.");render();return}
     var el=function(id){return document.getElementById(id)||{checked:false,value:""}};
     acTeacherDraft();
     var body={
@@ -334,7 +367,8 @@
     var req=f.mode==="add"?apiPost("/api/teachers",body):apiPatch("/api/teachers/"+f.row.id,body);
     req.then(function(){
       ac.teacherForm=null;invalidate("teachers:");delete ac.cache.teacherDeletions;delete ac.cache.dashboard;
-      render()}).catch(function(e){f._busy=false;f._error=errorText(e);render()})};
+      var target=route();if(("#/"+target)===location.hash)render();else go(target)})
+      .catch(function(e){f._busy=false;f._error=errorText(e);render()})};
 
   window.acTeacherQualAdd=function(){var f=ac.teacherForm;if(!f)return;
     acTeacherDraft();f.quals.push({title:"",institutionName:"",degree:"",year:""});render()};
@@ -465,7 +499,8 @@
   function adminTeacherForm(){
     var f=ac.teacherForm;if(!f)return "";
     var cat=teacherCatalog();
-    if(!cat)return '<section class="panel ac-form-panel">'+state("teacherCatalog")+'</section>';
+    if(!cat)return formPage({back:route(),title:t("إضافة معلم","Add teacher"),
+      body:'<div class="loading-inline"><div class="loader"></div></div>',onSave:"",busy:true});
     acTeacherDraft();
     var row=f.row||{};
     function val(id,fallback){return acTeacherVal(f,id,fallback)}
@@ -526,10 +561,10 @@
     var curStatus=val("ac-t-status",row.status||"active");
     var curVerif=val("ac-t-verif",row.verificationStatus||"pending");
 
-    return '<section class="panel ac-form-panel">'+formError(f)+
-      '<div class="panel-title"><h2>'+(isAdd?t("إضافة معلم","Add teacher"):t("تعديل بيانات المعلم","Edit teacher"))+
-      '</h2><button class="btn" onclick="acTeacherFormClose()">'+t("إغلاق","Close")+'</button></div>'+
-      '<div class="ac-form-grid">'+
+    return formPage({back:route(),error:f._error,busy:f._busy,onSave:"acTeacherSave()",onCancel:"acTeacherFormClose()",
+      title:isAdd?t("إضافة معلم","Add teacher"):t("تعديل بيانات المعلم","Edit teacher"),
+      subtitle:t("المعلم مستقل: حساب دخول، مواد بأسعارها، أوقات توفر، مؤهلات وموقع.","A teacher is independent: login account, per-subject prices, availability, qualifications and location."),
+      body:
         wInput(t("الاسم الكامل (عربي) *","Full name (Arabic) *"),"ac-t-name",val("ac-t-name",row.userName),t("مثال: عبدالله الشامي","e.g. Abdullah Al-Shami"))+
         wInput(t("الاسم بالإنجليزية","Name in English"),"ac-t-name-en",val("ac-t-name-en",row.nameEn),"Abdullah Al-Shami")+
         wInput(t("البريد الإلكتروني *","Email *"),"ac-t-email",val("ac-t-email",row.userEmail),"teacher@example.com")+
@@ -586,10 +621,7 @@
       (availRows||'<div class="empty-state">'+t("لم تُضف أوقات توفر بعد.","No availability added yet.")+'</div>')+
       '<div class="core-h3-row"><h3 class="core-h3">'+t("المؤهلات والخبرات","Qualifications and experience")+'</h3>'+
         '<button type="button" class="btn" onclick="acTeacherQualAdd()">'+icon("plus",14)+' '+t("إضافة مؤهل","Add qualification")+'</button></div>'+
-      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')+
-      '<div class="ac-form-actions"><button class="btn green" '+(f._busy?"disabled":"")+' onclick="acTeacherSave()">'+
-      (f._busy?t("جاري الحفظ...","Saving..."):t("حفظ","Save"))+'</button>'+
-      '<button class="btn" onclick="acTeacherFormClose()">'+t("إلغاء","Cancel")+'</button></div></section>'
+      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')})
   }
   // ---- detail ----
   function teacherBadgeRow(r){
@@ -893,7 +925,38 @@
             '<span class="entity-sub">'+t("مُبتّ","decided")+'</span>')+
           '</td></tr>'}).join("")+'</tbody></table></div>'}
 
+  // Dedicated teacher add/edit page. A refresh or a shared link arrives with no
+  // in-memory draft, so the row is resolved from the visible list first and from
+  // the single-teacher endpoint when the list was never loaded.
+  function adminTeacherFormPage(){
+    if(!ac.teacherForm){
+      var id=routeSubId();
+      if(routeSub()==="edit"&&id){
+        var source=ac.teacherDetail?[ac.teacherDetail.row]:(teacherRows()||[]);
+        var row=null;
+        for(var i=0;i<source.length;i++){if(source[i]&&String(source[i].id)===String(id))row=source[i]}
+        if(row)acTeacherFormInit("edit",row);
+        else{
+          ac.teacherForm={mode:"edit",row:null,_error:null,draft:{},showPass:false,
+            countryCode:"",countryId:"",govId:"",distId:"",hoodId:"",
+            subjects:[],stages:[],quals:[],avails:[],_loading:true};
+          teacherLoadCatalog();
+          apiGet("/api/teachers/"+encodeURIComponent(id)).then(function(r){
+            acTeacherFormInit("edit",r);ac.teacherForm._loading=false;render()})
+            .catch(function(e){ac.teacherForm._error=errorText(e);ac.teacherForm._loading=false;render()});
+        }
+      } else acTeacherFormInit("add",null);
+    }
+    var f=ac.teacherForm;
+    if(f&&f._loading)return formPage({back:route(),title:t("تعديل بيانات المعلم","Edit teacher"),
+      body:'<div class="loading-inline"><div class="loader"></div></div>',onSave:"",busy:true});
+    return adminTeacherForm();
+  }
+
   window.adminTeachersPage=function(){
+    // The add/edit screen is its own route (#/teachersAdmin/new, …/edit/:id).
+    var sub=routeSub();
+    if(sub==="new"||sub==="edit")return adminTeacherFormPage();
     if(ac.teacherDetail)return adminTeacherDetail(ac.teacherDetail);
     teacherLoadCatalog();
     var listUrl=teacherListUrl();
@@ -909,7 +972,6 @@
         '<button class="'+(ac.teachersView==="cards"?"active":"")+'" onclick="acTeacherViewSet(\'cards\')">'+icon("grid",14)+' '+t("كروت","Cards")+'</button>'+
         '<button class="'+(ac.teachersView==="table"?"active":"")+'" onclick="acTeacherViewSet(\'table\')">'+icon("list",14)+' '+t("جدول","Table")+'</button>'+
       '</div></div>';
-    body+=adminTeacherForm();
     body+='<div class="ac-tabs">'+TEACHER_TABS.map(function(x){
       return '<button class="'+(ac.teacherTab===x[0]?"active":"")+'" onclick="acTeacherTabSet(\''+x[0]+'\')">'+t(x[1],x[2])+'</button>'}).join("")+'</div>';
     body+='<div class="ac-filter-bar">'+
@@ -1039,6 +1101,10 @@
   window.acInstitutionsView=function(v){ac.institutionsView=v;render()};
 
   window.adminInstitutionsPage=function(group){
+    // Add/edit lives on its own route, so this page is either the list or the
+    // dedicated form — never both at once and never a pop-up over the table.
+    var sub=routeSub();
+    if(sub==="new"||sub==="edit")return adminOrgFormPage();
     var allowed=(group&&AC_TYPE_GROUPS[group])||null;
     if(allowed&&allowed.indexOf(ac.institutionType)<0)ac.institutionType=allowed[0];
     var key="institutions:"+ac.institutionType+":"+ac.institutionSearch;
@@ -1054,7 +1120,7 @@
       '<button class="btn green" onclick="acOrgFormOpen(\'add\',null)">'+icon("plus",15)+' '+t("إضافة","Add")+'</button>')+
       '<div class="org-type-tabs">'+allTypes.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
       '" onclick="acInstitutionType(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+'</div>';
-    body+=adminOrgForm()+'<section class="panel">'+
+    body+='<section class="panel">'+
       '<form class="toolbar" onsubmit="acInstitutionSearch(event)"><input id="ac-org-q" value="'+esc(ac.institutionSearch)+
       '" placeholder="'+t("بحث بالاسم...","Search by name...")+'"><button class="btn green">'+t("بحث","Search")+'</button>'+
       '<div class="view-toggle"><button type="button" class="'+(ac.institutionsView==="cards"?"active":"")+
@@ -1155,8 +1221,12 @@
     if(!track)return t("عام","General");
     return {science:t("علمي","Science"),literary:t("أدبي","Literary"),general:t("عام","General")}[track]||track;
   }
-  window.acCatalogFormOpen=function(kind){ac.academicForm={kind:kind,_error:null,_busy:false};render()};
-  window.acCatalogFormClose=function(){ac.academicForm=null;render()};
+  window.acCatalogFormOpen=function(kind){
+    ac.academicForm={kind:kind,_error:null,_busy:false};
+    var target="academic/"+(kind==="grade"?"grades":"stages")+"/new";
+    if(("#/"+target)===location.hash)render();else go(target)};
+  window.acCatalogFormClose=function(){ac.academicForm=null;
+    var target="academic";if(("#/"+target)===location.hash)render();else go(target)};
   window.acCatalogSave=function(){
     var f=ac.academicForm;if(!f||f._busy)return;
     var name=wVal("ac-cat-name"),code=wVal("ac-cat-code");
@@ -1181,7 +1251,9 @@
     f._busy=true;apiPost(url,payload).then(function(){ac.academicForm=null;
       delete ac.cache["academic:"+(f.kind==="grade"?"grades":"stages")];
       // A new catalog row changes the options an offering form can pick from.
-      invalidate("academic:");render()}).catch(function(e){f._busy=false;f._error=errorText(e);render()});
+      invalidate("academic:");
+      var target="academic";if(("#/"+target)===location.hash)render();else go(target)})
+      .catch(function(e){f._busy=false;f._error=errorText(e);render()});
   };
   // Saving a track edits the shared grade, which is a catalog decision and not a
   // tenant one, so the control only appears for the platform admin page.
@@ -1195,10 +1267,12 @@
     var isGrade=f.kind==="grade";
     var stages=ac.cache["academic:stages"]||[];
     var stageOpts=stages.map(function(s){return wOpt(s.id,s.name)}).join("");
-    return '<section class="panel ac-form"><div class="panel-title"><h2>'+
-      esc(isGrade?t("إضافة صف","Add grade"):t("إضافة مرحلة","Add stage"))+'</h2></div>'+formError(f)+
-      '<div class="ac-form-grid">'+
-      wInput(isGrade?t("اسم الصف","Grade name"):t("اسم المرحلة","Stage name"),"ac-cat-name","",
+    return formPage({back:"academic",error:f._error,busy:f._busy,
+      onSave:"acCatalogSave()",onCancel:"acCatalogFormClose()",
+      saveLabel:t("حفظ البيانات","Save data"),
+      title:isGrade?t("إضافة صف","Add grade"):t("إضافة مرحلة","Add stage"),
+      subtitle:t("كتالوج عام للمنصة — بدون أسعار ولا سعة.","Global platform catalog — no prices and no capacity."),
+      body:wInput(isGrade?t("اسم الصف","Grade name"):t("اسم المرحلة","Stage name"),"ac-cat-name","",
         isGrade?t("مثال: الأول ثانوي","e.g. First Secondary"):t("مثال: المرحلة الثانوية","e.g. Secondary stage"))+
       // The code is the key an institution offering points at, so the example
       // is a real catalog code and not a subject code such as "MATH".
@@ -1208,12 +1282,21 @@
         wInput(t("الاسم بالإنجليزية","English name"),"ac-cat-name-en","",t("مثال: Secondary stage","e.g. Secondary stage"))+
         wArea(t("الوصف","Description"),"ac-cat-desc",""))+
       (isGrade?wSel(t("المرحلة","Stage"),"ac-cat-stage",wOpt("",t("— اختر المرحلة —","— Select a stage —"))+stageOpts):"")+
-      (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")+
-      '</div><div class="ac-form-actions">'+
-      '<button class="btn green" onclick="acCatalogSave()">'+t("حفظ","Save")+'</button>'+
-      '<button class="btn" onclick="acCatalogFormClose()">'+t("إلغاء","Cancel")+'</button></div></section>';
+      (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")});
+  }
+  // The catalog add form owns a route of its own: #/academic/stages/new and
+  // #/academic/grades/new. A refresh rebuilds the form state from the URL.
+  function academicCatalogFormPage(kind){
+    if(!ac.academicForm||ac.academicForm.kind!==kind)ac.academicForm={kind:kind,_error:null,_busy:false};
+    if(kind==="grade")load("academic:stages","/api/academic/stages",listOf);
+    return acCatalogForm();
   }
   window.academicPage=function(){
+    var sub=routeSub();
+    if((sub==="stages"||sub==="grades")&&routeSubId()==="new"){
+      ac.academicTab=sub;
+      return academicCatalogFormPage(sub==="grades"?"grade":"stage");
+    }
     var defs={
       stages:["stages",t("المراحل","Stages"),t("أسماء المراحل التعليمية على مستوى المنصة. بدون رسوم أو سعة.","Platform-wide stage names. No fees or capacity here.")],
       grades:["grades",t("الصفوف","Grades"),t("سلم الصفوف مع المسار: علمي / أدبي / عام.","The grade ladder with its track: science / literary / general.")],
@@ -1236,7 +1319,7 @@
       '</span></div></div>'+
       '<div class="section-tabs ac-tabs">'+Object.keys(defs).map(function(k){return '<button class="'+(ac.academicTab===k?"active":"")+
       '" onclick="acAcademicTab(\''+k+'\')">'+esc(defs[k][1])+'</button>'}).join("")+'</div>'+
-      acCatalogForm()+'<section class="panel"><div class="panel-title"><h2>'+esc(def[1])+'</h2></div>';
+      '<section class="panel"><div class="panel-title"><h2>'+esc(def[1])+'</h2></div>';
     var rows=ac.cache[key];
     if(!rows)body+=state(key);
     else if(!rows.length)body+='<div class="empty-state">'+t("لا توجد بيانات.","No records.")+'</div>';

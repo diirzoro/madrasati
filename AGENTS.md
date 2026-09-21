@@ -145,6 +145,21 @@ absent by design.
   small Arabic type, crowded dashboards.
 - Tables paginate/filter server-side; never render thousands of rows at once.
 - Entity rows open a full details view, not a small modal.
+- **Every add/edit form is a dedicated page, not an inline panel and not a
+  pop-up over the table.** The route is the list route plus a second segment
+  (`#/schools/new`, `#/schools/edit/:id`, `#/teachersAdmin/new`,
+  `#/academic/stages/new`, `#/offers/new`, `#/ads/edit/:id`, `#/slides/new`,
+  `#/detail/offering/:stageId|new`, `#/detail/subject/new`). Only the first
+  segment picks the sidebar page, so a form never becomes a sidebar entry, and
+  a refresh or a shared link still opens it. Each one renders through the single
+  `formPage()` builder (`app.js`) and the single `.uf-page` block
+  (`styles.css`): a «← العودة إلى القائمة» back control, one white card centred
+  at `max-width: 760px`, fields at `height: 40px` / `border-radius: 8px` / light
+  grey border with a 16px rhythm, a 28%-label / 72%-control grid on desktop, one
+  column with 44px targets below 768px, and the [ إلغاء ] + [ حفظ البيانات ]
+  footer. Auth screens (login / sign-up) keep their current split layout and
+  side imagery, and only need to stay responsive. This is UI, CSS and routing
+  only — it may not add, remove or rename a column.
 - Responsive down to 360px, 44×44 touch targets, no horizontal scrolling, RTL
   drawer from the right and LTR from the left. No separate mobile product.
 

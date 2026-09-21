@@ -706,12 +706,18 @@ function applyCustomTheme(){
  render();
 }
 function go(r){location.hash="#/"+r}
-function route(){
-  var r=(location.hash.replace("#/","")||"home").split("?")[0];
-  if(r==="login/login")return "login";
-  if(r==="register/register")return "register";
-  return r;
+// V4 is hash-routing only, and a route has at most two meaningful segments:
+// "#/teachersAdmin" is a section page and "#/teachersAdmin/new" is that same
+// section's dedicated form page. Only the first segment selects the page, so a
+// new form route never registers a second sidebar entry or a second product;
+// the extra segment just tells the page what to render.
+function routePath(){
+  var raw=(location.hash.replace(/^#\/?/,"")||"home").split("?")[0];
+  return raw.split("/").filter(function(x){return x!==""});
 }
+function route(){return routePath()[0]||"home"}
+function routeSub(){var p=routePath();return p.length>1?p[1]:""}
+function routeSubId(){var p=routePath();return p.length>2?decodeURIComponent(p[2]):""}
 
 var sidebarOpen=false;
 function toggleSidebar(){
@@ -1569,6 +1575,37 @@ function adminShell(body){
   '<main class="admin-content"><div class="admin-inner">'+body+'</div></main>'+
  '</div>'
 }
+
+/* ---------- Universal dedicated form page ----------
+   Every add/edit screen in the platform (institutions, teachers, stages,
+   grades, fees, offers, ads, slides) renders through this one builder, so the
+   shape cannot drift between sections: a back link to the list, a single white
+   card centred at 760px, the fields on a label/control grid that collapses to
+   one column on mobile, and the two footer actions. Callers only supply the
+   title, the field markup and the save/cancel handlers. UI only — no form here
+   changes what the server accepts. */
+function formPage(opts){
+ var ar=lang==="ar",o=opts||{};
+ var back=o.back||route()||"home";
+ var backLabel=o.backLabel||(ar?"← العودة إلى القائمة":"← Back to the list");
+ var cancel=o.onCancel||("go('"+back+"')");
+ return adminShell(
+  '<div class="uf-page">'+
+   '<button type="button" class="uf-back" onclick="go(\''+esc(back)+'\')">'+esc(backLabel)+'</button>'+
+   (o.title||o.subtitle?'<div class="uf-head">'+(o.title?'<h1>'+esc(o.title)+'</h1>':"")+
+     (o.subtitle?'<p>'+esc(o.subtitle)+'</p>':"")+'</div>':"")+
+   '<section class="uf-card">'+
+    (o.error?'<div class="ac-form-error">'+esc(o.error)+'</div>':"")+
+    '<div class="uf-grid">'+(o.body||"")+'</div>'+
+    (o.foot||"")+
+    '<div class="uf-actions">'+
+     '<button type="button" class="btn green uf-save"'+(o.busy?" disabled":"")+' onclick="'+o.onSave+'">'+
+      esc(o.busy?(ar?"جاري الحفظ...":"Saving..."):(o.saveLabel||(ar?"حفظ البيانات":"Save data")))+'</button>'+
+     '<button type="button" class="btn uf-cancel" onclick="'+cancel+'">'+esc(ar?"إلغاء":"Cancel")+'</button>'+
+    '</div>'+
+   '</section>'+
+  '</div>');
+}
 var dashboardData={pendingRegistrations:0,connected:false};
 
 function kpis(){
@@ -1851,8 +1888,8 @@ function detailBlock(isPublic){
   esc(tr("stageFeesLabel"))+'</h2><p>'+esc(lang==="ar"?"هذه الرسوم والسعة خاصة بهذه المؤسسة، والمصدر هو عرض المؤسسة لا الكتالوج العام.":"These fees and seats belong to this institution; the source is its offering, not the global catalog.")+
   '</p></div>'+(isPublic?"":'<button class="btn brown" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button>')+'</div>'+
   gatedNote+(deliveryChips?'<h3 class="core-h3">'+esc(tr("deliveryLabel"))+'</h3><div class="core-chips">'+deliveryChips+'</div>':"")+
-  (isPublic?"":orgStageForm())+stagesTable+
-  subjectsHeading+(isPublic?"":orgSubjectForm())+subjectsTable+'</section>';
+  stagesTable+
+  subjectsHeading+subjectsTable+'</section>';
 
  detailExtras.lastHeader=header;detailExtras.lastShared=shared;detailExtras.lastOffering=offeringSection;
  return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+offeringSection+shared;
@@ -1863,8 +1900,31 @@ function detailBlock(isPublic){
 // the server has already withheld every priced field from their offering call.
 function detailPage(){
  var u=getCurrentUser();
+ var sub=routeSub();
+ // The priced offering writes live on their own routes now; only the platform
+ // admin reaches them, and the server still enforces requireOrgMember.
+ if(u&&u.role==="admin"&&(sub==="offering"||sub==="subject"))return offeringFormPage(sub);
  if(u&&u.role==="admin")return adminShell(detailBlock(false));
  return publicShell(detailBlock(true));
+}
+
+// Dedicated page for one priced row of the institution offering:
+// #/detail/offering/:stageId|new and #/detail/subject/new, both carrying ?id=
+// so the institution being priced is still the one in the address bar.
+function offeringFormPage(kind){
+ var orgId=currentOrg&&currentOrg.id;
+ if(!orgId)return adminShell('<div class="uf-page"><div class="loading-inline"><div class="loader"></div></div></div>');
+ if(kind==="offering"){
+  var sid=routeSubId();
+  if(!orgStageEdit.open||String(orgStageEdit.stageId||"")!==(sid==="new"?"":String(sid))){
+   orgStageEdit.open=true;orgStageEdit.stageId=(sid&&sid!=="new")?sid:null;orgStageEdit._error=null;
+   if(!orgStageEdit.catalog){apiGet('/api/academic/stages').then(function(rows){orgStageEdit.catalog=rows||[];render()})
+    .catch(function(){orgStageEdit.catalog=[];render()})}
+  }
+  return orgStageForm();
+ }
+ if(!orgSubjectEdit.open){orgSubjectEdit.open=true;orgSubjectEdit._error=null}
+ return orgSubjectForm();
 }
 
 function generic(title){
@@ -1893,15 +1953,15 @@ function detailInput(label,id,value,placeholder){
 function detailSelect(label,id,options,wide){
  return detailField(label,id,'<select id="'+id+'">'+options+'</select>',wide);
 }
+function detailBackRoute(){var id=currentOrg&&currentOrg.id;return "detail"+(id?"?id="+encodeURIComponent(id):"")}
 function orgStageFormOpen(stageId){
- orgStageEdit.open=true;orgStageEdit.stageId=stageId||null;orgStageEdit._error=null;
- if(!orgStageEdit.catalog){
-  apiGet('/api/academic/stages').then(function(rows){orgStageEdit.catalog=rows||[];render()})
-   .catch(function(){orgStageEdit.catalog=[];render()});
- }
- render();
+ var target="detail/offering/"+encodeURIComponent(stageId||"new")+(currentOrg&&currentOrg.id?"?id="+encodeURIComponent(currentOrg.id):"");
+ if(("#/"+target)===location.hash)render();else go(target);
 }
-function orgStageFormClose(){orgStageEdit.open=false;render()}
+function orgStageFormClose(){
+ orgStageEdit.open=false;
+ var target=detailBackRoute();if(("#/"+target)===location.hash)render();else go(target);
+}
 function orgStageForm(){
  if(!orgStageEdit.open)return "";
  var offering=orgOffering();
@@ -1915,10 +1975,11 @@ function orgStageForm(){
  var stageOpts=cat.filter(function(s){return !used[s.id]||s.id===orgStageEdit.stageId})
   .map(function(s){return detailOpt(s.id,s.name,s.id===orgStageEdit.stageId)}).join("");
  var cur=(existing&&existing.fee)||{};
- return '<div class="ac-form org-stage-form">'+
-  (orgStageEdit._error?'<div class="ac-form-error">'+esc(orgStageEdit._error)+'</div>':"")+
-  '<div class="ac-form-grid">'+
-  detailSelect(tr("stages"),"os-stage",stageOpts,true)+
+ return formPage({back:detailBackRoute(),error:orgStageEdit._error,busy:orgStageEdit._busy,
+  onSave:"orgStageSave()",onCancel:"orgStageFormClose()",
+  title:orgStageEdit.stageId?tr("editLabel"):tr("addStageLabel"),
+  subtitle:lang==="ar"?"هذه الرسوم والسعة خاصة بهذه المؤسسة، والمصدر هو عرض المؤسسة لا الكتالوج العام.":"These fees and seats belong to this institution; the source is its offering, not the global catalog.",
+  body:detailSelect(tr("stages"),"os-stage",stageOpts)+
   detailInput(tr("feeLabel"),"os-fee",cur.amount!=null?String(cur.amount):"","0.00")+
   detailSelect(tr("currencyLabel"),"os-currency",["YER","SAR","USD"].map(function(c){return detailOpt(c,c,cur.currency||"YER")}).join(""))+
   detailSelect(tr("frequencyLabel"),"os-frequency",[["yearly",tr("yearly")],["termly",tr("termly")],["monthly",tr("monthly")]]
@@ -1927,10 +1988,7 @@ function orgStageForm(){
     .map(function(x){return detailOpt(x[0],x[1],(existing&&existing.deliveryMode)||"on_site")}).join(""))+
   detailSelect(tr("languageLabel"),"os-language",[["AR",detailLangLabel("AR")],["EN",detailLangLabel("EN")],["FR",detailLangLabel("FR")]]
     .map(function(x){return detailOpt(x[0],x[1],(existing&&existing.languageCode)||"AR")}).join(""))+
-  detailInput(tr("capacityLabel"),"os-capacity",existing&&existing.capacity!=null?String(existing.capacity):"","")+
-  '</div><div class="ac-form-actions">'+
-  '<button class="btn green" onclick="orgStageSave()">'+esc(lang==="ar"?"حفظ":"Save")+'</button>'+
-  '<button class="btn" onclick="orgStageFormClose()">'+esc(lang==="ar"?"إلغاء":"Cancel")+'</button></div></div>';
+  detailInput(tr("capacityLabel"),"os-capacity",existing&&existing.capacity!=null?String(existing.capacity):"","")});
 }
 function orgStageSave(){
  var f=orgStageEdit;if(f._busy)return;
@@ -1949,7 +2007,7 @@ function orgStageSave(){
  f._busy=true;
  apiPut('/api/academic/org/'+encodeURIComponent(orgId)+'/offering/stages/'+encodeURIComponent(stageId),payload)
   .then(function(){f._busy=false;f.open=false;f.stageId=null;return loadOrgDetailExtras(orgId)})
-  .then(function(){render()})
+  .then(function(){var t=detailBackRoute();if(("#/"+t)===location.hash)render();else go(t)})
   .catch(function(e){f._busy=false;f._error=(e&&e.data&&e.data.error)||(e&&e.message)||"Error";render()});
 }
 
@@ -1957,23 +2015,28 @@ function orgStageSave(){
 // It is created under the institution, never in the global catalog, and it is
 // born with reviewStatus "pending" so an admin still has to approve it.
 var orgSubjectEdit={open:false,_error:null,_busy:false};
-function orgSubjectFormOpen(){orgSubjectEdit.open=true;orgSubjectEdit._error=null;render()}
-function orgSubjectFormClose(){orgSubjectEdit.open=false;render()}
+function orgSubjectFormOpen(){
+ var target="detail/subject/new"+(currentOrg&&currentOrg.id?"?id="+encodeURIComponent(currentOrg.id):"");
+ orgSubjectEdit.open=true;orgSubjectEdit._error=null;
+ if(("#/"+target)===location.hash)render();else go(target);
+}
+function orgSubjectFormClose(){
+ orgSubjectEdit.open=false;
+ var target=detailBackRoute();if(("#/"+target)===location.hash)render();else go(target);
+}
 function orgSubjectForm(){
  if(!orgSubjectEdit.open)return "";
- return '<div class="ac-form org-stage-form">'+
-  (orgSubjectEdit._error?'<div class="ac-form-error">'+esc(orgSubjectEdit._error)+'</div>':"")+
-  '<div class="ac-form-grid">'+
-  detailInput(tr("subjectNameLabel"),"osub-name","",lang==="ar"?"مثال: الروبوتات":"e.g. Robotics")+
+ return formPage({back:detailBackRoute(),error:orgSubjectEdit._error,busy:orgSubjectEdit._busy,
+  onSave:"orgSubjectSave()",onCancel:"orgSubjectFormClose()",
+  title:tr("addOwnSubject"),
+  subtitle:lang==="ar"?"مادة تُضاف لهذه المؤسسة فقط، وتبقى بانتظار اعتماد المدير العام. المادة العامة لا تُعدّل من هنا.":"A subject added for this institution only; it stays pending until the platform admin approves it. The global catalog is not edited here.",
+  body:detailInput(tr("subjectNameLabel"),"osub-name","",lang==="ar"?"مثال: الروبوتات":"e.g. Robotics")+
   detailSelect(tr("languageLabel"),"osub-language",[["AR",detailLangLabel("AR")],["EN",detailLangLabel("EN")],["FR",detailLangLabel("FR")]]
     .map(function(x){return detailOpt(x[0],x[1])}).join(""))+
   detailInput(tr("feeLabel"),"osub-fee","","0.00")+
   detailSelect(tr("currencyLabel"),"osub-currency",["YER","SAR","USD"].map(function(c){return detailOpt(c,c,"YER")}).join(""))+
   detailSelect(tr("frequencyLabel"),"osub-frequency",[["yearly",tr("yearly")],["termly",tr("termly")],["monthly",tr("monthly")]]
-    .map(function(x){return detailOpt(x[0],x[1],"yearly")}).join(""))+
-  '</div><div class="ac-form-actions">'+
-  '<button class="btn green" onclick="orgSubjectSave()">'+esc(lang==="ar"?"حفظ":"Save")+'</button>'+
-  '<button class="btn" onclick="orgSubjectFormClose()">'+esc(lang==="ar"?"إلغاء":"Cancel")+'</button></div></div>';
+    .map(function(x){return detailOpt(x[0],x[1],"yearly")}).join(""))});
 }
 function orgSubjectSave(){
  var f=orgSubjectEdit;if(f._busy)return;
@@ -1988,7 +2051,7 @@ function orgSubjectSave(){
   currency:(document.getElementById("osub-currency")||{}).value||"YER",
   frequency:(document.getElementById("osub-frequency")||{}).value||"yearly"
  }).then(function(){f._busy=false;f.open=false;return loadOrgDetailExtras(orgId)})
-  .then(function(){render()})
+  .then(function(){var t=detailBackRoute();if(("#/"+t)===location.hash)render();else go(t)})
   .catch(function(e){f._busy=false;f._error=(e&&e.data&&e.data.error)||(e&&e.message)||"Error";render()});
 }
 
