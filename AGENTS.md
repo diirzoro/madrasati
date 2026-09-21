@@ -48,7 +48,12 @@ memo in the same commit and say why — never leave the two contradicting.
 
 1. **Subjects are the only academic foundation.** Curriculum is a
    *classification* (وزاري / أهلي / دولي) attached to subject and stage. Never
-   build a second subject system next to it.
+   build a second subject system next to it. An institution that needs a
+   subject the catalog lacks gets a row in the *same* `subjects` table with
+   `organization_id` set (`NULL` = global). `organization_id IS NULL` is the
+   filter for the global catalog, and `review_status` (`pending` / `approved` /
+   `rejected`) is the moderation lifecycle — only an admin approves, so an
+   institution can propose a subject but never admit its own.
 2. **Normalized tables are the source of truth.** The legacy JSONB columns on
    `organizations` are a temporary cache. Any new read/write path uses the
    normalized tables; migrate the frontend to them progressively.
@@ -85,17 +90,22 @@ memo in the same commit and say why — never leave the two contradicting.
     3 and 4; the offering tables hold the amounts, and `remaining_seats` is
     always read, never written.
 
-## 4. Admin sidebar is frozen at 15 items
+## 4. Admin sidebar is frozen at 13 items
 
-`home`, `schools`, `institutesAdmin`, `collegesAdmin`, `teachersAdmin`,
-`students`, `bookings`, `verify`, `academic`, `locations`, `offers`, `ads`,
-`reports`, `access`, `settings`.
+`admin` (الرئيسية), `schools`, `teachersAdmin`, `students`, `bookings`,
+`verify`, `academic`, `locations`, `offers`, `ads`, `reports`, `access`,
+`settings`.
 
-The institution entries share one page (`adminInstitutionsPage(group)`) with
-five explicit tabs — private schools, government schools, colleges,
-universities, institutes. A sidebar entry only selects which tab is open on
-arrival; it never hides the other four types. The marketing entries are split
-into offers and ads. Payments and fees are absent by design.
+Institutions are **one** entry. Private schools, government schools, colleges,
+universities and institutes are five explicit tabs of the single
+`adminInstitutionsPage()` screen, always all five visible; an entry only selects
+which tab is open on arrival and never hides the other four.
+`institutesAdmin`, `collegesAdmin` and `institutions` stay as route aliases so
+an existing deep link still resolves. Never split them back into separate
+sidebar products.
+
+The marketing entries are split into offers and ads. Payments and fees are
+absent by design.
 
 ## 5. Design system rules
 

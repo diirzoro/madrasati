@@ -29,6 +29,12 @@ function mapOrganization(row) {
     phone: row.phone,
     whatsapp: row.whatsapp,
     principalName: row.principal_name,
+    // Resolved from the owner membership, so the card can always show a name and
+    // an avatar instead of a bare uuid.
+    ownerName: row.owner_name || row.principal_name || null,
+    ownerEmail: row.owner_email || null,
+    ownerPhone: row.owner_phone || null,
+    ownerAvatar: row.owner_avatar || null,
     email: row.email,
     website: row.website,
     image: row.image,

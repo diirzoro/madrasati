@@ -18,3 +18,9 @@
 .ac-check input{width:18px;height:18px;accent-color:var(--theme-primary,#1f5d46)}.ac-checkgrid{display:grid;gap:4px}
 .ac-hint{color:var(--theme-muted,#6b7280);font-size:12px}
 @media(max-width:1200px){.ac-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.ac-grid-2,.ac-module-grid{grid-template-columns:1fr}.ac-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ac-kpi{padding:14px}.ac-kpi strong{font-size:23px}}@media(max-width:390px){.ac-kpis{grid-template-columns:1fr}}
+
+/* A table row is a link to the institution full screen, so it must look and
+   behave like one: pointer cursor, a hover affordance, and a keyboard path. */
+.tbl tbody tr.row-click{cursor:pointer}
+.tbl tbody tr.row-click:hover,.tbl tbody tr.row-click:focus-visible{background:#f4f9f6}
+.tbl tbody tr.row-click:focus-visible{outline:2px solid var(--theme-primary,#1f5d46);outline-offset:-2px}

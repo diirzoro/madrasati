@@ -1057,8 +1057,38 @@ adds no new authority: it documents the shape the offering layer actually took.
 |---|---|
 | `030_organization_offering_and_grade_tracks.sql` | Adds `academic_grades.track` (علمي / أدبي / عام, NULL = عام). Records the catalog/offering split and the stage+subject offering as `COMMENT`s on the tables. No amount is added to any catalog row. |
 | `031_higher_education_catalog_and_offering_backfill.sql` | Adds the higher-education stage names (دبلوم، دبلوم عالي، بكالوريوس، ماجستير، دكتوراه) to the price-free catalog so college / university / institute tenants have something to select, fills the secondary-ladder tracks, and backfills `organization_stages` rows **without a fee** for institutions that the seed describes but had no offering row. |
+| `033_academic_stage_names_and_org_subjects.sql` | Adds `academic_stages.name_en` (the catalog is bilingual), and gives `subjects` an owner plus a review lifecycle. |
 
-Both are additive, idempotent and re-runnable, per `AGENTS.md` section 7.
+Both are additive, idempotent and re-runnable, per `AGENTS.md` section 7. The
+migration set through `033` re-runs cleanly on an already-migrated database.
+
+### Institution-private subjects (migration `033`)
+
+A school sometimes teaches a subject the platform catalog does not carry — a
+local specialisation, a vocational subject, a language club. `AGENTS.md` rule 1
+forbids building a second subject system next to the first, so the private
+subject **is** a row in `subjects`, distinguished by its owner:
+
+| `subjects.organization_id` | Meaning | Who may create it | Catalog listing |
+|---|---|---|---|
+| `NULL` | Global platform subject, admin-owned | platform admin only | included |
+| `<org id>` | That institution's own subject | a member of that institution | excluded |
+
+`review_status` (`pending` / `approved` / `rejected`) carries the moderation
+state, and `review_note` records why. The column defaults to `approved` so every
+pre-existing row keeps its current meaning; only a subject an institution adds
+for itself starts life as `pending`.
+
+Consequences that must be preserved:
+
+1. The global catalog listing filters on `organization_id IS NULL`, so a private
+   subject can never leak into platform-wide definitions.
+2. `GET /api/academic/org/:orgId/subjects` returns global rows **and** that
+   institution's own rows, so an institution never sees another tenant's subject.
+3. A private subject is invisible to every other tenant: the non-owner receives
+   `404`, not `403`, so its existence is not confirmed (`AGENTS.md` rule 7).
+4. Only an admin may move `review_status` off `pending`. An institution may
+   create and edit its own subject but not approve it.
 
 ### API
 
@@ -1067,7 +1097,9 @@ Both are additive, idempotent and re-runnable, per `AGENTS.md` section 7.
 | `GET /api/academic/:catalog` | public read allowed | The price-free platform catalog. |
 | `GET /api/academic/org/:orgId/offering` | `requireOrgMember` | The institution's own priced offering. |
 | `GET /api/academic/org/:orgId/offering/public` | public | The same offering with the pricing gated: amounts and fees are withheld, the structure (stages, languages, delivery, capacity) is shown. |
-| `GET /api/academic/org/:orgId/subjects` | `requireOrgMember` | The institution's subjects with their own fees and languages. |
+| `GET /api/academic/org/:orgId/subjects` | `requireOrgMember` | The institution's subjects: the global catalog plus its own, with their own fees and languages. |
+| `POST /api/academic/org/:orgId/subjects` | `requireOrgMember` + `requireRole('admin','owner')` | Adds an institution-private subject. It starts as `pending`, so it is the institution's to propose and the admin's to approve. |
+| `PATCH /api/academic/subjects/:id/review` | `requireRole('admin')` | Approves or rejects a private subject. Admin-only, so an institution can propose but never approve its own row. |
 
 `remaining_seats` is read from the generated column and is never written by any
 handler.
@@ -1076,6 +1108,8 @@ handler.
 
 - `#/academic` is the platform catalog: five tabs (المراحل / الصفوف / المواد العامة / لغات التدريس / تصنيفات المناهج), a banner stating it carries no prices, and a pointer to «عروض المؤسسات» for the priced layer.
 - The stage form's code field is labelled with a stage-shaped example (`مثال: SEC أو ثانوية`), never a subject code, because that code is the key an offering references.
+- Because the catalog is bilingual, a stage and a general subject form carries its Arabic name, its English name and a description, so the EN locale is not a blank screen.
 - The institution details screen holds the priced layer: a stages-and-fees table (fee + currency + payment period + teaching language + delivery mode + capacity + remaining seats), a subjects table, and [إضافة مرحلة للمدرسة] plus [تعديل].
+- The subjects table marks an institution-private subject with a «مادة خاصة بالمؤسسة» badge and shows its review state («معتمدة» / «قيد المراجعة»), so a school can see which of its own subjects the admin has approved. A catalog subject carries neither badge.
 - Gated pricing: a visitor with no session sees the structure with amounts replaced by «سجّل الدخول لعرض الرسوم والتسجيل», and facilities / services / documents read the same way instead of "none recorded".
 - Delivery is an attribute with exactly three values (حضوري / عن بُعد / مدمج). A legacy `ACTIVE` teaching-method row must never render as «نشط» in that list.

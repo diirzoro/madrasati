@@ -52,6 +52,27 @@ function buildListQuery(filters) {
   return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', params };
 }
 
+// The owner of an institution is whoever holds the 'owner' membership. That
+// membership -- not organizations.owner_user_id, which is unpopulated on the
+// imported rows -- is the normalized source of truth (AGENTS.md rule 2), so the
+// card and the detail screen can always name the owner and show an avatar.
+const OWNER_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT m.user_id
+    FROM organization_memberships m
+    WHERE m.organization_id = o.id AND m.membership_role = 'owner'
+    ORDER BY (m.status = 'active') DESC, m.joined_at, m.id
+    LIMIT 1
+  ) owner_mem ON true
+  LEFT JOIN users owner_user ON owner_user.id = COALESCE(owner_mem.user_id, o.owner_user_id)
+  LEFT JOIN user_profiles owner_profile ON owner_profile.user_id = owner_user.id`;
+const OWNER_COLUMNS = `
+  owner_user.id AS owner_id,
+  owner_user.name AS owner_name,
+  owner_user.email AS owner_email,
+  owner_user.phone AS owner_phone,
+  owner_profile.avatar_url AS owner_avatar`;
+
 async function listOrganizations(filters = {}) {
   const { where, params } = buildListQuery(filters);
   const limit = Number(filters.limit) || 50;
@@ -68,6 +89,7 @@ async function listOrganizations(filters = {}) {
     `SELECT o.*,
        g.name AS governorate_name,
        d.name AS district_name,
+       ${OWNER_COLUMNS},
        (SELECT COUNT(*)::int FROM offers f
          WHERE f.organization_id = o.id
            AND f.active = true
@@ -79,6 +101,7 @@ async function listOrganizations(filters = {}) {
      FROM organizations o
      LEFT JOIN locations_governorates g ON g.id = o.governorate_id
      LEFT JOIN locations_districts d ON d.id = o.district_id
+     ${OWNER_JOIN}
      ${where}
      ORDER BY ${orderBy}
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -101,6 +124,7 @@ async function findOrganizationById(id) {
     `SELECT o.*,
        g.name AS governorate_name,
        d.name AS district_name,
+       ${OWNER_COLUMNS},
        (SELECT COUNT(*)::int FROM offers f
          WHERE f.organization_id = o.id
            AND f.active = true
@@ -112,6 +136,7 @@ async function findOrganizationById(id) {
      FROM organizations o
      LEFT JOIN locations_governorates g ON g.id = o.governorate_id
      LEFT JOIN locations_districts d ON d.id = o.district_id
+     ${OWNER_JOIN}
      WHERE o.id = $1`,
     [id]
   );

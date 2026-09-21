@@ -20,7 +20,8 @@ const TRACKS = ['science', 'literary', 'general'];
 function mapStage(row) {
   if (!row) return null;
   return {
-    id: row.id, code: row.code, name: row.name, description: row.description,
+    id: row.id, code: row.code, name: row.name, nameEn: row.name_en || null,
+    description: row.description,
     sortOrder: row.sort_order, isActive: row.is_active,
   };
 }
@@ -37,7 +38,16 @@ function mapGrade(row) {
 
 function mapSubject(row) {
   if (!row) return null;
-  return { id: row.id, name: row.name };
+  return {
+    id: row.id, name: row.name, description: row.description || null,
+    // Scope tells the two subject origins apart on screen: 'global' rows are the
+    // platform catalog, 'organization' rows belong to one institution and carry
+    // a review state.
+    scope: row.organization_id ? 'organization' : 'global',
+    organizationId: row.organization_id || null,
+    reviewStatus: row.review_status || 'approved',
+    reviewNote: row.review_note || null,
+  };
 }
 
 function mapCurriculum(row) {
@@ -75,16 +85,61 @@ function normalizeCode(code) {
   return v;
 }
 
+// A stage is created with its bilingual name and description, and optionally
+// with its whole grade ladder in one call ("عدد الصفوف التابعة لها وأسماء
+// الصفوف"). The ladder is written into academic_grades, the same grade table the
+// global catalog uses, so adding six grades is one atomic definition rather than
+// six separate trips to the grades screen.
 async function createStage(data) {
   const name = String((data && data.name) || '').trim();
   if (!name) throw new ValidationError('name is required');
+  const nameEn = data.nameEn == null ? null : String(data.nameEn).trim() || null;
+  const code = normalizeCode(data.code);
+
+  const grades = normalizeGradeLadder(data.grades, code);
+
   const row = await repo.createStage({
-    code: normalizeCode(data.code),
+    code,
     name,
+    nameEn,
     description: data.description || null,
     sortOrder: Number.isFinite(Number(data.sortOrder)) ? Number(data.sortOrder) : 0,
   });
-  return mapStage(row);
+
+  const created = [];
+  for (let i = 0; i < grades.length; i += 1) {
+    const g = grades[i];
+    created.push(await repo.createGrade({
+      stageId: row.id,
+      code: g.code,
+      name: g.name,
+      description: null,
+      track: normalizeTrack(g.track),
+      sortOrder: g.sortOrder == null ? i + 1 : g.sortOrder,
+    }));
+  }
+
+  return { ...mapStage(row), grades: created.map(mapGrade) };
+}
+
+// Accepts either the grade objects the UI builds (name + optional code/track) or
+// a plain count. Codes are derived from the stage code when omitted, which is
+// what produces G1..G6 for a stage coded SEC, and are upper-cased so they match
+// the catalog's code format.
+function normalizeGradeLadder(input, stageCode) {
+  if (input == null) return [];
+  if (!Array.isArray(input)) throw new ValidationError('grades must be an array');
+  return input.map((raw, index) => {
+    if (typeof raw === 'string') {
+      const n = String(raw).trim();
+      if (!n) throw new ValidationError(`grades[${index}] is empty`);
+      return { name: n, code: `${stageCode}${index + 1}`.slice(0, 16), sortOrder: index + 1 };
+    }
+    const name = String((raw && raw.name) || '').trim();
+    if (!name) throw new ValidationError(`grades[${index}].name is required`);
+    const code = raw.code ? normalizeCode(raw.code) : `${stageCode}${index + 1}`.slice(0, 16);
+    return { name, code, track: raw.track, sortOrder: raw.sortOrder };
+  });
 }
 
 async function createGrade(data) {
@@ -131,7 +186,89 @@ async function updateGrade(id, data) {
 // org joins (read)
 async function listOrgStages(orgId) { return (await repo.listOrgStages(orgId)).map(mapStage); }
 async function listOrgGrades(orgId) { return (await repo.listOrgGrades(orgId)).map(mapGrade); }
-async function listOrgSubjects(orgId) { return (await repo.listOrgSubjects(orgId)).map(mapSubject); }
+async function listOrgSubjects(orgId) {
+  return (await repo.listOrgSubjects(orgId)).map((row) => ({
+    ...mapSubject(row),
+    languageCode: row.language_code || null,
+    amount: row.fee_amount == null ? null : Number(row.fee_amount),
+    currency: row.currency || null,
+    frequency: row.frequency || null,
+  }));
+}
+
+/* ---------- institution's own subjects (the "+" quick add) ----------
+   A school sometimes teaches something the global catalog has no row for. It may
+   add it for itself; the row lands in the same `subjects` table with its own
+   organization_id and starts as 'pending', so the platform admin keeps the
+   supervision the charter asks for while the school can use it immediately. */
+
+async function createOrgSubject(orgId, data, { actorUserId } = {}) {
+  const name = String((data && data.name) || '').trim();
+  if (name.length < 2) throw new ValidationError('name is required and must be at least 2 characters');
+
+  const row = await repo.createOrgSubject({
+    organizationId: orgId,
+    name,
+    slug: await uniqueOrgSubjectSlug(orgId, name),
+    description: data.description || null,
+    createdBy: actorUserId || null,
+  });
+  // The subject exists to be offered, so it is linked to the institution in the
+  // same operation; leaving it unlinked would create an orphan catalog row.
+  await repo.upsertOrgSubjectOffer(orgId, row.id, {
+    language_code: normalizeEnum(data.languageCode, OFFERING_LANGUAGES, 'languageCode'),
+    fee_amount: data.amount == null || data.amount === '' ? null : assertMoney(data.amount, 'amount'),
+    currency: normalizeEnum(data.currency, OFFERING_CURRENCIES, 'currency') || 'YER',
+    frequency: normalizeEnum(data.frequency, OFFERING_FREQUENCIES, 'frequency'),
+  });
+
+  await writeAudit({
+    actorUserId: actorUserId || null,
+    action: 'create',
+    objectType: 'organization_subject',
+    objectId: String(row.id),
+    metadata: { organizationId: orgId, name },
+  });
+
+  return { ...mapSubject(row), organizationId: orgId };
+}
+
+// slugs are globally unique on `subjects`, so an institution's subject carries a
+// short owner discriminator. That keeps the constraint intact instead of
+// rewriting it, and makes a collision between two schools' "Robotics" harmless.
+async function uniqueOrgSubjectSlug(orgId, name) {
+  const base = String(name).trim().toLowerCase()
+    .replace(/[^a-z0-9\u0600-\u06FF]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'subject';
+  const owner = String(orgId).replace(/-/g, '').slice(0, 8);
+  let candidate = `org-${owner}-${base}`;
+  let n = 1;
+  while (await repo.findSubjectBySlug(candidate)) {
+    n += 1;
+    candidate = `org-${owner}-${base}-${n}`;
+  }
+  return candidate;
+}
+
+// Platform admin supervision: approve or reject a subject an institution added.
+// Only organization-scoped rows can be reviewed -- a global catalog subject is
+// not up for review by anyone.
+async function reviewOrgSubject(subjectId, data, { actorUserId } = {}) {
+  const status = normalizeEnum(data && data.status, ['pending', 'approved', 'rejected'], 'status');
+  if (!status) throw new ValidationError('status must be pending, approved or rejected');
+  const row = await repo.reviewSubject(subjectId, { status, note: data && data.note });
+  if (!row) throw new NotFoundError('Institution subject not found');
+  await writeAudit({
+    actorUserId: actorUserId || null,
+    action: 'review',
+    objectType: 'organization_subject',
+    objectId: String(subjectId),
+    metadata: { status, organizationId: row.organization_id },
+  });
+  return mapSubject(row);
+}
+
 async function listOrgCurricula(orgId) { return (await repo.listOrgCurricula(orgId)).map(mapCurriculum); }
 async function listOrgLanguages(orgId) { return (await repo.listOrgLanguages(orgId)).map(mapLanguage); }
 async function listOrgTeachingMethods(orgId) { return (await repo.listOrgTeachingMethods(orgId)).map(mapTeachingMethod); }
@@ -253,6 +390,8 @@ async function getOrgOffering(orgId, { canSeePricing = false } = {}) {
       subjectId: r.id, name: r.name, languageCode: r.language_code,
       amount: gated ? null : r.fee_amount, currency: gated ? null : r.currency,
       frequency: gated ? null : r.frequency,
+      scope: r.organization_id ? 'organization' : 'global',
+      reviewStatus: r.review_status || 'approved',
     })),
   };
 }
@@ -320,6 +459,7 @@ async function removeSubjectOffer(orgId, subjectId) {
 module.exports = {
   listStages, listGrades, listSubjects, listCurricula, listLanguages, listTeachingMethods,
   createStage, createGrade, updateGrade,
+  createOrgSubject, reviewOrgSubject,
   listOrgStages, listOrgGrades, listOrgSubjects, listOrgCurricula, listOrgLanguages, listOrgTeachingMethods,
   getOrgOffering, setStageOffer, removeStageOffer, setSubjectOffer, removeSubjectOffer,
   canSeeOrgPricing,

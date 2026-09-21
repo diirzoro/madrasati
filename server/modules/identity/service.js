@@ -14,13 +14,27 @@ const VALID_STATUS = ['active', 'suspended', 'pending', 'deleted'];
 
 function mapUser(row) {
   if (!row) return null;
+  const role = row.role || 'client';
+  const organizationId = row.organization_id || null;
   return {
     id: row.id,
     name: row.name,
     email: row.email,
-    role: row.role || 'client',
+    role,
     phone: row.phone,
     status: row.status || 'active',
+    // Institution affiliation. A teacher who belongs to an institution is staff
+    // of that institution (organization_memberships); a teacher with none is the
+    // independent freelancer whose profile lives in teacher_profiles. The two are
+    // different arrangements and the screen must not blur them.
+    organizationId,
+    organizationName: row.organization_name || null,
+    organizationType: row.organization_type || null,
+    organizationVerified: row.organization_verified == null ? null : Boolean(row.organization_verified),
+    membershipRole: row.membership_role || null,
+    membershipStatus: row.membership_status || null,
+    teacherKind: role === 'teacher' ? (organizationId ? 'institutional' : 'freelancer') : null,
+    isProtected: Boolean(row.is_protected),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

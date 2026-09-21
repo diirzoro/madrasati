@@ -96,7 +96,7 @@ const i18n={
  ar:{
   home:"الرئيسية", landingHome:"الصفحة الرئيسية", privateSchools:"المدارس الخاصة", governmentSchools:"المدارس الحكومية",
   colleges:"الكليات", institutes:"المعاهد", privateTeachers:"المدرسين الخصوصيين",
-  schools:"إدارة المدارس", teachers:"المعلمون", students:"الطلاب", bookings:"الحجوزات", verify:"التحقق والمراجعة",
+  schools:"إدارة المؤسسات الدراسية", teachers:"المعلمون", students:"الطلاب", bookings:"الحجوزات", verify:"التحقق والمراجعة",
   academic:"البيانات الأكاديمية", stages:"المراحل", grades:"الصفوف", subjects:"المواد", curricula:"المناهج",
   teachingLanguages:"لغات التدريس", teachingMethods:"طرق التدريس",
   locations:"المناطق", countries:"الدول", governorates:"المحافظات", districts:"المديريات", neighborhoods:"الأحياء",
@@ -209,6 +209,12 @@ const i18n={
   deliveryLabel:"طريقة التدريس", languageLabel:"لغة التدريس", yearly:"سنوي", termly:"فصلي", monthly:"شهري",
   onSite:"حضوري", onlineDelivery:"عن بُعد", hybridDelivery:"مدمج",
   noOfferingStages:"لم تُحدَّد مراحل لهذه المؤسسة بعد", noOfferingSubjects:"لا توجد مواد خاصة بهذه المؤسسة",
+  seatsAvailableBadge:"متوفر مقاعد (فاضي)", seatsFullBadge:"مكتمل السعة (مليان)", seatsUndeclared:"السعة غير معلنة",
+  addOwnSubject:"إضافة مادة خاصة بالمؤسسة", subjectNameLabel:"اسم المادة", subjectScopeOwn:"مادة خاصة بالمؤسسة",
+  reviewPending:"بانتظار مراجعة الإدارة", reviewApproved:"معتمدة", reviewRejected:"مرفوضة",
+  reviewLabel:"حالة المراجعة", approveLabel:"اعتماد", rejectLabel:"رفض",
+  gradesCountLabel:"عدد الصفوف", gradeNamesLabel:"أسماء الصفوف", nameEnLabel:"الاسم بالإنجليزية",
+  descriptionLabel:"الوصف", stageCodeLabel:"الرمز",
   printReport:"طباعة", exportReport:"تصدير", exportXlsx:"Excel (.xlsx)", exportDocx:"Word (.docx)", exportPdf:"PDF",
   reportTitle:"تقرير مؤسسة", reportIssued:"تاريخ الإصدار", reportPlatform:"منصة مدرستي",
   pricingGated:"سجّل الدخول لعرض الرسوم والتسجيل",
@@ -219,7 +225,7 @@ const i18n={
  en:{
   home:"Home", landingHome:"Home", privateSchools:"Private Schools", governmentSchools:"Government Schools",
   colleges:"Colleges", institutes:"Institutes", privateTeachers:"Private Teachers",
-  schools:"School Management", teachers:"Teachers", students:"Students", bookings:"Bookings", verify:"Verification & Review",
+  schools:"Institutions Management", teachers:"Teachers", students:"Students", bookings:"Bookings", verify:"Verification & Review",
   academic:"Academic Data", stages:"Stages", grades:"Grades", subjects:"Subjects", curricula:"Curricula",
   teachingLanguages:"Teaching Languages", teachingMethods:"Teaching Methods",
   locations:"Locations", countries:"Countries", governorates:"Governorates", districts:"Districts", neighborhoods:"Neighborhoods",
@@ -332,6 +338,12 @@ checking:"Checking...", createAccountBtn:"Create account", alreadyHaveAccount:"H
   deliveryLabel:"Delivery mode", languageLabel:"Teaching language", yearly:"Yearly", termly:"Termly", monthly:"Monthly",
   onSite:"On-site", onlineDelivery:"Online", hybridDelivery:"Blended",
   noOfferingStages:"No stages defined for this institution yet", noOfferingSubjects:"No subjects specific to this institution",
+  seatsAvailableBadge:"Seats available (free)", seatsFullBadge:"At full capacity (full)", seatsUndeclared:"Capacity not declared",
+  addOwnSubject:"Add an institution subject", subjectNameLabel:"Subject name", subjectScopeOwn:"Institution subject",
+  reviewPending:"Awaiting admin review", reviewApproved:"Approved", reviewRejected:"Rejected",
+  reviewLabel:"Review state", approveLabel:"Approve", rejectLabel:"Reject",
+  gradesCountLabel:"Number of grades", gradeNamesLabel:"Grade names", nameEnLabel:"English name",
+  descriptionLabel:"Description", stageCodeLabel:"Code",
   printReport:"Print", exportReport:"Export", exportXlsx:"Excel (.xlsx)", exportDocx:"Word (.docx)", exportPdf:"PDF",
   reportTitle:"Institution report", reportIssued:"Issued", reportPlatform:"Madrasati platform",
   pricingGated:"Sign in to view fees and register",
@@ -608,15 +620,17 @@ function orgTable(){
  '</tr></thead><tbody>'+
  orgData.items.map(function(o){
   var imgIdx=Math.abs(hashStr(o.id||""))%8+1;
-  return '<tr>'+
+  return '<tr class="row-click" onclick="go(\'detail?id='+o.id+'\')">'+
   '<td><div class="entity school-entity"><img class="school-logo" src="assets/images/school-logo-'+imgIdx+'.svg"><div><b>'+o.name+'</b><div class="entity-sub">'+(o.bio||"—")+'</div></div></div></td>'+
   '<td>'+orgTypeLabel(o.type)+'</td><td>'+(o.governorate||"—")+'</td>'+
   '<td>'+o.teachers+'</td><td>'+o.students+'</td>'+
   '<td><span class="badge '+orgStatusClass(o.verified)+'">'+orgStatusLabel(o.verified)+'</span></td>'+
   '<td><div class="crud-actions">'+
-    '<button class="crud view" title="'+(lang==="ar"?"عرض التفاصيل":"View")+'" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",15)+'</button>'+
-    '<button class="crud verify" title="'+(lang==="ar"?"تحقق":"Verify")+'" onclick="toggleVerify(\''+o.id+'\','+o.verified+')">'+icon("shield",15)+'</button>'+
-    '<button class="crud delete" title="'+(lang==="ar"?"حذف":"Delete")+'" onclick="deleteOrg(\''+o.id+'\')">'+icon("trash",15)+'</button>'+
+   // Buttons inside a clickable row must swallow the click, otherwise verifying
+   // or deleting would also navigate to the detail screen.
+   '<button class="crud view" title="'+(lang==="ar"?"عرض التفاصيل":"View")+'" onclick="event.stopPropagation();go(\'detail?id='+o.id+'\')">'+icon("eye",15)+'</button>'+
+   '<button class="crud verify" title="'+(lang==="ar"?"تحقق":"Verify")+'" onclick="event.stopPropagation();toggleVerify(\''+o.id+'\','+o.verified+')">'+icon("shield",15)+'</button>'+
+   '<button class="crud delete" title="'+(lang==="ar"?"حذف":"Delete")+'" onclick="event.stopPropagation();deleteOrg(\''+o.id+'\')">'+icon("trash",15)+'</button>'+
   '</div></td>'+
   '</tr>'
  }).join("")+
@@ -1473,13 +1487,18 @@ function sideMenu(){
  var user=getCurrentUser();
  var role=user?user.role:null;
  var allItems=[
-  // Exactly the 15 approved admin sections, in order. "Fees" is deliberately
-  // absent: fees are a property of the priced entity (stage, subject, course,
-  // service), never a standalone module with its own page.
+  // The approved admin sidebar, in order. "Fees" is deliberately absent: fees
+  // are a property of the priced entity (stage, subject, course, service), never
+  // a standalone module with its own page.
+  //
+  // Institutions are ONE entry. Private schools, government schools, colleges,
+  // universities and institutes are five tabs of one screen over one shared
+  // organization core, so splitting them into three sidebar links duplicated the
+  // same catalog three times and made an institution's type look like three
+  // different products. The per-group accessors still exist as route aliases so
+  // an old link resolves to the unified screen.
   ["admin","home","home"],
   ["schools","school","schools"],
-  ["institutesAdmin","school","institutesAdmin"],
-  ["collegesAdmin","college","collegesAdmin"],
   ["teachersAdmin","teacher","teachers"],
   ["students","users","students"],
   ["bookings","calendar","bookings"],
@@ -1637,12 +1656,10 @@ function coreBadge(v){
  var bad=["suspended","rejected","deleted","cancelled","inactive"].indexOf(v)>-1;
  return '<span class="badge '+(ok?"ok":bad?"bad":"wait")+'">'+esc(statusLabel(v))+'</span>';
 }
-// The detail screen is reached from three admin lists, so the back button has to
-// return to the list the visitor came from rather than always to "schools".
+// There is a single institutions screen now, and it holds all five types as
+// tabs, so the back button always returns there. The per-type routes it used to
+// pick between no longer exist as separate destinations.
 function backRouteForOrg(){
- var t=currentOrg&&currentOrg.type;
- if(t==="institute")return "institutesAdmin";
- if(t==="college"||t==="university")return "collegesAdmin";
  return "schools";
 }
 
@@ -1788,28 +1805,50 @@ function detailBlock(isPublic){
   '</th><th>'+esc(tr("deliveryLabel"))+'</th><th>'+esc(tr("capacityLabel"))+'</th><th>'+esc(tr("remainingSeatsLabel"))+
   '</th><th></th></tr></thead><tbody>'+offStages.map(function(s){
    var cap=s.capacity==null?"—":esc(String(s.capacity));
+   // Capacity is derived, never typed: remaining_seats is generated as
+   // capacity - current_students, and a negative number is a real
+   // over-enrolment, not a value to clamp. The badge just names the state an
+   // administrator is looking for, "seats free" or "full".
+   var state;
+   if(s.capacity==null)state='<span class="badge wait">'+esc(tr("seatsUndeclared"))+'</span>';
+   else if(s.remainingSeats>0)state='<span class="badge ok">'+esc(tr("seatsAvailableBadge"))+'</span>';
+   else state='<span class="badge stop">'+esc(tr("seatsFullBadge"))+'</span>';
    var rem=s.remainingSeats==null?"—":'<b'+(s.remainingSeats<0?' class="over-capacity"':"")+'>'+esc(String(s.remainingSeats))+'</b>';
    return '<tr><td><b>'+esc(s.stageName||s.stageCode||"—")+'</b><div class="entity-sub" dir="ltr">'+
     esc(s.stageCode||"")+'</div></td><td>'+feeCell(s.fee)+'</td><td>'+esc(detailLangLabel(s.languageCode))+
-    '</td><td>'+esc(detailDeliveryLabel(s.deliveryMode))+'</td><td>'+cap+'</td><td>'+rem+'</td>'+
+    '</td><td>'+esc(detailDeliveryLabel(s.deliveryMode))+'</td><td>'+cap+state+'</td><td>'+rem+'</td>'+
     '<td>'+(isPublic?"":'<button class="crud edit" title="'+esc(tr("editLabel"))+'" onclick="orgStageFormOpen(\''+esc(s.stageId)+'\')">'+icon("edit",14)+'</button>')+'</td></tr>'
   }).join("")+'</tbody></table></div>';
  var subjRows=offSubjects&&offSubjects.length?offSubjects:(detailExtras.subjects||[]).map(function(s){
    return {subjectId:s.id,name:s.name,languageCode:s.language_code,amount:gated?null:s.fee_amount,
      currency:gated?null:s.currency,frequency:gated?null:s.frequency}});
+ // A subject this institution defined for itself is marked as such and carries
+ // its review state, so it is always clear which rows come from the platform
+ // catalog and which are local ones the admin still has to look at.
+ function subjectScopeCell(s){
+  if(s.scope!=="organization")return "";
+  var cls=s.reviewStatus==="approved"?"ok":s.reviewStatus==="rejected"?"stop":"wait";
+  var label=s.reviewStatus==="approved"?tr("reviewApproved"):s.reviewStatus==="rejected"?tr("reviewRejected"):tr("reviewPending");
+  return '<div class="entity-sub">'+esc(tr("subjectScopeOwn"))+'</div><span class="badge '+cls+'">'+esc(label)+'</span>';
+ }
  var subjectsTable=subjRows.length?'<div class="table-wrap"><table class="tbl"><thead><tr>'+
   '<th>'+esc(tr("subjects"))+'</th><th>'+esc(tr("languageLabel"))+'</th><th>'+esc(tr("feeLabel"))+
   '</th></tr></thead><tbody>'+subjRows.map(function(s){
-   return '<tr><td><b>'+esc(s.name)+'</b></td><td>'+esc(detailLangLabel(s.languageCode))+'</td><td>'+
+   return '<tr><td><b>'+esc(s.name)+'</b>'+subjectScopeCell(s)+'</td><td>'+esc(detailLangLabel(s.languageCode))+'</td><td>'+
     (gated?'<span class="gated-value">'+esc(tr("pricingGated"))+'</span>':esc(moneyText(s.amount,s.currency)))+
     (s.frequency?'<div class="entity-sub">'+esc(frequencyLabel(s.frequency))+'</div>':"")+'</td></tr>'
   }).join("")+'</tbody></table></div>':'<div class="empty-state">'+esc(tr("noOfferingSubjects"))+'</div>';
+ // The "+" next to the subject heading is the institution's escape hatch when a
+ // subject it teaches is not in the global catalog. The subject it creates belongs
+ // to the institution and goes to the admin for review.
+ var subjectsHeading='<div class="core-h3-row"><h3 class="core-h3">'+esc(tr("orgSubjectsLabel"))+'</h3>'+
+  (isPublic?"":'<button class="mini-plus" title="'+esc(tr("addOwnSubject"))+'" onclick="orgSubjectFormOpen()">'+icon("plus",14)+'</button>')+'</div>';
  var offeringSection='<section class="panel core-panel"><div class="panel-title"><div><h2>'+
   esc(tr("stageFeesLabel"))+'</h2><p>'+esc(lang==="ar"?"هذه الرسوم والسعة خاصة بهذه المؤسسة، والمصدر هو عرض المؤسسة لا الكتالوج العام.":"These fees and seats belong to this institution; the source is its offering, not the global catalog.")+
   '</p></div>'+(isPublic?"":'<button class="btn brown" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button>')+'</div>'+
   gatedNote+(deliveryChips?'<h3 class="core-h3">'+esc(tr("deliveryLabel"))+'</h3><div class="core-chips">'+deliveryChips+'</div>':"")+
   (isPublic?"":orgStageForm())+stagesTable+
-  '<h3 class="core-h3">'+esc(tr("orgSubjectsLabel"))+'</h3>'+subjectsTable+'</section>';
+  subjectsHeading+(isPublic?"":orgSubjectForm())+subjectsTable+'</section>';
 
  detailExtras.lastHeader=header;detailExtras.lastShared=shared;detailExtras.lastOffering=offeringSection;
  return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+offeringSection+shared;
@@ -1906,6 +1945,45 @@ function orgStageSave(){
  f._busy=true;
  apiPut('/api/academic/org/'+encodeURIComponent(orgId)+'/offering/stages/'+encodeURIComponent(stageId),payload)
   .then(function(){f._busy=false;f.open=false;f.stageId=null;return loadOrgDetailExtras(orgId)})
+  .then(function(){render()})
+  .catch(function(e){f._busy=false;f._error=(e&&e.data&&e.data.error)||(e&&e.message)||"Error";render()});
+}
+
+// A subject the institution teaches but the platform catalog does not list.
+// It is created under the institution, never in the global catalog, and it is
+// born with reviewStatus "pending" so an admin still has to approve it.
+var orgSubjectEdit={open:false,_error:null,_busy:false};
+function orgSubjectFormOpen(){orgSubjectEdit.open=true;orgSubjectEdit._error=null;render()}
+function orgSubjectFormClose(){orgSubjectEdit.open=false;render()}
+function orgSubjectForm(){
+ if(!orgSubjectEdit.open)return "";
+ return '<div class="ac-form org-stage-form">'+
+  (orgSubjectEdit._error?'<div class="ac-form-error">'+esc(orgSubjectEdit._error)+'</div>':"")+
+  '<div class="ac-form-grid">'+
+  detailInput(tr("subjectNameLabel"),"osub-name","",lang==="ar"?"مثال: الروبوتات":"e.g. Robotics")+
+  detailSelect(tr("languageLabel"),"osub-language",[["AR",detailLangLabel("AR")],["EN",detailLangLabel("EN")],["FR",detailLangLabel("FR")]]
+    .map(function(x){return detailOpt(x[0],x[1])}).join(""))+
+  detailInput(tr("feeLabel"),"osub-fee","","0.00")+
+  detailSelect(tr("currencyLabel"),"osub-currency",["YER","SAR","USD"].map(function(c){return detailOpt(c,c,"YER")}).join(""))+
+  detailSelect(tr("frequencyLabel"),"osub-frequency",[["yearly",tr("yearly")],["termly",tr("termly")],["monthly",tr("monthly")]]
+    .map(function(x){return detailOpt(x[0],x[1],"yearly")}).join(""))+
+  '</div><div class="ac-form-actions">'+
+  '<button class="btn green" onclick="orgSubjectSave()">'+esc(lang==="ar"?"حفظ":"Save")+'</button>'+
+  '<button class="btn" onclick="orgSubjectFormClose()">'+esc(lang==="ar"?"إلغاء":"Cancel")+'</button></div></div>';
+}
+function orgSubjectSave(){
+ var f=orgSubjectEdit;if(f._busy)return;
+ var orgId=currentOrg&&currentOrg.id;if(!orgId)return;
+ var name=((document.getElementById("osub-name")||{}).value||"").trim();
+ if(!name){f._error=lang==="ar"?"اكتب اسم المادة.":"Enter the subject name.";render();return}
+ f._busy=true;
+ apiPost('/api/academic/org/'+encodeURIComponent(orgId)+'/subjects',{
+  name:name,
+  languageCode:(document.getElementById("osub-language")||{}).value||"AR",
+  amount:(document.getElementById("osub-fee")||{}).value||"",
+  currency:(document.getElementById("osub-currency")||{}).value||"YER",
+  frequency:(document.getElementById("osub-frequency")||{}).value||"yearly"
+ }).then(function(){f._busy=false;f.open=false;return loadOrgDetailExtras(orgId)})
   .then(function(){render()})
   .catch(function(e){f._busy=false;f._error=(e&&e.data&&e.data.error)||(e&&e.message)||"Error";render()});
 }
@@ -2240,7 +2318,7 @@ function accessPage(){
  const tabs=[["overview","accessOverview"],["users","users"],["roles","roles"],["matrix","accessMatrix"],["overrides","accessOverrides"],["pages","publicSections"]];
  if(!tabs.some(x=>x[0]===sectionTab)) sectionTab="overview";
  const roles=["Super Admin","Organization Owner","Teacher","Client"];
- const modules=[["المدارس","schools"],["المعاهد","institutes"],["الكليات","colleges"],["المعلمون","teachers"],["المناطق","locations"],["العروض","offers"],["الإعلانات","ads"],["التقارير","reports"],["الإعدادات","settings"]];
+ const modules=[["إدارة المؤسسات الدراسية","schools"],["المعلمون","teachers"],["المناطق","locations"],["العروض","offers"],["الإعلانات","ads"],["التقارير","reports"],["الإعدادات","settings"]];
  return adminShell(`<div class="welcome"><div><h1>${tr("usersAccess")}</h1><p>${lang==="ar"?"تحكم بمن يرى الأقسام والصفحات وما الذي يستطيع تنفيذه داخل كل قسم.":"Control who can see sections/pages and what actions they can perform."}</p></div></div>
  ${tabBar(tabs,sectionTab)}
  ${sectionTab==="matrix"||sectionTab==="pages"?`
@@ -2562,6 +2640,28 @@ async function loadDashboardData(){
  }
 }
 
+// Wide tables become stacked rows on a phone, and a stacked cell is meaningless
+// without its column name. Instead of hand-writing data-label on every cell of
+// every table (and forgetting it on the next one), copy the header text onto
+// each cell here, once, right after the markup lands. One pass, every table.
+function stampTableLabels(){
+ try{
+  var tables=document.querySelectorAll("table.tbl");
+  for(var i=0;i<tables.length;i++){
+   var ths=tables[i].querySelectorAll("thead th");
+   if(!ths.length)continue;
+   var labels=[].map.call(ths,function(th){return (th.textContent||"").replace(/\s+/g," ").trim()});
+   var rows=tables[i].querySelectorAll("tbody tr");
+   for(var r=0;r<rows.length;r++){
+    var cells=rows[r].children;
+    for(var c=0;c<cells.length&&c<labels.length;c++){
+     if(cells[c].getAttribute("data-label")===null)cells[c].setAttribute("data-label",labels[c]);
+    }
+   }
+  }
+ }catch(e){console.error("[table labels]",e)}
+}
+
 function render(){
   apply();
   var r=route();
@@ -2661,7 +2761,8 @@ function render(){
  else if(r==="teachers")html=teacherPage();
  else if(r==="admin")html=admin();
  else if(r==="schools"){
-  if(typeof adminInstitutionsPage==="function")html=adminInstitutionsPage("schools");
+  // The one institutions screen: all five types as tabs over the shared core.
+  if(typeof adminInstitutionsPage==="function")html=adminInstitutionsPage();
   else html=adminShell('<div class="welcome"><div><h1>'+tr("schools")+'</h1><p>'+tr("genericNote")+'</p></div></div><section class="panel"><div class="empty-state">'+(lang==="ar"?"وحدة المدارس غير متصلة بعد.":"The schools module is not connected yet.")+'</div></section>');
  }
  else if(r==="detail")html=detailPage();
@@ -2679,6 +2780,7 @@ function render(){
   else html=generic(titles[r]||r);
  }
   document.getElementById("app").innerHTML=html;
+  stampTableLabels();
   if(publicRoutes.includes(r))syncFilterControls();
   // Dynamic hero slider: mount ONLY on home, destroy everywhere else so no
   // duplicate intervals survive navigation (returning to #/home remounts once).

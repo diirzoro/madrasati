@@ -39,6 +39,20 @@ router.get('/org/:orgId/stages',             requireAuth, requireOrgMember(), as
 router.get('/org/:orgId/grades',             requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgGrades(r.params.orgId)); }));
 router.get('/org/:orgId/subjects',           requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgSubjects(r.params.orgId)); }));
 
+// The "+" quick add: an institution defines a subject of its own. requireOrgMember
+// keeps the write inside the tenant, and the row is stamped 'pending' for admin
+// review inside the service rather than trusting anything the client sends.
+router.post('/org/:orgId/subjects', requireAuth, requireOrgMember(), requireRole('admin', 'owner'), asyncHandler(async (r, res) => {
+  res.status(201).json(await service.createOrgSubject(r.params.orgId, r.body, { actorUserId: r.user.id }));
+}));
+
+// Platform admin supervision over institution-defined subjects. This is the only
+// way a private subject leaves 'pending', and it deliberately has no org scope:
+// review is the platform's job, not the institution's.
+router.patch('/subjects/:id/review', requireAuth, requireRole('admin'), asyncHandler(async (r, res) => {
+  res.json(await service.reviewOrgSubject(r.params.id, r.body, { actorUserId: r.user.id }));
+}));
+
 // ---------- organization offering (tenant-scoped, priced, sized) ----------
 // Every write below carries requireOrgMember so a caller can only change the
 // offering of an institution they belong to, and an outsider gets a 404 rather

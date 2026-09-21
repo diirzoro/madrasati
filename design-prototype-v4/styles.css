@@ -109,7 +109,7 @@ a{text-decoration:none;color:inherit}
 .panel{background:#fff;border:1px solid #e8e1d8;border-radius:9px;box-shadow:0 5px 16px rgba(31,55,45,.035);overflow:hidden;margin-bottom:14px}
 .panel-title{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 6px}.panel-title h2{font-size:19px;margin:0}.panel-title p{font-size:10px;color:var(--muted);margin:2px 0 0}
 .toolbar{display:flex;gap:8px;padding:8px 14px 12px}.toolbar input,.toolbar select{height:36px;border:1px solid #dfe1df;border-radius:6px;background:#fff;padding:0 10px}.toolbar input{flex:1}
-.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:900px}.tbl th{font-size:10px;color:#56625c;background:#f2f7fb;text-align:right;padding:9px;border-bottom:1px solid #e5e5e0}.tbl td{font-size:11px;padding:9px;border-bottom:1px solid #eee9e2}.tbl tbody tr:nth-child(even){background:#f7fafc}
+.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;min-width:900px}.tbl th{font-size:10px;color:#56625c;background:#f2f7fb;text-align:right;padding:6px 8px;border-bottom:1px solid #e5e5e0;line-height:1.3;white-space:nowrap}.tbl td{font-size:11px;padding:6px 8px;border-bottom:1px solid #eee9e2;line-height:1.35;vertical-align:middle}.tbl tbody tr:nth-child(even){background:#f7fafc}
 .entity{display:flex;align-items:center;gap:8px}.thumb{width:32px;height:32px;border-radius:50%;object-fit:cover}.badge{font-size:9px;padding:4px 8px;border-radius:999px;font-weight:800}.ok{background:#E2F3E8;color:#2F7A59}.wait{background:#FFF0D8;color:#99671b}.stop{background:#FBE6E2;color:#A64E3E}
 .pager{display:flex;justify-content:center;gap:5px;padding:9px}.pager button{width:29px;height:29px;border:1px solid #ded8d0;background:#fff;border-radius:5px}.pager .active{background:var(--brown);color:#fff;border-color:var(--brown)}
 
@@ -2131,6 +2131,15 @@ html[dir="rtl"] .admin-date-block{
 .core-row b{font-size:13.5px;color:var(--ink);font-weight:800;text-align:end;overflow-wrap:anywhere}
 .core-row-actions{padding-top:12px;display:flex;gap:8px;flex-wrap:wrap}
 .core-h3{font-size:13px;font-weight:800;color:var(--ink);margin:16px 0 8px}
+/* Section heading with a trailing action (the "+" that adds an institution
+   subject). The heading keeps its own margin so the button aligns to the text
+   baseline instead of stretching the row. */
+.core-h3-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 0 8px}
+.core-h3-row .core-h3{margin:0}
+.mini-plus{width:30px;height:30px;min-height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;
+ border-radius:999px;border:1px solid var(--theme-primary,#1f5d46);background:var(--theme-primary,#1f5d46);
+ color:#fff;cursor:pointer;flex:0 0 auto}
+.mini-plus:hover{filter:brightness(.94)}
 .core-chips{display:flex;flex-wrap:wrap;gap:7px}
 .core-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
  background:var(--cream);font-size:12.5px;font-weight:700;color:var(--ink)}
@@ -2219,6 +2228,25 @@ img{max-width:100%}
  .core-hero-actions{width:100%}
  .export-group{width:100%}
  .org-card-line{font-size:13.5px}
+
+ /* Tables must not scroll sideways on a phone. The 900px floor is dropped and
+    each row becomes its own labelled block: the header row is hidden and every
+    cell prints its column name from the data-label stamped at render time. */
+ .table-wrap{overflow-x:visible}
+ .tbl{min-width:0!important;display:block}
+ .tbl thead{display:none}
+ .tbl tbody{display:block}
+ .tbl tbody tr{display:block;border:1px solid var(--line,#e7ded3);border-radius:10px;
+  padding:8px 10px;margin:0 0 8px;background:#fff}
+ .tbl tbody tr:nth-child(even){background:#fff}
+ .tbl td{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border:0;padding:5px 0;font-size:13px;text-align:end}
+ .tbl td+td{border-top:1px dashed #efe9e1}
+ .tbl td::before{content:attr(data-label);flex:0 0 40%;font-size:11.5px;font-weight:800;
+  color:var(--muted,#6B7280);text-align:start}
+ /* A cell with no header (the actions column) carries no label row. */
+ .tbl td[data-label=""]::before{display:none}
+ .tbl td[data-label=""]{justify-content:flex-end;padding-top:8px}
 }
 @media (max-width:420px){
  :root{font-size:15px}

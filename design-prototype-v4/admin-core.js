@@ -3,7 +3,7 @@
 (function () {
   "use strict";
   var ac={cache:{},loading:{},errors:{},institutionType:"private_school",institutionSearch:"",institutionsView:"cards",
-    userRole:"",userStatus:"",userSearch:"",academicTab:"stages",
+    userRole:"",userStatus:"",userSearch:"",userOrg:"",academicTab:"stages",
     orgForm:null,teacherForm:null};
   function t(ar,en){return lang==="ar"?ar:en}
   function errorText(e){return e&&e.data&&e.data.error||e&&e.message||t("تعذر تحميل البيانات.","Unable to load data.")}
@@ -221,6 +221,19 @@
     if(o.email)out+='<div class="org-card-line">'+icon("mail",13)+'<span class="ltr-num" dir="ltr">'+esc(o.email)+'</span></div>';
     return out;
   }
+  // Where a person belongs. An owner or client is tied to the institution of
+  // their primary membership. A teacher is either on an institution's staff or
+  // an independent freelancer, and those are genuinely different rows: a
+  // freelancer has a teacher_profiles row and no membership at all.
+  function userAffiliationCell(u){
+    if(u.organizationName){
+      return '<b>'+esc(u.organizationName)+'</b><div class="entity-sub">'+esc(orgTypeLabel(u.organizationType)||"")+
+        (u.membershipRole?' · '+esc(u.membershipRole):"")+'</div>';
+    }
+    if(u.teacherKind==="freelancer")return '<span class="badge wait">'+t("مدرس مستقل","Freelance teacher")+'</span>';
+    if(u.teacherKind==="institutional")return '<span class="badge ok">'+t("مدرس مؤسسة","Institution teacher")+'</span>';
+    return "—";
+  }
   function orgCard(o){
     var place=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
     var wa=o.whatsapp||o.phone;
@@ -256,7 +269,7 @@
     // arrival; it never hides the rest of the catalog.
     var allTypes=[["private_school",t("مدارس خاصة","Private schools")],["government_school",t("مدارس حكومية","Government schools")],
       ["college",t("كليات","Colleges")],["university",t("جامعات","Universities")],["institute",t("معاهد","Institutes")]];
-    var body=head(t("المؤسسات التعليمية","Educational institutions"),t("إدارة المؤسسات من مصدر موحد.","Manage institutions through the shared organization core."),
+    var body=head(t("إدارة المؤسسات الدراسية","Institutions management"),t("إدارة المؤسسات من مصدر موحد.","Manage institutions through the shared organization core."),
       '<button class="btn green" onclick="acOrgFormOpen(\'add\',null)">'+icon("plus",15)+' '+t("إضافة","Add")+'</button>')+
       '<div class="org-type-tabs">'+allTypes.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
       '" onclick="acInstitutionType(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+'</div>';
@@ -273,7 +286,8 @@
       t("المالك / المدير","Owner / principal")+'</th><th>'+t("الموقع","Location")+'</th><th>'+t("الاتصال","Contact")+'</th><th>'+
       t("التحقق","Verification")+'</th><th></th></tr></thead><tbody>'+d.items.map(function(o){
         var wa=o.whatsapp||o.phone;
-        return '<tr><td><div class="row-entity"><span class="row-logo"><img src="'+esc(orgLogo(o))+'" alt="" loading="lazy"></span><div><b>'+
+        return '<tr class="row-click" onclick="go(\'detail?id='+o.id+'\')">'+
+        '<td><div class="row-entity"><span class="row-logo"><img src="'+esc(orgLogo(o))+'" alt="" loading="lazy"></span><div><b>'+
         esc(o.name)+'</b><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div></div></div></td>'+
         '<td><div class="row-entity">'+avatarFor(o)+'<div><b>'+esc(orgOwnerName(o)||"—")+'</b></div></div></td>'+
         '<td>'+esc([o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ")||"—")+'</td>'+
@@ -281,10 +295,12 @@
         (o.email?'<span class="ltr-num" dir="ltr">'+esc(o.email)+'</span>':"")+'</div>'+
         (wa?waButton(wa,{compact:true,size:13}):"")+'</td>'+
         '<td>'+badge(o.verified?"verified":o.verificationStatus||"pending")+'</td>'+
-        '<td><div class="crud-actions"><button class="crud view" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+
-        '</button><button class="crud edit" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+
-        '</button><button class="crud verify" onclick="acOrgVerify(\''+o.id+'\','+(o.verified?"true":"false")+')">'+
-        icon(o.verified?"x":"check",14)+'</button><button class="crud delete" onclick="acOrgArchive(\''+o.id+'\')">'+
+        // The whole row opens the detail screen; each action button stops the
+        // click from bubbling so a verify or archive never doubles as a visit.
+        '<td><div class="crud-actions"><button class="crud view" onclick="event.stopPropagation();go(\'detail?id='+o.id+'\')">'+icon("eye",14)+
+        '</button><button class="crud edit" onclick="event.stopPropagation();acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+
+        '</button><button class="crud verify" onclick="event.stopPropagation();acOrgVerify(\''+o.id+'\','+(o.verified?"true":"false")+')">'+
+        icon(o.verified?"x":"check",14)+'</button><button class="crud delete" onclick="event.stopPropagation();acOrgArchive(\''+o.id+'\')">'+
         icon("trash",14)+'</button></div></td></tr>'}).join("")+'</tbody></table></div>';
     return adminShell(body+'</section>')
   };
@@ -312,27 +328,38 @@
 
   window.acUserFilters=function(e){e.preventDefault();ac.userRole=(document.getElementById("ac-user-role")||{}).value||"";
     ac.userStatus=(document.getElementById("ac-user-status")||{}).value||"";ac.userSearch=(document.getElementById("ac-user-q")||{}).value||"";
+    ac.userOrg=(document.getElementById("ac-user-org")||{}).value||"";
     invalidate("users:");render()};
   window.acUserStatus=function(id,status){apiPatch("/api/users/"+id,{status:status}).then(function(){
     invalidate("users:");delete ac.cache.dashboard;render()}).catch(function(e){alert(errorText(e))})};
   window.adminAccountsPage=function(){
-    var key="users:"+ac.userRole+":"+ac.userStatus+":"+ac.userSearch,qs=["limit=100"];
+    var key="users:"+ac.userRole+":"+ac.userStatus+":"+ac.userSearch+":"+ac.userOrg,qs=["limit=100"];
     if(ac.userRole)qs.push("role="+encodeURIComponent(ac.userRole));if(ac.userStatus)qs.push("status="+encodeURIComponent(ac.userStatus));
     if(ac.userSearch)qs.push("search="+encodeURIComponent(ac.userSearch));
+    if(ac.userOrg)qs.push("organizationId="+encodeURIComponent(ac.userOrg));
     load(key,"/api/users?"+qs.join("&"),function(d){return{items:listOf(d),total:Number(d&&d.total||listOf(d).length)}});
+    // The institution filter lists the institutions already loaded on the
+    // institutions screen, so the admin can ask "who belongs to this school?"
+    // without a second catalog request.
+    load("orgs:filter","/api/organizations?limit=100",function(d){return listOf(d)});
+    var orgs=ac.cache["orgs:filter"]||[];
+    var orgOpts='<option value="">'+t("كل المؤسسات","All institutions")+'</option>'+orgs.map(function(o){
+      return '<option value="'+esc(o.id)+'"'+(ac.userOrg===o.id?" selected":"")+'>'+esc(o.name)+'</option>'}).join("");
     var body=head(t("العملاء والطلاب","Clients and students"),
-      t("إدارة الحسابات الحالية. علاقات الأسرة والطلاب مرحلة مستقلة.","Manage current accounts. Family/student relationships are a separate phase."))+
+      t("إدارة الحسابات الحالية وربطها بالمؤسسة التي تنتمي إليها. علاقات الأسرة والطلاب مرحلة مستقلة.","Manage current accounts and the institution each one belongs to. Family/student relationships are a separate phase."))+
       '<section class="panel"><form class="toolbar" onsubmit="acUserFilters(event)"><input id="ac-user-q" value="'+esc(ac.userSearch)+
       '" placeholder="'+t("بحث...","Search...")+'"><select id="ac-user-role"><option value="">'+t("كل الأدوار","All roles")+
       '</option><option value="client">Client</option><option value="teacher">Teacher</option><option value="owner">Owner</option></select>'+
       '<select id="ac-user-status"><option value="">'+t("كل الحالات","All statuses")+'</option><option value="active">Active</option>'+
-      '<option value="pending">Pending</option><option value="suspended">Suspended</option></select><button class="btn green">'+
+      '<option value="pending">Pending</option><option value="suspended">Suspended</option></select>'+
+      '<select id="ac-user-org">'+orgOpts+'</select><button class="btn green">'+
       t("تطبيق","Apply")+'</button></form>';
     var d=ac.cache[key];if(!d)body+=state(key);else if(!d.items.length)body+='<div class="empty-state">'+t("لا توجد حسابات.","No accounts.")+'</div>';
     else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المستخدم","User")+'</th><th>'+t("الدور","Role")+
-      '</th><th>'+t("الهاتف","Phone")+'</th><th>'+t("الحالة","Status")+'</th><th></th></tr></thead><tbody>'+
+      '</th><th>'+t("المؤسسة","Institution")+'</th><th>'+t("الهاتف","Phone")+'</th><th>'+t("الحالة","Status")+'</th><th></th></tr></thead><tbody>'+
       d.items.map(function(u){return '<tr><td><b>'+esc(u.name)+'</b><div class="entity-sub">'+esc(u.email)+'</div></td><td>'+
-      esc(u.role||"—")+'</td><td dir="ltr">'+esc(u.phone||"—")+'</td><td>'+badge(u.status)+'</td><td><button class="btn" onclick="acUserStatus(\''+
+      esc(u.role||"—")+'</td><td>'+userAffiliationCell(u)+'</td><td dir="ltr">'+esc(u.phone||"—")+'</td><td>'+badge(u.status)+
+      '</td><td><button class="btn" onclick="acUserStatus(\''+
       u.id+'\',\''+(u.status==="suspended"?"active":"suspended")+'\')">'+(u.status==="suspended"?t("تفعيل","Activate"):t("إيقاف","Suspend"))+
       '</button></td></tr>'}).join("")+'</tbody></table></div>';return adminShell(body+'</section>')
   };
@@ -376,6 +403,13 @@
     if(!name){f._error=t("الاسم مطلوب.","Name is required.");render();return}
     if(!code){f._error=t("الرمز مطلوب.","Code is required.");render();return}
     var payload={name:name,code:code};
+    if(f.kind==="stage"){
+      // Bilingual catalog: the Arabic name is what staff read, the English one is
+      // what the EN shell renders, so both belong to the same definition.
+      var nameEn=wVal("ac-cat-name-en"),desc=wVal("ac-cat-desc");
+      if(nameEn)payload.nameEn=nameEn;
+      if(desc)payload.description=desc;
+    }
     var url="/api/academic/stages";
     if(f.kind==="grade"){
       url="/api/academic/grades";
@@ -410,6 +444,9 @@
       // is a real catalog code and not a subject code such as "MATH".
       wInput(t("الرمز (يُكتب بالإنجليزية)","Code (Latin letters)"),"ac-cat-code","",
         isGrade?t("مثال: G12 أو ثالث ثانوي","e.g. G12"):t("مثال: SEC أو ثانوية","e.g. SEC"))+
+      (isGrade?"":
+        wInput(t("الاسم بالإنجليزية","English name"),"ac-cat-name-en","",t("مثال: Secondary stage","e.g. Secondary stage"))+
+        wArea(t("الوصف","Description"),"ac-cat-desc",""))+
       (isGrade?wSel(t("المرحلة","Stage"),"ac-cat-stage",wOpt("",t("— اختر المرحلة —","— Select a stage —"))+stageOpts):"")+
       (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")+
       '</div><div class="ac-form-actions">'+
@@ -499,10 +536,10 @@
 
   var previousGeneric=window.generic;
   window.generic=function(title){var r=route();
-    if(r==="schools")return adminInstitutionsPage("schools");
-    if(r==="institutesAdmin")return adminInstitutionsPage("institutes");
-    if(r==="collegesAdmin")return adminInstitutionsPage("colleges");
-    if(r==="institutions")return adminInstitutionsPage();
+    // One institutions screen. The former institutes/colleges routes are kept as
+    // aliases rather than deleted, so an existing bookmark or an in-flight back
+    // route still lands on the unified catalog instead of a placeholder page.
+    if(r==="schools"||r==="institutions"||r==="institutesAdmin"||r==="collegesAdmin")return adminInstitutionsPage();
     if(r==="teachersAdmin")return adminTeachersPage();if(r==="students")return adminAccountsPage();if(r==="bookings")return adminBookingsPage();
     if(r==="reports")return adminReportsPage();
     return previousGeneric(title)};

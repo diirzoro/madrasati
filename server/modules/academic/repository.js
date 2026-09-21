@@ -29,11 +29,11 @@ async function listGrades(stageId) {
 }
 
 // ---------- global catalog writes (platform admin only) ----------
-async function createStage({ code, name, description, sortOrder }) {
+async function createStage({ code, name, nameEn, description, sortOrder }) {
   const { rows } = await query(
-    `INSERT INTO academic_stages (code, name, description, sort_order, is_active)
-     VALUES ($1, $2, $3, $4, true) RETURNING *`,
-    [code, name, description, sortOrder]
+    `INSERT INTO academic_stages (code, name, name_en, description, sort_order, is_active)
+     VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
+    [code, name, nameEn, description, sortOrder]
   );
   return rows[0];
 }
@@ -60,9 +60,46 @@ async function updateGrade(id, fields) {
   return rows[0] || null;
 }
 
+// The global catalog lists platform-wide subjects only. A subject an institution
+// added for itself carries an organization_id and is filtered out here, so
+// "the catalog" never grows a private row just because one school needed it.
 async function listSubjects() {
-  const { rows } = await query(`SELECT * FROM subjects ORDER BY name`);
+  const { rows } = await query(
+    `SELECT * FROM subjects WHERE organization_id IS NULL ORDER BY name`
+  );
   return rows;
+}
+
+async function findSubjectById(id) {
+  const { rows } = await query(`SELECT * FROM subjects WHERE id = $1`, [id]);
+  return rows[0] || null;
+}
+
+async function findSubjectBySlug(slug) {
+  const { rows } = await query(`SELECT id FROM subjects WHERE slug = $1`, [slug]);
+  return rows[0] || null;
+}
+
+// An institution's own subject. It lands in the same subjects table as the
+// global catalog -- there is deliberately no second subject system -- and starts
+// as 'pending' so the platform admin keeps supervision over what institutions
+// teach.
+async function createOrgSubject({ organizationId, name, slug, description, createdBy }) {
+  const { rows } = await query(
+    `INSERT INTO subjects (name, slug, description, organization_id, review_status, created_by)
+     VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING *`,
+    [name, slug, description, organizationId, createdBy || null]
+  );
+  return rows[0];
+}
+
+async function reviewSubject(id, { status, note }) {
+  const { rows } = await query(
+    `UPDATE subjects SET review_status = $1, review_note = $2
+     WHERE id = $3 AND organization_id IS NOT NULL RETURNING *`,
+    [status, note || null, id]
+  );
+  return rows[0] || null;
 }
 
 async function listCurricula() {
@@ -140,9 +177,14 @@ async function setOrgGrades(orgId, gradeIds) {
   }
 }
 
+// An institution's subject list is the global catalog it picked from PLUS the
+// subjects it defined for itself. `is_global` and `review_status` come along so
+// the screen can mark which rows are the platform's and which are this
+// institution's own, still awaiting or already past admin review.
 async function listOrgSubjects(orgId) {
   const { rows } = await query(
-    `SELECT s.*, os2.language_code, os2.fee_amount, os2.currency, os2.frequency
+    `SELECT s.*, s.organization_id IS NULL AS is_global,
+            os2.language_code, os2.fee_amount, os2.currency, os2.frequency
      FROM organization_subjects os2
      JOIN subjects s ON s.id = os2.subject_id
      WHERE os2.organization_id = $1 ORDER BY s.name`,
@@ -328,6 +370,7 @@ async function setOrgTeachingMethods(orgId, methodIds) {
 module.exports = {
   listStages, listGrades, listSubjects, listCurricula, listLanguages, listTeachingMethods,
   createStage, createGrade, updateGrade,
+  findSubjectById, findSubjectBySlug, createOrgSubject, reviewSubject,
   listOrgStages, setOrgStages,
   listOrgGrades, setOrgGrades,
   listOrgSubjects, setOrgSubjects,

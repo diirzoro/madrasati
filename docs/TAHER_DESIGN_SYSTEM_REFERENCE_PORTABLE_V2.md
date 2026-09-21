@@ -67,9 +67,7 @@ English uses LTR with sidebar physically on the left.
 Main sidebar:
 ```text
 الرئيسية
-إدارة المدارس
-إدارة المعاهد
-إدارة الكليات
+إدارة المؤسسات الدراسية
 المعلمون
 الطلاب
 الحجوزات
@@ -83,17 +81,25 @@ Main sidebar:
 الإعدادات
 ```
 
-This list is frozen at 15 entries. `إدارة المدارس`، `إدارة المعاهد`، and
-`إدارة الكليات` are three sidebar entries backed by **one** page
-implementation, filtered by institution type:
+This list is frozen at 13 entries. The three former institution entries —
+`إدارة المدارس`، `إدارة المعاهد`، `إدارة الكليات` — collapsed into the single
+**إدارة المؤسسات الدراسية** entry, because they were already backed by one page
+implementation and three links made an institution's type look like three
+different products. The five types are tabs of that one screen:
 
-| Entry | Types shown |
+| Tab | Type |
 |---|---|
-| `إدارة المدارس` | مدارس خاصة، مدارس حكومية |
-| `إدارة المعاهد` | معاهد |
-| `إدارة الكليات` | كليات، جامعات |
+| مدارس خاصة | private school |
+| مدارس حكومية | government school |
+| كليات | college |
+| جامعات | university |
+| معاهد | institute |
 
-Never fork a separate management system per institution type.
+All five tabs are always visible; the entry that led to the screen only decides
+which tab opens on arrival, and it never hides the other four. The old route
+names (`schools`, `institutesAdmin`, `collegesAdmin`, `institutions`) survive as
+aliases so an existing deep link still resolves. Never fork a separate
+management system per institution type.
 
 ### Academic Data
 
@@ -208,6 +214,22 @@ Use premium data-grid styling with:
 - status badges
 
 Large lists should not render thousands of rows at once.
+
+### Tables on small screens (implemented behaviour)
+
+A data table does not scroll sideways on a phone. Below 760px each row becomes
+a stacked card: every cell prints its own column name above the value.
+
+- `stampTableLabels()` copies each `<th>` text onto the matching `<td>` as
+  `data-label`, and CSS renders `td::before { content: attr(data-label) }`. The
+  label therefore always matches the header the user is looking at, and a new
+  column needs no CSS work.
+- The column that holds the row actions has an empty header, so it receives an
+  empty label and CSS drops the label line rather than printing a blank one.
+- Only `table.tbl` is transformed; a table that is not a data grid keeps its
+  normal layout.
+- The rule is idempotent, so the stamp may run on every render without
+  overwriting a label a module set on purpose.
 
 CRUD actions:
 - View

@@ -17,6 +17,11 @@ const {
 
 const router = Router();
 
+// Explicit whitelist: nothing reaches the client that this list does not name.
+// The affiliation fields are the ones the admin directory renders as a column
+// (which institution this person belongs to, and whether a teacher is on an
+// institution's staff or an independent freelancer); they stay null on the auth
+// routes where no institution context was loaded.
 const mapUserDto = (user) => ({
   id: user.id,
   name: user.name,
@@ -24,6 +29,14 @@ const mapUserDto = (user) => ({
   role: user.role,
   phone: user.phone,
   status: user.status,
+  organizationId: user.organizationId ?? null,
+  organizationName: user.organizationName ?? null,
+  organizationType: user.organizationType ?? null,
+  organizationVerified: user.organizationVerified ?? null,
+  membershipRole: user.membershipRole ?? null,
+  membershipStatus: user.membershipStatus ?? null,
+  teacherKind: user.teacherKind ?? null,
+  isProtected: user.isProtected ?? false,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -88,11 +101,12 @@ router.get(
   requireAuth,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
-    const { role, status, search, limit = 100, offset = 0 } = req.query;
+    const { role, status, search, organizationId, limit = 100, offset = 0 } = req.query;
     const { items, total } = await service.listUsers({
       role,
       status,
       search,
+      organizationId,
       limit: Number(limit),
       offset: Number(offset),
     });
