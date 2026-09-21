@@ -63,7 +63,14 @@ router.get(
     });
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Type', doc.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${doc.fileName.replace(/"/g, '')}"`);
+    // Node rejects non-Latin-1 header values, so an Arabic file name would throw
+    // ERR_INVALID_CHAR and turn the download into a 500. Send an ASCII fallback
+    // for old clients plus the RFC 5987 UTF-8 form, which is what browsers use.
+    const asciiName = doc.fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(doc.fileName)}`
+    );
     res.sendFile(absPath);
   })
 );

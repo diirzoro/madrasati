@@ -2,7 +2,7 @@
 // Pages compose existing domain APIs; PostgreSQL remains authoritative.
 (function () {
   "use strict";
-  var ac={cache:{},loading:{},errors:{},institutionType:"private_school",institutionSearch:"",
+  var ac={cache:{},loading:{},errors:{},institutionType:"private_school",institutionSearch:"",institutionsView:"cards",
     userRole:"",userStatus:"",userSearch:"",academicTab:"stages",
     orgForm:null,teacherForm:null};
   function t(ar,en){return lang==="ar"?ar:en}
@@ -17,7 +17,7 @@
   }
   function badge(v){var ok=["active","verified","approved","accepted","completed","confirmed"].indexOf(v)>-1;
     var bad=["suspended","rejected","deleted","cancelled","inactive"].indexOf(v)>-1;
-    return '<span class="badge '+(ok?"ok":bad?"bad":"wait")+'">'+esc(v||"—")+'</span>'}
+    return '<span class="badge '+(ok?"ok":bad?"bad":"wait")+'">'+esc(statusLabel(v))+'</span>'}
   function head(title,desc,actions){return '<div class="welcome ac-welcome"><div><h1>'+esc(title)+'</h1><p>'+esc(desc)+
     '</p></div><div class="sp-actions">'+(actions||"")+'</div></div>'}
   function state(key){if(ac.loading[key])return '<div class="loading-inline"><div class="loader"></div></div>';
@@ -203,6 +203,30 @@
     institutes:["institute"],
     colleges:["college","university"]
   };
+  // Card view: the same organization core the detail screen shows, condensed to
+  // what identifies an institution at a glance — logo, type, location, principal
+  // and a direct WhatsApp channel.
+  function orgCard(o){
+    var place=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
+    var wa=o.whatsapp||o.phone;
+    return '<article class="org-card">'+
+      '<div class="org-card-head"><div class="org-card-logo"><img src="'+esc(orgLogo(o))+'" alt="'+esc(o.name)+'" loading="lazy"></div>'+
+      '<div class="org-card-id"><h3>'+esc(o.name)+'</h3><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div>'+
+      '<div class="org-card-badges">'+badge(o.verified?"verified":o.verificationStatus||"pending")+
+      badge(o.registrationOpen?"active":"inactive")+'</div></div></div>'+
+      '<div class="org-card-meta">'+
+      '<div class="org-card-line">'+icon("pin",13)+'<span>'+esc(place||"—")+'</span></div>'+
+      (o.principalName?'<div class="org-card-line">'+icon("user",13)+'<span>'+esc(o.principalName)+'</span></div>':"")+
+      (o.phone?'<div class="org-card-line">'+icon("phone",13)+'<span dir="ltr">'+esc(o.phone)+'</span></div>':"")+
+      '</div>'+
+      '<div class="org-card-actions">'+
+      '<button class="btn green" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+' '+t("التفاصيل","Details")+'</button>'+
+      (wa?waButton(wa,{compact:true,size:14,label:t("واتساب","WhatsApp")}):"")+
+      '<button class="crud edit" title="'+t("تعديل","Edit")+'" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+'</button>'+
+      '</div></article>';
+  }
+  window.acInstitutionsView=function(v){ac.institutionsView=v;render()};
+
   window.adminInstitutionsPage=function(group){
     var allowed=(group&&AC_TYPE_GROUPS[group])||null;
     if(allowed&&allowed.indexOf(ac.institutionType)<0)ac.institutionType=allowed[0];
@@ -219,8 +243,13 @@
       '" onclick="acInstitutionType(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+'</div>';
     body+=adminOrgForm()+'<section class="panel">'+
       '<form class="toolbar" onsubmit="acInstitutionSearch(event)"><input id="ac-org-q" value="'+esc(ac.institutionSearch)+
-      '" placeholder="'+t("بحث بالاسم...","Search by name...")+'"><button class="btn green">'+t("بحث","Search")+'</button></form>';
+      '" placeholder="'+t("بحث بالاسم...","Search by name...")+'"><button class="btn green">'+t("بحث","Search")+'</button>'+
+      '<div class="view-toggle"><button type="button" class="'+(ac.institutionsView==="cards"?"active":"")+
+      '" onclick="acInstitutionsView(\'cards\')">'+icon("grid",13)+' '+t("كروت","Cards")+'</button>'+
+      '<button type="button" class="'+(ac.institutionsView==="table"?"active":"")+
+      '" onclick="acInstitutionsView(\'table\')">'+icon("list",13)+' '+t("جدول","Table")+'</button></div></form>';
     var d=ac.cache[key];if(!d)body+=state(key);else if(!d.items.length)body+='<div class="empty-state">'+t("لا توجد مؤسسات.","No institutions.")+'</div>';
+    else if(ac.institutionsView==="cards")body+='<div class="org-grid">'+d.items.map(orgCard).join("")+'</div>';
     else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المؤسسة","Institution")+'</th><th>'+
       t("الموقع","Location")+'</th><th>'+t("التحقق","Verification")+'</th><th>'+t("التسجيل","Registration")+
       '</th><th></th></tr></thead><tbody>'+d.items.map(function(o){return '<tr><td><b>'+esc(o.name)+'</b><div class="entity-sub">'+

@@ -30,10 +30,61 @@ function icon(name,size=18){
    search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
    palette:'<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.1"/><circle cx="12" cy="7.5" r="1.1"/><circle cx="15.5" cy="10" r="1.1"/><path d="M12 21c-1.2 0-1.7-.6-1.2-1.7.4-.9-.1-1.6-.9-2-.7-.4-1-1-1-1.8"/>',
    globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3Z"/>',
-   tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.4"/>'
+   tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+  whatsapp:'<path d="M21 11.6a8.5 8.5 0 0 1-12.5 7.5L3 20.6l1.6-5.4A8.5 8.5 0 1 1 21 11.6Z"/><path d="M8.9 8.5c.3-.6 1-.6 1.3 0l.6 1.3c.1.3.1.6-.2.8l-.4.5c-.2.2-.2.4-.1.6.5 1 1.3 1.8 2.3 2.3.2.1.5.1.6-.1l.5-.4c.2-.3.5-.3.8-.2l1.3.6c.6.3.6 1 0 1.3-3 1.6-7.4-2.8-6.7-6.7Z"/>',
+  phone:'<path d="M6.6 3h2.9l1.4 4-2 1.4a12 12 0 0 0 6.7 6.7l1.4-2 4 1.4v2.9a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z"/>',
+  download:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
+  building:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15 9h3a2 2 0 0 1 2 2v10"/><path d="M2 21h20"/><path d="M8 7h3M8 11h3M8 15h3"/>',
+  back:'<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>'
   }[name]||'';
  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 }
+
+/* ---------- shared organization presentation helpers ---------- */
+
+// Falls back to the generated placeholder when an organization has no logo, so
+// a card never renders a broken image.
+function orgLogo(o){
+ var img=o&&o.image;
+ return img||"assets/images/school-logo-1.svg";
+}
+
+// wa.me accepts only a full international number in bare digits, so
+// "+967 733 101 001" and "+967-733-101-001" must collapse to the same chat.
+// A locally stored number written as "0733..." is lifted to +967 so it still
+// opens a chat instead of silently failing.
+function waNumber(phone){
+ var digits=String(phone||"").replace(/\D/g,"");
+ if(!digits)return "";
+ if(digits.indexOf("00")===0)digits=digits.slice(2);
+ if(digits.charAt(0)==="0")digits="967"+digits.slice(1);
+ return digits;
+}
+function waLink(phone){var n=waNumber(phone);return n?"https://wa.me/"+n:""}
+function telLink(phone){var d=String(phone||"").replace(/[^\d+]/g,"");return d?"tel:"+d:""}
+
+function waButton(phone,opts){
+ var href=waLink(phone);if(!href)return "";
+ var o=opts||{};var label=o.label||tr("whatsapp");
+ return '<a class="wa-btn'+(o.compact?" compact":"")+'" href="'+href+'" target="_blank" rel="noopener noreferrer" title="'+esc(label)+'">'+
+  icon("whatsapp",o.size||15)+'<span>'+esc(label)+'</span></a>';
+}
+
+// The API returns status tokens in English snake_case. Badges render them inside
+// an otherwise Arabic UI, so known tokens are translated and anything unknown
+// falls through as-is rather than being hidden.
+var STATUS_LABELS={
+ active:"فعّال",inactive:"غير فعّال",verified:"موثّق",unverified:"غير موثّق",
+ pending:"قيد المراجعة",under_review:"قيد المراجعة",approved:"معتمد",
+ rejected:"مرفوض",changes_requested:"تعديلات مطلوبة",suspended:"موقوف",
+ deleted:"محذوف",cancelled:"ملغي",accepted:"مقبول",completed:"مكتمل",
+ confirmed:"مؤكد",open:"التسجيل مفتوح",closed:"التسجيل مغلق"
+};
+function statusLabel(v){
+ if(lang!=="ar")return v||"—";
+ return STATUS_LABELS[v]||v||"—";
+}
+
 
 
 const i18n={
@@ -138,7 +189,16 @@ const i18n={
   governmentSub:"استكشف المدارس الحكومية",
   collegesSub:"استكشف الكليات",
   institutesSub:"استكشف المعاهد",
-  teachersSub:"ابحث عن مدرس خصوصي مناسب"
+  teachersSub:"ابحث عن مدرس خصوصي مناسب",
+  whatsapp:"واتساب", call:"اتصال", viewCards:"كروت", viewTable:"جدول",
+  sharedCore:"المعلومات المشتركة", institutionDetail:"تفاصيل المؤسسة",
+  backToInstitutions:"رجوع إلى المؤسسات", identityLabel:"الهوية والنبذة",
+  contactInfo:"بيانات الاتصال", ownerLabel:"المالك", principalLabel:"مدير المؤسسة",
+  exactLocation:"الموقع الجغرافي", accreditation:"حالة الاعتماد",
+  facilitiesLabel:"المرافق", servicesLabel:"الخدمات", openMap:"فتح الخريطة",
+  noFacilities:"لا توجد مرافق مسجلة", noServices:"لا توجد خدمات مسجلة",
+  seatsLabel:"المقاعد المتاحة", locationUnavailable:"الموقع غير محدد",
+  typeLabel:"النوع", phoneLabel:"الهاتف", websiteLabel:"الموقع الإلكتروني", curriculumLabel:"المنهج"
  },
  en:{
   home:"Home", landingHome:"Home", privateSchools:"Private Schools", governmentSchools:"Government Schools",
@@ -241,7 +301,16 @@ checking:"Checking...", createAccountBtn:"Create account", alreadyHaveAccount:"H
   governmentSub:"Explore government schools",
   collegesSub:"Explore colleges",
   institutesSub:"Explore institutes",
-  teachersSub:"Find a suitable private tutor"
+  teachersSub:"Find a suitable private tutor",
+  whatsapp:"WhatsApp", call:"Call", viewCards:"Cards", viewTable:"Table",
+  sharedCore:"Shared information", institutionDetail:"Institution details",
+  backToInstitutions:"Back to institutions", identityLabel:"Identity and overview",
+  contactInfo:"Contact details", ownerLabel:"Owner", principalLabel:"Principal",
+  exactLocation:"Location", accreditation:"Accreditation status",
+  facilitiesLabel:"Facilities", servicesLabel:"Services", openMap:"Open map",
+  noFacilities:"No facilities recorded", noServices:"No services recorded",
+  seatsLabel:"Seats available", locationUnavailable:"Location not set",
+  typeLabel:"Type", phoneLabel:"Phone", websiteLabel:"Website", curriculumLabel:"Curriculum"
  }
 };
 function tr(k){return (i18n[lang]&&i18n[lang][k])||k}
@@ -391,6 +460,29 @@ async function loadOrganization(id){
  }catch(e){
   currentOrg=null;
  }
+}
+
+// Documents, facilities and services are three separate resources the detail
+// screen needs at once. They are fetched in parallel, and each one settles on
+// its own so a single failing endpoint degrades one panel instead of blanking
+// the whole page.
+var detailExtras={orgId:null,docs:[],facilities:[],services:[],subjects:[],loading:false};
+function asList(d){if(Array.isArray(d))return d;if(d&&Array.isArray(d.items))return d.items;if(d&&Array.isArray(d.rows))return d.rows;return []}
+async function loadOrgDetailExtras(orgId){
+ detailExtras.loading=true;detailExtras.docs=[];detailExtras.facilities=[];detailExtras.services=[];detailExtras.subjects=[];
+ var enc=encodeURIComponent(orgId);
+ var res=await Promise.all([
+  apiGet('/api/documents?organizationId='+enc).catch(function(){return []}),
+  apiGet('/api/organizations/'+enc+'/facilities').catch(function(){return []}),
+  apiGet('/api/organizations/'+enc+'/services').catch(function(){return []}),
+  apiGet('/api/academic/org/'+enc+'/subjects').catch(function(){return []})
+ ]);
+ detailExtras.orgId=orgId;
+ detailExtras.docs=asList(res[0]);
+ detailExtras.facilities=asList(res[1]);
+ detailExtras.services=asList(res[2]);
+ detailExtras.subjects=asList(res[3]);
+ detailExtras.loading=false;
 }
 
 function orgTypeLabel(type){
@@ -1435,31 +1527,174 @@ function table(){
 function admin(){
  return adminShell('<div class="welcome"><div><h1>'+(lang==="ar"?"مرحباً بك في منصة مدرستي ☀":"Welcome to Madarasati")+'</h1><p>'+(lang==="ar"?"نظرة شاملة على أداء المنصة اليوم":"Overview of platform performance today")+'</p></div></div>'+kpis()+'<section class="panel"><div class="panel-title"><div><h2>'+(lang==="ar"?"المدارس":"Schools")+'</h2><p>'+(lang==="ar"?"إدارة ومتابعة جميع المدارس المسجلة في المنصة":"Manage all schools registered on the platform")+'</p></div><button class="btn brown" onclick="go(\'schools\')">'+icon("plus",15)+' '+(lang==="ar"?"إضافة مدرسة":"Add school")+'</button></div><div class="toolbar"><input placeholder="'+(lang==="ar"?"ابحث عن مدرسة ...":"Search schools ...")+'"><select><option>'+(lang==="ar"?"كل الحالات":"All statuses")+'</option></select><select><option>'+tr("allGovernorates")+'</option></select><button class="btn">'+(lang==="ar"?"تصفية":"Filter")+'</button></div>'+table()+'</section>');
 }
+/* ---------- Institution detail: the shared organization core ----------
+   One screen serves every institution type because the five blocks below are
+   the fields all of them share. Type-specific data is added on top, never in
+   place of, this core. */
+function detailRangeLabel(range){
+ var m={
+  KG:"رياض الأطفال", PRIMARY:"أساسي - ابتدائي", PREP:"إعدادي", SECONDARY:"ثانوي",
+  BASIC:"أساسي"
+ };
+ if(lang!=="ar")m={KG:"Kindergarten",PRIMARY:"Primary",PREP:"Preparatory",SECONDARY:"Secondary",BASIC:"Basic"};
+ return m[range]||range;
+}
+function detailMethodLabel(code){
+ var ar={TRAD:"تقليدي",ACTIVE:"نشط",HYBRID:"مدمج",ONLINE:"عن بُعد",MONTESSORI:"منتسوري"};
+ if(lang!=="ar")return {TRAD:"Traditional",ACTIVE:"Active",HYBRID:"Blended",ONLINE:"Online",MONTESSORI:"Montessori"}[code]||code;
+ return ar[code]||code;
+}
+function detailGenderLabel(g){
+ var ar={male:"بنين",female:"بنات",mixed:"مختلط"};
+ if(lang!=="ar")return {male:"Boys",female:"Girls",mixed:"Mixed"}[g]||g;
+ return ar[g]||g;
+}
+function detailCurriculumLabel(c){
+ if(!c)return "—";
+ var key=String(c).replace(/^curriculum_/,"").toUpperCase();
+ var ar={AHLI:"أهلي",WAZARI:"وزاري",DOWALI:"دولي",CUSTOM:"مخصص"};
+ if(lang!=="ar")return {AHLI:"Private",WAZARI:"National",DOWALI:"International",CUSTOM:"Custom"}[key]||c;
+ return ar[key]||c;
+}
+function detailDocType(d){return ownDocTypeLabel(d)}
+function detailLangLabel(l){
+ var ar={AR:"العربية",EN:"الإنجليزية",FR:"الفرنسية"};
+ if(lang==="ar")return ar[l]||l;
+ return {AR:"Arabic",EN:"English",FR:"French"}[l]||l;
+}
+function detailBytes(n){
+ var b=Number(n||0);if(!b)return "";
+ if(b<1024)return b+" B";
+ if(b<1024*1024)return (b/1024).toFixed(1)+" KB";
+ return (b/(1024*1024)).toFixed(1)+" MB";
+}
+// admin-core keeps its own badge() private to its IIFE, so the detail screen
+// carries its own copy with the same colour mapping.
+function coreBadge(v){
+ var ok=["active","verified","approved","accepted","completed","confirmed"].indexOf(v)>-1;
+ var bad=["suspended","rejected","deleted","cancelled","inactive"].indexOf(v)>-1;
+ return '<span class="badge '+(ok?"ok":bad?"bad":"wait")+'">'+esc(statusLabel(v))+'</span>';
+}
+// The detail screen is reached from three admin lists, so the back button has to
+// return to the list the visitor came from rather than always to "schools".
+function backRouteForOrg(){
+ var t=currentOrg&&currentOrg.type;
+ if(t==="institute")return "institutesAdmin";
+ if(t==="college"||t==="university")return "collegesAdmin";
+ return "schools";
+}
+
 function detailBlock(){
+ var ar=lang==="ar";
  if(!currentOrg){
-  return '<div class="detail-card"><div class="empty-state">'+(lang==="ar"?"جاري التحميل...":"Loading...")+'</div></div>';
+  return '<div class="detail-card"><div class="empty-state">'+(ar?"جاري التحميل...":"Loading...")+'</div></div>';
  }
  var o=currentOrg;
- var ar=lang==="ar";
- var imgIdx=Math.abs(hashStr(o.id||""))%8+1;
- var galleries=o.gallery&&o.gallery.length?o.gallery:[];
- var galleryHtml=galleries.length?galleries.slice(0,3).map(function(g){return '<img src="'+g+'">'}).join(""):
-  [1,2,3].map(function(i){return '<img src="assets/images/school-'+imgIdx+'.jpg">'}).join("");
- return '<section class="detail-card"><div class="detail-cover"><div class="detail-name"><div class="detail-logo"><img src="assets/images/school-logo-'+imgIdx+'.svg" alt="'+(ar?"شعار المدرسة":"School logo")+'"></div><div><h2>'+o.name+'</h2><p>'+(o.bio||"—")+'</p></div></div></div>'+
- '<div class="tabs"><button class="active">'+(ar?"نظرة عامة":"Overview")+'</button><button>'+(ar?"معلومات المدرسة":"School Info")+'</button><button>'+(ar?"الخدمات":"Services")+'</button><button>'+(ar?"المعلمون":"Teachers")+'</button><button>'+(ar?"الطلاب":"Students")+'</button><button>'+(ar?"التحقق والمراجعة":"Verification")+'</button></div>'+
- '<div class="detail-kpis">'+
-  '<div class="mini"><span>'+(ar?"المحافظة":"Governorate")+'</span><b>'+(o.governorate||"—")+'</b></div>'+
-  '<div class="mini"><span>'+(ar?"نوع المدرسة":"School Type")+'</span><b>'+orgTypeLabel(o.type)+'</b></div>'+
-  '<div class="mini"><span>'+(ar?"المعلمون":"Teachers")+'</span><b>'+(o.teachers||0)+'</b></div>'+
-  '<div class="mini"><span>'+(ar?"الطلاب":"Students")+'</span><b>'+(o.students||0)+'</b></div>'+
-  '<div class="mini"><span>'+(ar?"التقييم":"Rating")+'</span><b>'+(o.rating||0)+' ★</b></div>'+
- '</div>'+
- '<div class="detail-bottom">'+
-  '<div class="subbox"><h3>'+(ar?"نبذة عن المدرسة":"About")+'</h3><p>'+(o.description||o.bio||"—")+'</p></div>'+
-  '<div class="subbox"><h3>'+(ar?"موقع المدرسة":"Location")+'</h3><p>⌖ '+(o.address||o.governorate||"—")+(o.district?" - "+o.district:"")+'</p></div>'+
-  '<div class="subbox"><h3>'+(ar?"صور من المدرسة":"Gallery")+'</h3><div class="gallery">'+galleryHtml+'</div></div>'+
- '</div></section>'
+ var loc=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
+ var mapHref=o.mapUrl||(o.latitude&&o.longitude
+  ?"https://www.google.com/maps?q="+encodeURIComponent(o.latitude+","+o.longitude)
+  :(o.address?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(o.address):""));
+
+ // ---- 1. identity ----
+ var header='<section class="core-hero">'+
+  '<div class="core-hero-top"><button class="btn" onclick="go(backRouteForOrg())">'+icon("back",14)+' '+esc(tr("backToInstitutions"))+'</button>'+
+  '<div class="core-hero-badges">'+coreBadge(o.verified?"verified":o.verificationStatus||"pending")+
+  coreBadge(o.registrationOpen?"active":"inactive")+'</div></div>'+
+  '<div class="core-hero-main"><div class="core-logo"><img src="'+esc(orgLogo(o))+'" alt="'+esc(o.name)+'"></div>'+
+  '<div class="core-hero-copy"><h2>'+esc(o.name)+'</h2>'+
+  '<div class="core-sub">'+esc(orgTypeLabel(o.type))+(o.slug?' · '+esc(o.slug):'')+'</div>'+
+  '<p>'+esc(o.description||o.bio||"—")+'</p>'+
+  '<div class="core-hero-actions">'+waButton(o.whatsapp||o.phone,{size:16})+
+  (o.phone?'<a class="core-action" href="'+esc(telLink(o.phone))+'">'+icon("phone",15)+'<span>'+esc(o.phone)+'</span></a>':'')+
+  (mapHref?'<a class="core-action" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("pin",15)+'<span>'+esc(tr("openMap"))+'</span></a>':'')+
+  '</div></div></div>'+
+  '</section>';
+
+ var kpis='<div class="detail-kpis">'+
+  '<div class="mini"><span>'+esc(tr("governorate"))+'</span><b>'+esc(o.governorate||"—")+'</b></div>'+
+  '<div class="mini"><span>'+esc(tr("district"))+'</span><b>'+esc(o.district||"—")+'</b></div>'+
+  '<div class="mini"><span>'+esc(tr("neighborhood"))+'</span><b>'+esc(o.neighborhood||"—")+'</b></div>'+
+  '<div class="mini"><span>'+esc(tr("typeLabel"))+'</span><b>'+esc(orgTypeLabel(o.type))+'</b></div>'+
+  '<div class="mini"><span>'+esc(tr("seatsLabel"))+'</span><b>'+esc(o.seatsAvailable==null?"—":o.seatsAvailable)+'</b></div>'+
+  '</div>';
+
+ // ---- 2. contact + owner ----
+ function row(label,value,link){
+  var v=value||"—";
+  return '<div class="core-row"><span>'+esc(label)+'</span><b>'+(link?'<a href="'+esc(link)+'">'+esc(v)+'</a>':esc(v))+'</b></div>';
+ }
+ var contact='<section class="panel core-panel"><div class="panel-title"><h2>'+esc(tr("contactInfo"))+'</h2></div>'+
+  '<div class="core-rows">'+
+  row(tr("principalLabel"),o.principalName)+
+  row(tr("ownerLabel"),o.ownerId||(ar?"غير مرتبط بمالك":"No owner linked"))+
+  row(tr("phoneLabel"),o.phone,telLink(o.phone))+
+  row(tr("whatsapp"),o.whatsapp,waLink(o.whatsapp||o.phone))+
+  row(tr("email"),o.email,o.email?"mailto:"+o.email:"")+
+  row(tr("websiteLabel"),o.website,o.website)+
+  '</div><div class="core-row-actions">'+waButton(o.whatsapp||o.phone,{label:tr("whatsapp")})+'</div></section>';
+
+ // ---- 3. location ----
+ var location='<section class="panel core-panel"><div class="panel-title"><h2>'+esc(tr("exactLocation"))+'</h2></div>'+
+  (loc||o.address?'<div class="core-rows">'+
+   row(tr("governorate"),o.governorate)+row(tr("district"),o.district)+row(tr("neighborhood"),o.neighborhood)+
+   row(ar?"العنوان":"Address",o.address)+
+   row(ar?"الإحداثيات":"Coordinates",o.latitude&&o.longitude?o.latitude+", "+o.longitude:"")
+   +'</div>':"")+
+  (mapHref?'<div class="core-map"><a class="btn green" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("map",15)+' '+esc(tr("openMap"))+'</a></div>'
+   :'<div class="empty-state">'+esc(tr("locationUnavailable"))+'</div>')+
+  '</section>';
+
+ // ---- 4. documents and licences ----
+ var docs=detailExtras.docs||[];
+ var docsHtml=docs.length?
+  '<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("docType"))+'</th><th>'+esc(tr("docFile"))+
+  '</th><th>'+esc(tr("reqStatus"))+'</th><th></th></tr></thead><tbody>'+
+  docs.map(function(d){
+   return '<tr><td><b>'+esc(detailDocType(d.docType))+'</b></td>'+
+    '<td>'+esc(d.fileName||"—")+'<div class="entity-sub">'+esc(detailBytes(d.fileSize))+'</div></td>'+
+    '<td>'+coreBadge(d.status)+'</td>'+
+    '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" title="'+esc(tr("downloadDoc"))+
+    '" href="/api/documents/'+encodeURIComponent(d.id)+'/file" target="_blank" rel="noopener">'+icon("download",14)+'</a></div></td></tr>';
+  }).join("")+'</tbody></table></div>'
+  :'<div class="empty-state">'+esc(tr("noDocuments"))+'</div>';
+ var documents='<section class="panel core-panel"><div class="panel-title"><h2>'+esc(tr("myDocuments"))+'</h2></div>'+docsHtml+'</section>';
+
+ // ---- 5. facilities, services and accreditation ----
+ var fac=detailExtras.facilities||[];
+ var svc=detailExtras.services||[];
+ var subj=detailExtras.subjects||[];
+ function chips(list,isService){
+  if(!list.length)return "";
+  return '<div class="core-chips">'+list.map(function(x){
+   var off=x.available===false;
+   var extra=isService&&x.price!=null&&Number(x.price)>0?' <b>'+Number(x.price).toLocaleString(lang==="ar"?"ar-YE":"en-US")+' '+esc(x.currency||"YER")+'</b>':"";
+   var qty=!isService&&x.quantity>1?' <b>×'+x.quantity+'</b>':"";
+   return '<span class="core-chip'+(off?" off":"")+'">'+icon(isService?"tag":"check",12)+esc(x.name)+extra+qty+'</span>';
+  }).join("")+'</div>';
+ }
+ var methods=(o.teachingMethods||[]).map(function(m){return '<span class="core-chip">'+esc(detailMethodLabel(m))+'</span>'}).join("");
+ var ranges=(o.stages||[]).map(function(s){return '<span class="core-chip">'+esc(detailRangeLabel(s))+'</span>'}).join("");
+ var langs=(o.languages||[]).map(function(l){return '<span class="core-chip">'+esc(detailLangLabel(l))+'</span>'}).join("");
+ var subjectChips=subj.length?'<div class="core-chips">'+subj.map(function(s){
+   return '<span class="core-chip">'+icon("list",12)+esc(s.name)+'</span>'}).join("")+'</div>':"";
+
+ var shared='<section class="panel core-panel"><div class="panel-title"><div><h2>'+esc(tr("sharedCore"))+'</h2></div></div>'+
+  '<div class="core-rows">'+
+   row(tr("accreditation"),o.verified?tr("docVerified"):tr("statusPending"))+
+   row(tr("curriculumLabel"),detailCurriculumLabel(o.curriculum))+
+   row(ar?"الجنس":"Gender",detailGenderLabel(o.gender))+
+  '</div>'+
+  (ranges?'<h3 class="core-h3">'+esc(tr("stages"))+'</h3><div class="core-chips">'+ranges+'</div>':"")+
+  (methods?'<h3 class="core-h3">'+esc(tr("teachingMethods"))+'</h3><div class="core-chips">'+methods+'</div>':"")+
+  (langs?'<h3 class="core-h3">'+esc(tr("teachingLanguages"))+'</h3><div class="core-chips">'+langs+'</div>':"")+
+  (subjectChips?'<h3 class="core-h3">'+esc(tr("subjects"))+'</h3>'+subjectChips:"")+
+  '<h3 class="core-h3">'+esc(tr("facilitiesLabel"))+'</h3>'+(chips(fac,false)||'<div class="empty-state">'+esc(tr("noFacilities"))+'</div>')+
+  '<h3 class="core-h3">'+esc(tr("servicesLabel"))+'</h3>'+(chips(svc,true)||'<div class="empty-state">'+esc(tr("noServices"))+'</div>')+
+  '</section>';
+
+ return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+shared;
 }
+
 function generic(title){
  return adminShell(`<div class="welcome"><div><h1>${title}</h1><p>${tr("genericNote")}</p></div></div>${kpis()}<section class="panel"><div class="panel-title"><h2>${title}</h2></div><div style="padding:24px;color:#78827d">${tr("sampleContent")}</div></section>`)
 }
@@ -2072,6 +2307,9 @@ function render(){
   var orgId=params.get("id");
   if(orgId&&(!currentOrg||currentOrg.id!==orgId)){
    loadOrganization(orgId).then(function(){render()});
+  }
+  if(orgId&&detailExtras.orgId!==orgId&&!detailExtras.loading){
+   loadOrgDetailExtras(orgId).then(function(){render()});
   }
  }
 

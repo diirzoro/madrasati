@@ -66,12 +66,16 @@ async function listOrganizations(filters = {}) {
   params.push(offset);
   const { rows } = await query(
     `SELECT o.*,
+       g.name AS governorate_name,
+       d.name AS district_name,
        (SELECT COUNT(*)::int FROM offers f
          WHERE f.organization_id = o.id
            AND f.active = true
            AND (f.starts_at IS NULL OR f.starts_at <= now())
            AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count
      FROM organizations o
+     LEFT JOIN locations_governorates g ON g.id = o.governorate_id
+     LEFT JOIN locations_districts d ON d.id = o.district_id
      ${where}
      ORDER BY ${orderBy}
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -92,12 +96,17 @@ async function countOrganizations(filters = {}) {
 async function findOrganizationById(id) {
   const { rows } = await query(
     `SELECT o.*,
+       g.name AS governorate_name,
+       d.name AS district_name,
        (SELECT COUNT(*)::int FROM offers f
          WHERE f.organization_id = o.id
            AND f.active = true
            AND (f.starts_at IS NULL OR f.starts_at <= now())
            AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count
-     FROM organizations o WHERE o.id = $1`,
+     FROM organizations o
+     LEFT JOIN locations_governorates g ON g.id = o.governorate_id
+     LEFT JOIN locations_districts d ON d.id = o.district_id
+     WHERE o.id = $1`,
     [id]
   );
   return rows[0] || null;
