@@ -79,7 +79,7 @@ function waButton(phone,opts){
 // an otherwise Arabic UI, so known tokens are translated and anything unknown
 // falls through as-is rather than being hidden.
 var STATUS_LABELS={
- active:"فعّال",inactive:"غير فعّال",verified:"موثّق",unverified:"غير موثّق",
+ active:"فعّال",inactive:"غير فعّال",verified:"موثّق",unverified:"غير موثّق",deletion_requested:"قيد طلب الحذف",
  pending:"قيد المراجعة",under_review:"قيد المراجعة",approved:"معتمد",
  rejected:"مرفوض",changes_requested:"تعديلات مطلوبة",suspended:"موقوف",
  deleted:"محذوف",cancelled:"ملغي",accepted:"مقبول",completed:"مكتمل",
@@ -373,7 +373,7 @@ var orgSearchTimeout=null;
 var locData={governorates:null,districts:{},neighborhoods:{}};
 var locPending={governorates:false,districts:{},neighborhoods:{}};
 var orgData={items:[],total:0,loading:false,error:null,loaded:false,cacheKey:null,loadedType:null,_loadingSince:0};
-var teacherData={items:[],loading:false,error:null,loaded:false,cacheKey:""};
+var teacherData={items:[],loading:false,error:null,loaded:false,cacheKey:"",pricingGated:false};
 var currentOrg=null;
 var orgPage={offset:0,limit:20};
 var prevRoute="";
@@ -483,7 +483,11 @@ async function loadTeachers(q){
   var params='?limit='+orgPage.limit+'&offset=0';
   if(q)params+='&search='+encodeURIComponent(q);
   var res=await apiGet('/api/teachers'+params);
-  teacherData.items=Array.isArray(res)?res:[];
+  // The endpoint answers with a paginated envelope ({items, total,
+  // pricingGated}); treating it as a bare array left the public directory
+  // permanently empty.
+  teacherData.items=Array.isArray(res)?res:(res&&Array.isArray(res.items)?res.items:[]);
+  teacherData.pricingGated=Boolean(res&&res.pricingGated);
  }catch(e){
   teacherData.error=e.message;teacherData.items=[];
  }finally{

@@ -302,6 +302,67 @@
     return String(name || "institution").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "institution";
   }
 
+  // ---- print-ready document ----
+  // One print shell for the platform. The institution report and the teacher
+  // report both hand a {entityName, entityType, logo, title, blocks} object to
+  // this function, so a printed page always carries the same official platform
+  // header, the same table style and the same footer. The institution path in
+  // app.js prints through its own copy of this shell today; folding it onto this
+  // function is the remaining step recorded in the design memo.
+  var PRINT_CSS =
+    'body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#1F2937;margin:24px}' +
+    '.print-head{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid #1F5D46;padding-bottom:12px;margin-bottom:18px}' +
+    '.print-brand,.print-org{display:flex;gap:10px;align-items:center}' +
+    '.print-mark{display:inline-flex;width:40px;height:40px;border-radius:10px;background:#1F5D46;color:#fff;align-items:center;justify-content:center;font-weight:700;font-size:20px}' +
+    '.print-org img{width:56px;height:56px;object-fit:contain;border-radius:12px}' +
+    '.print-head small{display:block;color:#6B7280;font-size:11px}' +
+    'h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;color:#174837;margin:18px 0 6px;border-inline-start:4px solid #B55A3C;padding-inline-start:8px}' +
+    '.print-sub{color:#6B7280;font-size:12px;margin:0 0 12px}' +
+    '.print-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}' +
+    '.print-tbl th,.print-tbl td{border:1px solid #E7DED3;padding:6px 8px;text-align:start}' +
+    '.print-tbl th{background:#F1F5F2;font-weight:700}' +
+    '.print-foot{margin-top:20px;border-top:1px solid #E7DED3;padding-top:8px;color:#6B7280;font-size:11px}' +
+    '@page{size:A4;margin:12mm}';
+
+  function printDoc(report) {
+    var r = report || {};
+    var ar = typeof lang === "undefined" || lang !== "en";
+    var T = function (key) { return typeof tr === "function" ? tr(key) : key; };
+    var esc2 = typeof esc === "function" ? esc : function (v) { return String(v == null ? "" : v); };
+    var head = '<header class="print-head"><div class="print-brand"><span class="print-mark">م</span><div><b>' +
+      esc2(T("reportPlatform")) + '</b><small>' +
+      (ar ? "مدرستي — منصة التعليم اليمنية" : "Madrasati — Yemen education platform") +
+      '</small></div></div><div class="print-org">' +
+      (r.logo ? '<img src="' + esc2(r.logo) + '" alt="">' : "") +
+      '<div><b>' + esc2(r.entityName || r.name || "—") + '</b><small>' + esc2(r.entityType || "") +
+      '</small></div></div></header>';
+    var body = (r.blocks || []).map(function (b) {
+      if (b.type === "title") return "<h1>" + esc2(b.text) + "</h1>";
+      if (b.type === "heading") return "<h2>" + esc2(b.text) + "</h2>";
+      if (b.type === "sub") return '<p class="print-sub">' + esc2(b.text) + "</p>";
+      if (b.type === "table") {
+        return "<table class=\"print-tbl\">" + b.rows.map(function (row, i) {
+          return "<tr>" + row.map(function (c) {
+            return (i === 0 ? "<th>" : "<td>") + esc2(c == null ? "" : c) + (i === 0 ? "</th>" : "</td>");
+          }).join("") + "</tr>";
+        }).join("") + "</table>";
+      }
+      return "<p>" + esc2(b.text) + "</p>";
+    }).join("");
+    var foot = '<footer class="print-foot">' + esc2(T("reportPlatform")) + " · " + esc2(T("reportIssued")) + ": " +
+      esc2(new Date().toLocaleDateString(ar ? "ar-YE" : "en-GB")) + "</footer>";
+    var w = window.open("", "_blank");
+    if (!w) {
+      alert(ar ? "تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة." : "Could not open the print window. Allow pop-ups.");
+      return;
+    }
+    w.document.write('<!doctype html><html lang="' + (ar ? "ar" : "en") + '" dir="' + (ar ? "rtl" : "ltr") +
+      '"><head><meta charset="utf-8"><title>' + esc2((r.title || "") + " — " + (r.entityName || "")) +
+      "</title><style>" + PRINT_CSS + "</style></head><body>" + head + body + foot +
+      '<script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>');
+    w.document.close();
+  }
+
   window.InstitutionReport = {
     exportXlsx: function (report) {
       download(buildXlsx(report.sheets), fileSlug(report.name) + ".xlsx",
@@ -314,4 +375,6 @@
     buildXlsx: buildXlsx,
     buildDocx: buildDocx,
   };
+
+  window.ReportDoc = { print: printDoc };
 })();

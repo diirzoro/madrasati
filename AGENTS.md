@@ -89,6 +89,30 @@ memo in the same commit and say why — never leave the two contradicting.
 11. **A stage is priced, a subject is priced, capacity is derived.** See rules
     3 and 4; the offering tables hold the amounts, and `remaining_seats` is
     always read, never written.
+12. **A teacher is an independent entity, not an organization member.** A
+    teacher has a real login account (the `teacher` role) plus a
+    `teacher_profiles` row, and owns their own location, availability,
+    qualifications, documents and stages. Prices sit on the **subject**
+    (`teacher_subjects`, one row per subject with its amount, currency, billing
+    period and teaching language) — never on the platform, and never as one
+    number on the teacher. Visitors never see the amounts: the two public reads
+    carry `optionalAuth`, and `mapTeacher` strips `amount`, `currency`,
+    `billingPeriod` and `hourlyRate` for an anonymous caller while setting
+    `pricingGated` — the same contract as the institution offering. The gate
+    lives on the server; a price that a browser hides is still served. Every
+    row needs its amount: `teacher_pricing.amount` is NOT NULL, so the service
+    refuses an unpriced subject with `400` instead of letting PostgreSQL
+    answer with a `500`.
+13. **A teacher is never deleted with one click.** Deletion is a *request* with
+    a written reason of at least ten characters; the profile moves to
+    `deletion_requested` and verification decides. An approved request is a soft
+    delete (`deleted_at` + `profile_status = 'inactive'`) so the audit trail
+    survives, and the account itself is closed with it (`users.status =
+    'deleted'`), so an approved request also ends the teacher's login.
+    Protected accounts (`users.is_protected`) are refused before a
+    request is even recorded. Every teacher write, the private documents and the
+    deletion queue carry `requireAuth` + `requireRole('admin')`; only the
+    public directory read stays open.
 
 ## 4. Admin sidebar is frozen at 13 items
 
@@ -156,7 +180,14 @@ curl /api/academic/stages                      # global catalog, price-free
 curl /api/academic/org/:orgId/offering         # priced; requireOrgMember
 curl /api/academic/org/:orgId/offering/public  # public; pricing gated
 curl '/api/advertisements?placement=ticker'    # published ticker strip
+curl /api/teachers?limit=5                     # public directory, prices gated
+curl /api/teachers/form-catalog                # what the teacher form may pick
 ```
+
+A change to a file under `design-prototype-v4/` is not verified by `node --check`
+alone: open the page, drive the real control, and read the row back over the API.
+`?v=` in `index.html` must be bumped whenever those assets change, or a browser
+keeps serving the previous copy.
 
 Migrations must be numbered sequentially, additive, and re-runnable
 (`IF NOT EXISTS`, guarded `DO $$` blocks). Never edit an applied migration —
