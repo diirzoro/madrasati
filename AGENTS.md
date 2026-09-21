@@ -72,6 +72,18 @@ memo in the same commit and say why — never leave the two contradicting.
    subject, so an English subject can exist inside an Arabic stage.
 9. **Enforced naming:** UI labels come from the `i18n` dictionary in
    `design-prototype-v4/app.js` (AR + EN). Add both languages together.
+10. **The global catalog carries no prices.** The platform catalog
+    («البيانات الأكاديمية», `#/academic`) defines stages, grades (+ track),
+    general subjects, languages and curriculum classifications, and nothing
+    else — no amount, no currency, no capacity, no delivery mode. Every price
+    belongs to one institution and lives in its offering
+    (`organization_stages` / `organization_subjects` / `organization_fees`).
+    The platform never prices a stage centrally. A catalog row's `code` is what
+    an offering references, so it is labelled with a stage-shaped example, not
+    a subject code.
+11. **A stage is priced, a subject is priced, capacity is derived.** See rules
+    3 and 4; the offering tables hold the amounts, and `remaining_seats` is
+    always read, never written.
 
 ## 4. Admin sidebar is frozen at 15 items
 
@@ -79,15 +91,20 @@ memo in the same commit and say why — never leave the two contradicting.
 `students`, `bookings`, `verify`, `academic`, `locations`, `offers`, `ads`,
 `reports`, `access`, `settings`.
 
-The institution entries share one page (`adminInstitutionsPage(group)`) with a
-per-group type filter; the marketing entries are split into offers and ads.
-Payments and fees are absent by design.
+The institution entries share one page (`adminInstitutionsPage(group)`) with
+five explicit tabs — private schools, government schools, colleges,
+universities, institutes. A sidebar entry only selects which tab is open on
+arrival; it never hides the other four types. The marketing entries are split
+into offers and ads. Payments and fees are absent by design.
 
 ## 5. Design system rules
 
 - Palette: `#1F5D46` (primary), `#174837` (dark), `#B55A3C` (accent),
   `#FAF7F2` (background), `#FFFFFF` (surface), `#1F2937` (text), `#6B7280`
-  (muted). Only the `education-green` theme is shipped.
+  (muted) for `education-green`, the brand theme and the shell default.
+- `theme-presets.json` ships six selectable themes and the picker lists all
+  six: education-green, navy-gold, burgundy-sand, teal-desert, plum-rose,
+  petrol-bronze. Never delete or hide a preset; add, never swap.
 - Reuse the approved shell — header, sidebar, tables, forms, cards. Never
   rebuild it per module.
 - Forbidden: corporate blues, legacy ERP look, heavy gradients, heavy shadows,
@@ -117,6 +134,12 @@ node db/migrate.js up              # apply pending migrations
 # services (dev)
 node server/pg-app.js              # API
 node server/v4-static.js           # static frontend + /api proxy
+
+# the two academic levels, side by side
+curl /api/academic/stages                      # global catalog, price-free
+curl /api/academic/org/:orgId/offering         # priced; requireOrgMember
+curl /api/academic/org/:orgId/offering/public  # public; pricing gated
+curl '/api/advertisements?placement=ticker'    # published ticker strip
 ```
 
 Migrations must be numbered sequentially, additive, and re-runnable

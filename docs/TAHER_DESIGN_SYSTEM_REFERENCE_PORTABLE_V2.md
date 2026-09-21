@@ -325,6 +325,47 @@ Validate each integrated screen for:
 
 Do not create a separate mobile product.
 
+## 10A. Institution Cards, Detail Chips, Report Header, Announcement Ticker
+
+Approved additions to the frozen system. They reuse the existing shell; none of
+them introduces a new visual language.
+
+**Institution cards and rows.** A card or a table row that represents an
+institution must carry, at minimum: the official logo, the name and type, the
+owner/principal name with a symbolic avatar, the location as
+(المحافظة · المديرية · الحي), and the contact block. Phone and email render in
+an `dir="ltr"` span so `+967` stays at the start of the number inside an RTL
+layout. A green WhatsApp action sits next to the number and opens
+`https://wa.me/967...` in a new tab. Cards open the full details page; they are
+not the place for a full record.
+
+**Facilities and services are one component.** Both lists render through the
+same chip component under their own heading, so a service looks exactly like a
+facility, with its price in the chip when one exists. Services must not degrade
+into plain text. Delivery values are exactly three — حضوري / عن بُعد / مدمج —
+and a status word such as «نشط» never appears in that list.
+
+**Themes stay six.** `theme-presets.json` ships six presets and the picker
+lists all six: الأخضر التعليمي (education-green, the default and the only
+brand-approved palette for the shell), الكحلي والذهبي, الخمري والرملي,
+التركواز والصحراء, البنفسجي والوردي الترابي, البترولي والبرونزي. No preset may
+be deleted or hidden. Any new theme is added, never swapped in.
+
+**Print and export carry the header.** The printed institution report is an A4
+document with the platform header (mark + platform name) on one side and the
+institution's own logo, name and type on the other, the issue date in the
+footer, and tables ruled for paper. The same document is what Excel, PDF and
+Word export. Money columns in a spreadsheet are real numbers with a separate
+currency column, not pre-formatted text, so a reader can sum them.
+
+**Announcement ticker.** The top strip is a continuous horizontal marquee:
+`ticker-ltr` for English and `ticker-rtl` for Arabic, the content duplicated
+once so the loop has no gap, paused on hover or focus, and replaced with a
+wrapping static line under `prefers-reduced-motion`. It reads published rows
+from the advertisements table (`/api/advertisements?placement=ticker`) and stays
+visible with an invitation message when no row is published. It is hidden in
+print.
+
 ## 11. Design Freeze / Implementation Safety
 
 During backend hardening or requirements work, do not redesign the approved V4 shell or visual system.

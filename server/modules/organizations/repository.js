@@ -72,7 +72,10 @@ async function listOrganizations(filters = {}) {
          WHERE f.organization_id = o.id
            AND f.active = true
            AND (f.starts_at IS NULL OR f.starts_at <= now())
-           AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count
+           AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count,
+       (SELECT COALESCE(json_agg(s.name ORDER BY s.sort_order, s.name), '[]'::json)
+          FROM organization_services s
+         WHERE s.organization_id = o.id AND s.available = true) AS service_names
      FROM organizations o
      LEFT JOIN locations_governorates g ON g.id = o.governorate_id
      LEFT JOIN locations_districts d ON d.id = o.district_id
@@ -102,7 +105,10 @@ async function findOrganizationById(id) {
          WHERE f.organization_id = o.id
            AND f.active = true
            AND (f.starts_at IS NULL OR f.starts_at <= now())
-           AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count
+           AND (f.ends_at IS NULL OR f.ends_at >= now())) AS offers_count,
+       (SELECT COALESCE(json_agg(s.name ORDER BY s.sort_order, s.name), '[]'::json)
+          FROM organization_services s
+         WHERE s.organization_id = o.id AND s.available = true) AS service_names
      FROM organizations o
      LEFT JOIN locations_governorates g ON g.id = o.governorate_id
      LEFT JOIN locations_districts d ON d.id = o.district_id

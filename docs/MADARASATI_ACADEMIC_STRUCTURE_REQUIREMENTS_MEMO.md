@@ -3,8 +3,9 @@
 ## Architecture & Dashboard Requirements Memo
 
 **Date:** 19 September 2026  
+**Revised:** 21 September 2026 — the catalog/offering split is recorded and the offering layer is implemented (section 36)  
 **Status:** OWNER REQUIREMENT — DOCUMENTATION / ARCHITECTURE LOCK  
-**Implementation:** NOT AUTHORIZED YET
+**Implementation:** the catalog schema and the organization offering layer are implemented (migrations 030, 031). Sections 1–35 remain governing; no further schema change is authorized without resolving section 35.
 
 ---
 
@@ -57,6 +58,34 @@ The five educational organization types share a **Shared Organization Core**, wi
 - Client
 
 These are dashboard experiences and roles, not separate applications.
+
+### Global Catalog vs. Organization Offering (binding)
+
+The distinction between the **platform catalog** and an **organization offering**
+is the rule that decides where every academic field is allowed to live. It is
+binding for all three memos, for the API and for the UI.
+
+| | Global Catalog | Organization Offering |
+|---|---|---|
+| Owned by | Platform admin only | The institution |
+| Screen | «البيانات الأكاديمية» (`#/academic`) | The institution details screen |
+| Lives in | `academic_stages`, `academic_grades`, `subjects`, `curricula`, `languages`, `teaching_methods`, `countries`/`governorates`/`districts`/`neighborhoods` | `organization_stages`, `organization_grades`, `organization_subjects`, `organization_curricula`, `organization_languages`, `organization_fees` |
+| Contains | Abstract definitions: stage names, grade names + track (علمي / أدبي / عام), general subject names, teaching languages, curriculum classifications (وزاري / أهلي / دولي) | The priced and operational layer: stage selected from the catalog, `fee_amount` + `currency` (YER, SAR, USD) + payment period (سنوي / فصلي / شهري), teaching language, delivery mode, capacity, subjects with their own fees and languages |
+| Never contains | Any amount, currency, capacity, seat count or delivery mode — the platform does not price a stage centrally | A second definition of a stage, grade, subject or language. An offering may only *reference* catalog rows |
+
+Consequences that must be preserved:
+
+1. Any amount on a catalog row is a defect. Money exists only in
+   `organization_fees` (and on the priced offering rows).
+2. Capacity is derived per institution, never entered: `remaining_seats` is a
+   generated column equal to `capacity - current_students`, and a negative
+   remainder is legal.
+3. The catalog screen must stay free of prices and capacity so an admin cannot
+   create a platform-wide price by mistake.
+4. A catalog row's `code` is the key an offering uses to reference it, so codes
+   must stay stable once published. The stage-code field is therefore labelled
+   with a stage-shaped example (ثانوية / SEC), never a subject code such as
+   `MATH`.
 
 ---
 
@@ -1014,3 +1043,39 @@ Two issues were intentionally left open for explicit Owner approval before schem
 2. **Fee source of truth:** Before implementation, explicitly choose how `stage_fee`, `subject_fee`, service pricing, and any fee-record/detail table relate, so there is one clear authoritative source and no accidental double counting.
 
 No migration/API/frontend implementation is authorized until these decisions are resolved and the existing implementation has been audited.
+
+---
+
+## 36. Offering Layer — Implementation Record (21 September 2026)
+
+This section records what is implemented, so the memo and the code agree. It
+adds no new authority: it documents the shape the offering layer actually took.
+
+### Migrations
+
+| Migration | Change |
+|---|---|
+| `030_organization_offering_and_grade_tracks.sql` | Adds `academic_grades.track` (علمي / أدبي / عام, NULL = عام). Records the catalog/offering split and the stage+subject offering as `COMMENT`s on the tables. No amount is added to any catalog row. |
+| `031_higher_education_catalog_and_offering_backfill.sql` | Adds the higher-education stage names (دبلوم، دبلوم عالي، بكالوريوس، ماجستير، دكتوراه) to the price-free catalog so college / university / institute tenants have something to select, fills the secondary-ladder tracks, and backfills `organization_stages` rows **without a fee** for institutions that the seed describes but had no offering row. |
+
+Both are additive, idempotent and re-runnable, per `AGENTS.md` section 7.
+
+### API
+
+| Route | Guard | Purpose |
+|---|---|---|
+| `GET /api/academic/:catalog` | public read allowed | The price-free platform catalog. |
+| `GET /api/academic/org/:orgId/offering` | `requireOrgMember` | The institution's own priced offering. |
+| `GET /api/academic/org/:orgId/offering/public` | public | The same offering with the pricing gated: amounts and fees are withheld, the structure (stages, languages, delivery, capacity) is shown. |
+| `GET /api/academic/org/:orgId/subjects` | `requireOrgMember` | The institution's subjects with their own fees and languages. |
+
+`remaining_seats` is read from the generated column and is never written by any
+handler.
+
+### UI
+
+- `#/academic` is the platform catalog: five tabs (المراحل / الصفوف / المواد العامة / لغات التدريس / تصنيفات المناهج), a banner stating it carries no prices, and a pointer to «عروض المؤسسات» for the priced layer.
+- The stage form's code field is labelled with a stage-shaped example (`مثال: SEC أو ثانوية`), never a subject code, because that code is the key an offering references.
+- The institution details screen holds the priced layer: a stages-and-fees table (fee + currency + payment period + teaching language + delivery mode + capacity + remaining seats), a subjects table, and [إضافة مرحلة للمدرسة] plus [تعديل].
+- Gated pricing: a visitor with no session sees the structure with amounts replaced by «سجّل الدخول لعرض الرسوم والتسجيل», and facilities / services / documents read the same way instead of "none recorded".
+- Delivery is an attribute with exactly three values (حضوري / عن بُعد / مدمج). A legacy `ACTIVE` teaching-method row must never render as «نشط» in that list.

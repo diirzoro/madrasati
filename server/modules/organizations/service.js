@@ -36,6 +36,7 @@ function mapOrganization(row) {
     facilities: parseJson(row.facilities, []),
     offers: parseJson(row.offers, []),
     offersCount: row.offers_count || 0,
+    services: Array.isArray(row.service_names) ? row.service_names : [],
     discounts: parseJson(row.discounts, []),
     activities: parseJson(row.activities, []),
     socialLinks: parseJson(row.social_links, []),

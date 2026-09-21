@@ -34,6 +34,11 @@ function icon(name,size=18){
   whatsapp:'<path d="M21 11.6a8.5 8.5 0 0 1-12.5 7.5L3 20.6l1.6-5.4A8.5 8.5 0 1 1 21 11.6Z"/><path d="M8.9 8.5c.3-.6 1-.6 1.3 0l.6 1.3c.1.3.1.6-.2.8l-.4.5c-.2.2-.2.4-.1.6.5 1 1.3 1.8 2.3 2.3.2.1.5.1.6-.1l.5-.4c.2-.3.5-.3.8-.2l1.3.6c.6.3.6 1 0 1.3-3 1.6-7.4-2.8-6.7-6.7Z"/>',
   phone:'<path d="M6.6 3h2.9l1.4 4-2 1.4a12 12 0 0 0 6.7 6.7l1.4-2 4 1.4v2.9a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z"/>',
   download:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  printer:'<path d="M7 9V3h10v6"/><path d="M7 19H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>',
+  file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>',
+  sheet:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M15 10v10"/>',
+  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
   building:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16"/><path d="M15 9h3a2 2 0 0 1 2 2v10"/><path d="M2 21h20"/><path d="M8 7h3M8 11h3M8 15h3"/>',
   back:'<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>'
   }[name]||'';
@@ -198,6 +203,17 @@ const i18n={
   facilitiesLabel:"المرافق", servicesLabel:"الخدمات", openMap:"فتح الخريطة",
   noFacilities:"لا توجد مرافق مسجلة", noServices:"لا توجد خدمات مسجلة",
   seatsLabel:"المقاعد المتاحة", locationUnavailable:"الموقع غير محدد",
+  stageFeesLabel:"المراحل والرسوم", orgSubjectsLabel:"المواد الدراسية للمؤسسة",
+  addStageLabel:"إضافة مرحلة للمدرسة", editLabel:"تعديل", feeLabel:"الرسوم", currencyLabel:"العملة",
+  frequencyLabel:"دورية السداد", capacityLabel:"السعة", remainingSeatsLabel:"المقاعد المتبقية",
+  deliveryLabel:"طريقة التدريس", languageLabel:"لغة التدريس", yearly:"سنوي", termly:"فصلي", monthly:"شهري",
+  onSite:"حضوري", onlineDelivery:"عن بُعد", hybridDelivery:"مدمج",
+  noOfferingStages:"لم تُحدَّد مراحل لهذه المؤسسة بعد", noOfferingSubjects:"لا توجد مواد خاصة بهذه المؤسسة",
+  printReport:"طباعة", exportReport:"تصدير", exportXlsx:"Excel (.xlsx)", exportDocx:"Word (.docx)", exportPdf:"PDF",
+  reportTitle:"تقرير مؤسسة", reportIssued:"تاريخ الإصدار", reportPlatform:"منصة مدرستي",
+  pricingGated:"سجّل الدخول لعرض الرسوم والتسجيل",
+  seatsOf:"مقعداً",
+  printHint:"اختر «حفظ كملف PDF» من نافذة الطباعة للحصول على نسخة PDF.",
   typeLabel:"النوع", phoneLabel:"الهاتف", websiteLabel:"الموقع الإلكتروني", curriculumLabel:"المنهج"
  },
  en:{
@@ -310,6 +326,17 @@ checking:"Checking...", createAccountBtn:"Create account", alreadyHaveAccount:"H
   facilitiesLabel:"Facilities", servicesLabel:"Services", openMap:"Open map",
   noFacilities:"No facilities recorded", noServices:"No services recorded",
   seatsLabel:"Seats available", locationUnavailable:"Location not set",
+  stageFeesLabel:"Stages and fees", orgSubjectsLabel:"Institution subjects",
+  addStageLabel:"Add stage to school", editLabel:"Edit", feeLabel:"Fee", currencyLabel:"Currency",
+  frequencyLabel:"Payment period", capacityLabel:"Capacity", remainingSeatsLabel:"Remaining seats",
+  deliveryLabel:"Delivery mode", languageLabel:"Teaching language", yearly:"Yearly", termly:"Termly", monthly:"Monthly",
+  onSite:"On-site", onlineDelivery:"Online", hybridDelivery:"Blended",
+  noOfferingStages:"No stages defined for this institution yet", noOfferingSubjects:"No subjects specific to this institution",
+  printReport:"Print", exportReport:"Export", exportXlsx:"Excel (.xlsx)", exportDocx:"Word (.docx)", exportPdf:"PDF",
+  reportTitle:"Institution report", reportIssued:"Issued", reportPlatform:"Madrasati platform",
+  pricingGated:"Sign in to view fees and register",
+  seatsOf:"seats",
+  printHint:"Choose “Save as PDF” in the print dialog to get a PDF copy.",
   typeLabel:"Type", phoneLabel:"Phone", websiteLabel:"Website", curriculumLabel:"Curriculum"
  }
 };
@@ -466,23 +493,39 @@ async function loadOrganization(id){
 // screen needs at once. They are fetched in parallel, and each one settles on
 // its own so a single failing endpoint degrades one panel instead of blanking
 // the whole page.
-var detailExtras={orgId:null,docs:[],facilities:[],services:[],subjects:[],loading:false};
+var detailExtras={orgId:null,docs:[],facilities:[],services:[],subjects:[],offering:null,loading:false};
 function asList(d){if(Array.isArray(d))return d;if(d&&Array.isArray(d.items))return d.items;if(d&&Array.isArray(d.rows))return d.rows;return []}
 async function loadOrgDetailExtras(orgId){
- detailExtras.loading=true;detailExtras.docs=[];detailExtras.facilities=[];detailExtras.services=[];detailExtras.subjects=[];
+ detailExtras.loading=true;detailExtras.docs=[];detailExtras.facilities=[];detailExtras.services=[];detailExtras.subjects=[];detailExtras.offering=null;
  var enc=encodeURIComponent(orgId);
  var res=await Promise.all([
   apiGet('/api/documents?organizationId='+enc).catch(function(){return []}),
   apiGet('/api/organizations/'+enc+'/facilities').catch(function(){return []}),
   apiGet('/api/organizations/'+enc+'/services').catch(function(){return []}),
-  apiGet('/api/academic/org/'+enc+'/subjects').catch(function(){return []})
+  apiGet('/api/academic/org/'+enc+'/subjects').catch(function(){return []}),
+  // The priced layer of this institution: which stages it teaches, with the fee,
+  // currency, period, language, delivery mode and capacity of each. The server
+  // decides whether amounts come back at all, so a gated response is normal.
+  apiGet('/api/academic/org/'+enc+'/offering/public').catch(function(){return null})
  ]);
  detailExtras.orgId=orgId;
  detailExtras.docs=asList(res[0]);
  detailExtras.facilities=asList(res[1]);
  detailExtras.services=asList(res[2]);
  detailExtras.subjects=asList(res[3]);
+ detailExtras.offering=res[4]||null;
  detailExtras.loading=false;
+}
+function orgOffering(){return detailExtras.offering||null}
+function moneyText(amount,currency){
+ if(amount==null||amount==="")return "—";
+ var n=Number(amount);
+ var num=isFinite(n)?n.toLocaleString(lang==="ar"?"ar-YE":"en-US"):String(amount);
+ return num+" "+String(currency||"YER");
+}
+function frequencyLabel(f){
+ var map={yearly:"yearly",annual:"yearly",termly:"termly",semester:"termly",monthly:"monthly",month:"monthly"};
+ return tr(map[String(f||"").toLowerCase()]||"yearly");
 }
 
 function orgTypeLabel(type){
@@ -524,7 +567,10 @@ function orgCardFromApi(o){
   mapUrl:googleMapsUrl(o),
   id:o.id,
   stages:normalizeNameList(o.stages),
-  services:normalizeNameList(o.facilities),
+  // Services are their own organization records. Reading facilities here — as
+  // this did before — put facility names under the services badges, so a
+  // school's real services never appeared on a card.
+  services:normalizeNameList(o.services),
   offers:Number(o.offersCount)||0,
   open:o.registrationOpen===true
  };
@@ -1531,18 +1577,34 @@ function admin(){
    One screen serves every institution type because the five blocks below are
    the fields all of them share. Type-specific data is added on top, never in
    place of, this core. */
-function detailRangeLabel(range){
- var m={
-  KG:"رياض الأطفال", PRIMARY:"أساسي - ابتدائي", PREP:"إعدادي", SECONDARY:"ثانوي",
-  BASIC:"أساسي"
- };
- if(lang!=="ar")m={KG:"Kindergarten",PRIMARY:"Primary",PREP:"Preparatory",SECONDARY:"Secondary",BASIC:"Basic"};
- return m[range]||range;
+
+// Delivery is an attribute with exactly three values: حضوري / عن بُعد / مدمج.
+// The legacy teaching-methods catalog also carried pedagogy rows and an ACTIVE
+// entry that used to render as "نشط" here — a status word that does not belong
+// in a delivery list. Anything that is not a delivery signal resolves through
+// the legacy map instead of being relabelled as a status.
+var DELIVERY_LABELS={
+ on_site:{ar:"حضوري",en:"On-site"},
+ online:{ar:"عن بُعد",en:"Online"},
+ hybrid:{ar:"مدمج",en:"Blended"}
+};
+var LEGACY_METHOD_LABELS={
+ TRAD:{ar:"التلقين المباشر",en:"Direct instruction"},
+ MONTESSORI:{ar:"منتسوري",en:"Montessori"}
+};
+function deliveryValue(code){
+ var c=String(code==null?"":code).trim().toLowerCase();
+ if(c==="on_site"||c==="onsite"||c==="residential"||c==="in_person"||c==="attendance")return "on_site";
+ if(c==="online"||c==="remote"||c==="distance"||c==="e_learning")return "online";
+ if(c==="hybrid"||c==="blended"||c==="mixed")return "hybrid";
+ return c;
 }
-function detailMethodLabel(code){
- var ar={TRAD:"تقليدي",ACTIVE:"نشط",HYBRID:"مدمج",ONLINE:"عن بُعد",MONTESSORI:"منتسوري"};
- if(lang!=="ar")return {TRAD:"Traditional",ACTIVE:"Active",HYBRID:"Blended",ONLINE:"Online",MONTESSORI:"Montessori"}[code]||code;
- return ar[code]||code;
+function detailDeliveryLabel(code){
+ var v=deliveryValue(code);
+ if(DELIVERY_LABELS[v])return DELIVERY_LABELS[v][lang==="ar"?"ar":"en"];
+ var legacy=LEGACY_METHOD_LABELS[v];
+ if(legacy)return legacy[lang==="ar"?"ar":"en"];
+ return code;
 }
 function detailGenderLabel(g){
  var ar={male:"بنين",female:"بنات",mixed:"مختلط"};
@@ -1584,16 +1646,20 @@ function backRouteForOrg(){
  return "schools";
 }
 
-function detailBlock(){
+function detailBlock(isPublic){
  var ar=lang==="ar";
  if(!currentOrg){
   return '<div class="detail-card"><div class="empty-state">'+(ar?"جاري التحميل...":"Loading...")+'</div></div>';
  }
  var o=currentOrg;
  var loc=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
+ // Without stored coordinates the map button still has to land somewhere useful,
+ // so it falls back to a Google Maps search on the institution name combined
+ // with its neighbourhood, district and governorate.
+ var mapQuery=[o.name,o.neighborhood,o.district,o.governorate].filter(Boolean).join(" ");
  var mapHref=o.mapUrl||(o.latitude&&o.longitude
   ?"https://www.google.com/maps?q="+encodeURIComponent(o.latitude+","+o.longitude)
-  :(o.address?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(o.address):""));
+  :(mapQuery?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(mapQuery):""));
 
  // ---- 1. identity ----
  var header='<section class="core-hero">'+
@@ -1605,8 +1671,15 @@ function detailBlock(){
   '<div class="core-sub">'+esc(orgTypeLabel(o.type))+(o.slug?' · '+esc(o.slug):'')+'</div>'+
   '<p>'+esc(o.description||o.bio||"—")+'</p>'+
   '<div class="core-hero-actions">'+waButton(o.whatsapp||o.phone,{size:16})+
-  (o.phone?'<a class="core-action" href="'+esc(telLink(o.phone))+'">'+icon("phone",15)+'<span>'+esc(o.phone)+'</span></a>':'')+
+  (o.phone?'<a class="core-action" href="'+esc(telLink(o.phone))+'">'+icon("phone",15)+'<span class="ltr-num" dir="ltr">'+esc(o.phone)+'</span></a>':'')+
   (mapHref?'<a class="core-action" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("pin",15)+'<span>'+esc(tr("openMap"))+'</span></a>':'')+
+  (isPublic?"":'<button class="core-action" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+'<span>'+esc(tr("editLabel"))+'</span></button>')+
+  '<button class="core-action" onclick="printInstitution()">'+icon("printer",15)+'<span>'+esc(tr("printReport"))+'</span></button>'+
+  '<span class="export-group">'+icon("download",15)+
+   '<button class="core-action" onclick="exportInstitution(\'xlsx\')" title="'+esc(tr("exportXlsx"))+'">'+esc(tr("exportXlsx"))+'</button>'+
+   '<button class="core-action" onclick="exportInstitution(\'pdf\')" title="'+esc(tr("exportPdf"))+'">'+esc(tr("exportPdf"))+'</button>'+
+   '<button class="core-action" onclick="exportInstitution(\'docx\')" title="'+esc(tr("exportDocx"))+'">'+esc(tr("exportDocx"))+'</button>'+
+  '</span>'+
   '</div></div></div>'+
   '</section>';
 
@@ -1656,27 +1729,22 @@ function detailBlock(){
     '<td><div class="crud-actions"><a class="crud view" style="text-decoration:none" title="'+esc(tr("downloadDoc"))+
     '" href="/api/documents/'+encodeURIComponent(d.id)+'/file" target="_blank" rel="noopener">'+icon("download",14)+'</a></div></td></tr>';
   }).join("")+'</tbody></table></div>'
-  :'<div class="empty-state">'+esc(tr("noDocuments"))+'</div>';
+  :'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noDocuments"))+'</div>';
  var documents='<section class="panel core-panel"><div class="panel-title"><h2>'+esc(tr("myDocuments"))+'</h2></div>'+docsHtml+'</section>';
 
  // ---- 5. facilities, services and accreditation ----
  var fac=detailExtras.facilities||[];
  var svc=detailExtras.services||[];
- var subj=detailExtras.subjects||[];
  function chips(list,isService){
   if(!list.length)return "";
   return '<div class="core-chips">'+list.map(function(x){
    var off=x.available===false;
-   var extra=isService&&x.price!=null&&Number(x.price)>0?' <b>'+Number(x.price).toLocaleString(lang==="ar"?"ar-YE":"en-US")+' '+esc(x.currency||"YER")+'</b>':"";
+   var extra=isService&&x.price!=null&&Number(x.price)>0?(gated?' <b class="gated-value">'+esc(tr("pricingGated"))+'</b>':' <b>'+Number(x.price).toLocaleString(lang==="ar"?"ar-YE":"en-US")+' '+esc(x.currency||"YER")+'</b>'):"";
    var qty=!isService&&x.quantity>1?' <b>×'+x.quantity+'</b>':"";
    return '<span class="core-chip'+(off?" off":"")+'">'+icon(isService?"tag":"check",12)+esc(x.name)+extra+qty+'</span>';
   }).join("")+'</div>';
  }
- var methods=(o.teachingMethods||[]).map(function(m){return '<span class="core-chip">'+esc(detailMethodLabel(m))+'</span>'}).join("");
- var ranges=(o.stages||[]).map(function(s){return '<span class="core-chip">'+esc(detailRangeLabel(s))+'</span>'}).join("");
  var langs=(o.languages||[]).map(function(l){return '<span class="core-chip">'+esc(detailLangLabel(l))+'</span>'}).join("");
- var subjectChips=subj.length?'<div class="core-chips">'+subj.map(function(s){
-   return '<span class="core-chip">'+icon("list",12)+esc(s.name)+'</span>'}).join("")+'</div>':"";
 
  var shared='<section class="panel core-panel"><div class="panel-title"><div><h2>'+esc(tr("sharedCore"))+'</h2></div></div>'+
   '<div class="core-rows">'+
@@ -1684,19 +1752,296 @@ function detailBlock(){
    row(tr("curriculumLabel"),detailCurriculumLabel(o.curriculum))+
    row(ar?"الجنس":"Gender",detailGenderLabel(o.gender))+
   '</div>'+
-  (ranges?'<h3 class="core-h3">'+esc(tr("stages"))+'</h3><div class="core-chips">'+ranges+'</div>':"")+
-  (methods?'<h3 class="core-h3">'+esc(tr("teachingMethods"))+'</h3><div class="core-chips">'+methods+'</div>':"")+
   (langs?'<h3 class="core-h3">'+esc(tr("teachingLanguages"))+'</h3><div class="core-chips">'+langs+'</div>':"")+
-  (subjectChips?'<h3 class="core-h3">'+esc(tr("subjects"))+'</h3>'+subjectChips:"")+
-  '<h3 class="core-h3">'+esc(tr("facilitiesLabel"))+'</h3>'+(chips(fac,false)||'<div class="empty-state">'+esc(tr("noFacilities"))+'</div>')+
-  '<h3 class="core-h3">'+esc(tr("servicesLabel"))+'</h3>'+(chips(svc,true)||'<div class="empty-state">'+esc(tr("noServices"))+'</div>')+
+  // Services render through the same chip component the facilities use, so the
+  // two lists are visually identical rather than services being plain text.
+  '<h3 class="core-h3">'+esc(tr("facilitiesLabel"))+'</h3>'+
+   (chips(fac,false)||'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noFacilities"))+'</div>')+
+  '<h3 class="core-h3">'+esc(tr("servicesLabel"))+'</h3>'+
+   (chips(svc,true)||'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noServices"))+'</div>')+
   '</section>';
 
- return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+shared;
+ // ---- 6. stages and fees of THIS institution (the priced layer) ----
+ // Delivery modes come from the offering, not from the legacy teaching-methods
+ // catalog: delivery is an attribute with exactly three values.
+ var offering=orgOffering();
+ var gated=offering?offering.pricingGated===true:false;
+ var offStages=offering?offering.stages:null;
+ var offSubjects=offering?offering.subjects:null;
+ var deliveryCodes=[];
+ (offStages||[]).forEach(function(s){if(s.deliveryMode&&deliveryCodes.indexOf(s.deliveryMode)<0)deliveryCodes.push(s.deliveryMode)});
+ (o.teachingMethods||[]).map(deliveryValue).forEach(function(m){
+   if(DELIVERY_LABELS[m]&&deliveryCodes.indexOf(m)<0)deliveryCodes.push(m)});
+ var deliveryChips=deliveryCodes.map(function(m){
+  return '<span class="core-chip">'+esc(detailDeliveryLabel(m))+'</span>'}).join("");
+ var gatedNote=gated?'<div class="gated-note">'+icon("shield",14)+'<span>'+esc(tr("pricingGated"))+'</span></div>':"";
+ function feeCell(fee){
+  if(gated)return '<span class="gated-value">'+esc(tr("pricingGated"))+'</span>';
+  if(!fee)return "—";
+  return '<b>'+esc(moneyText(fee.amount,fee.currency))+'</b><div class="entity-sub">'+esc(frequencyLabel(fee.frequency))+'</div>';
+ }
+ var stagesTable;
+ if(!offering)stagesTable='<div class="empty-state">'+esc(tr("noOfferingStages"))+'</div>';
+ else if(!offStages.length)stagesTable='<div class="empty-state">'+esc(tr("noOfferingStages"))+'</div>';
+ else stagesTable='<div class="table-wrap"><table class="tbl"><thead><tr>'+
+  '<th>'+esc(tr("stages"))+'</th><th>'+esc(tr("feeLabel"))+'</th><th>'+esc(tr("languageLabel"))+
+  '</th><th>'+esc(tr("deliveryLabel"))+'</th><th>'+esc(tr("capacityLabel"))+'</th><th>'+esc(tr("remainingSeatsLabel"))+
+  '</th><th></th></tr></thead><tbody>'+offStages.map(function(s){
+   var cap=s.capacity==null?"—":esc(String(s.capacity));
+   var rem=s.remainingSeats==null?"—":'<b'+(s.remainingSeats<0?' class="over-capacity"':"")+'>'+esc(String(s.remainingSeats))+'</b>';
+   return '<tr><td><b>'+esc(s.stageName||s.stageCode||"—")+'</b><div class="entity-sub" dir="ltr">'+
+    esc(s.stageCode||"")+'</div></td><td>'+feeCell(s.fee)+'</td><td>'+esc(detailLangLabel(s.languageCode))+
+    '</td><td>'+esc(detailDeliveryLabel(s.deliveryMode))+'</td><td>'+cap+'</td><td>'+rem+'</td>'+
+    '<td>'+(isPublic?"":'<button class="crud edit" title="'+esc(tr("editLabel"))+'" onclick="orgStageFormOpen(\''+esc(s.stageId)+'\')">'+icon("edit",14)+'</button>')+'</td></tr>'
+  }).join("")+'</tbody></table></div>';
+ var subjRows=offSubjects&&offSubjects.length?offSubjects:(detailExtras.subjects||[]).map(function(s){
+   return {subjectId:s.id,name:s.name,languageCode:s.language_code,amount:gated?null:s.fee_amount,
+     currency:gated?null:s.currency,frequency:gated?null:s.frequency}});
+ var subjectsTable=subjRows.length?'<div class="table-wrap"><table class="tbl"><thead><tr>'+
+  '<th>'+esc(tr("subjects"))+'</th><th>'+esc(tr("languageLabel"))+'</th><th>'+esc(tr("feeLabel"))+
+  '</th></tr></thead><tbody>'+subjRows.map(function(s){
+   return '<tr><td><b>'+esc(s.name)+'</b></td><td>'+esc(detailLangLabel(s.languageCode))+'</td><td>'+
+    (gated?'<span class="gated-value">'+esc(tr("pricingGated"))+'</span>':esc(moneyText(s.amount,s.currency)))+
+    (s.frequency?'<div class="entity-sub">'+esc(frequencyLabel(s.frequency))+'</div>':"")+'</td></tr>'
+  }).join("")+'</tbody></table></div>':'<div class="empty-state">'+esc(tr("noOfferingSubjects"))+'</div>';
+ var offeringSection='<section class="panel core-panel"><div class="panel-title"><div><h2>'+
+  esc(tr("stageFeesLabel"))+'</h2><p>'+esc(lang==="ar"?"هذه الرسوم والسعة خاصة بهذه المؤسسة، والمصدر هو عرض المؤسسة لا الكتالوج العام.":"These fees and seats belong to this institution; the source is its offering, not the global catalog.")+
+  '</p></div>'+(isPublic?"":'<button class="btn brown" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button>')+'</div>'+
+  gatedNote+(deliveryChips?'<h3 class="core-h3">'+esc(tr("deliveryLabel"))+'</h3><div class="core-chips">'+deliveryChips+'</div>':"")+
+  (isPublic?"":orgStageForm())+stagesTable+
+  '<h3 class="core-h3">'+esc(tr("orgSubjectsLabel"))+'</h3>'+subjectsTable+'</section>';
+
+ detailExtras.lastHeader=header;detailExtras.lastShared=shared;detailExtras.lastOffering=offeringSection;
+ return header+kpis+'<div class="core-grid">'+contact+location+'</div>'+documents+offeringSection+shared;
+}
+
+// The same detail document serves the dashboard and the public directory. Only
+// the shell differs: visitors get the public chrome and no editing controls, and
+// the server has already withheld every priced field from their offering call.
+function detailPage(){
+ var u=getCurrentUser();
+ if(u&&u.role==="admin")return adminShell(detailBlock(false));
+ return publicShell(detailBlock(true));
 }
 
 function generic(title){
  return adminShell(`<div class="welcome"><div><h1>${title}</h1><p>${tr("genericNote")}</p></div></div>${kpis()}<section class="panel"><div class="panel-title"><h2>${title}</h2></div><div style="padding:24px;color:#78827d">${tr("sampleContent")}</div></section>`)
+}
+
+/* ---------- Organization offering: stage + fee editing on the detail screen ----------
+   These write to the same tenant-scoped endpoints the institution dashboard uses
+   (/api/academic/org/:orgId/offering/stages/:stageId), which enforce
+   requireOrgMember and the admin/owner role server-side. The screen only decides
+   what is convenient to show, never what is allowed. */
+var orgStageEdit={open:false,stageId:null,catalog:null,_error:null,_busy:false};
+// Local field builders: admin-core keeps its own private copies for the admin
+// forms, so the detail screen carries the small set it needs instead of
+// reaching into that module.
+function detailOpt(value,label,selected){
+ return '<option value="'+esc(value)+'"'+(selected===value?" selected":"")+'>'+esc(label)+'</option>';
+}
+function detailField(label,id,html,wide){
+ return '<div class="form-group'+(wide?" ac-field-wide":"")+'"><label>'+esc(label)+'</label>'+html+'</div>';
+}
+function detailInput(label,id,value,placeholder){
+ return detailField(label,id,'<input id="'+id+'" type="text" value="'+esc(value==null?"":value)+
+  '" placeholder="'+esc(placeholder||"")+'">');
+}
+function detailSelect(label,id,options,wide){
+ return detailField(label,id,'<select id="'+id+'">'+options+'</select>',wide);
+}
+function orgStageFormOpen(stageId){
+ orgStageEdit.open=true;orgStageEdit.stageId=stageId||null;orgStageEdit._error=null;
+ if(!orgStageEdit.catalog){
+  apiGet('/api/academic/stages').then(function(rows){orgStageEdit.catalog=rows||[];render()})
+   .catch(function(){orgStageEdit.catalog=[];render()});
+ }
+ render();
+}
+function orgStageFormClose(){orgStageEdit.open=false;render()}
+function orgStageForm(){
+ if(!orgStageEdit.open)return "";
+ var offering=orgOffering();
+ var existing=null;
+ if(orgStageEdit.stageId&&offering){
+  (offering.stages||[]).forEach(function(s){if(s.stageId===orgStageEdit.stageId)existing=s});
+ }
+ var cat=orgStageEdit.catalog||[];
+ var used={};
+ if(offering)(offering.stages||[]).forEach(function(s){used[s.stageId]=true});
+ var stageOpts=cat.filter(function(s){return !used[s.id]||s.id===orgStageEdit.stageId})
+  .map(function(s){return detailOpt(s.id,s.name,s.id===orgStageEdit.stageId)}).join("");
+ var cur=(existing&&existing.fee)||{};
+ return '<div class="ac-form org-stage-form">'+
+  (orgStageEdit._error?'<div class="ac-form-error">'+esc(orgStageEdit._error)+'</div>':"")+
+  '<div class="ac-form-grid">'+
+  detailSelect(tr("stages"),"os-stage",stageOpts,true)+
+  detailInput(tr("feeLabel"),"os-fee",cur.amount!=null?String(cur.amount):"","0.00")+
+  detailSelect(tr("currencyLabel"),"os-currency",["YER","SAR","USD"].map(function(c){return detailOpt(c,c,cur.currency||"YER")}).join(""))+
+  detailSelect(tr("frequencyLabel"),"os-frequency",[["yearly",tr("yearly")],["termly",tr("termly")],["monthly",tr("monthly")]]
+    .map(function(x){return detailOpt(x[0],x[1],cur.frequency||"yearly")}).join(""))+
+  detailSelect(tr("deliveryLabel"),"os-delivery",[["on_site",tr("onSite")],["online",tr("onlineDelivery")],["hybrid",tr("hybridDelivery")]]
+    .map(function(x){return detailOpt(x[0],x[1],(existing&&existing.deliveryMode)||"on_site")}).join(""))+
+  detailSelect(tr("languageLabel"),"os-language",[["AR",detailLangLabel("AR")],["EN",detailLangLabel("EN")],["FR",detailLangLabel("FR")]]
+    .map(function(x){return detailOpt(x[0],x[1],(existing&&existing.languageCode)||"AR")}).join(""))+
+  detailInput(tr("capacityLabel"),"os-capacity",existing&&existing.capacity!=null?String(existing.capacity):"","")+
+  '</div><div class="ac-form-actions">'+
+  '<button class="btn green" onclick="orgStageSave()">'+esc(lang==="ar"?"حفظ":"Save")+'</button>'+
+  '<button class="btn" onclick="orgStageFormClose()">'+esc(lang==="ar"?"إلغاء":"Cancel")+'</button></div></div>';
+}
+function orgStageSave(){
+ var f=orgStageEdit;if(f._busy)return;
+ var orgId=currentOrg&&currentOrg.id;if(!orgId)return;
+ var stageId=(document.getElementById("os-stage")||{}).value||f.stageId;
+ if(!stageId){f._error=lang==="ar"?"اختر المرحلة.":"Select a stage.";render();return}
+ var payload={
+  deliveryMode:(document.getElementById("os-delivery")||{}).value||"on_site",
+  languageCode:(document.getElementById("os-language")||{}).value||"AR",
+  amount:(document.getElementById("os-fee")||{}).value||"",
+  currency:(document.getElementById("os-currency")||{}).value||"YER",
+  frequency:(document.getElementById("os-frequency")||{}).value||"yearly"
+ };
+ var capacity=(document.getElementById("os-capacity")||{}).value;
+ payload.capacity=capacity===""?null:Number(capacity);
+ f._busy=true;
+ apiPut('/api/academic/org/'+encodeURIComponent(orgId)+'/offering/stages/'+encodeURIComponent(stageId),payload)
+  .then(function(){f._busy=false;f.open=false;f.stageId=null;return loadOrgDetailExtras(orgId)})
+  .then(function(){render()})
+  .catch(function(e){f._busy=false;f._error=(e&&e.data&&e.data.error)||(e&&e.message)||"Error";render()});
+}
+
+/* ---------- Institution report: print, Excel, Word, PDF ---------- */
+// One report object drives all four outputs so the printed sheet and the exported
+// files can never disagree about the institution's data.
+function institutionReport(){
+ var o=currentOrg||{};
+ var offering=orgOffering();
+ var gated=offering?offering.pricingGated===true:false;
+ var ar=lang==="ar";
+ var meta=[
+  [tr("typeLabel"),orgTypeLabel(o.type)],
+  [tr("principalLabel"),o.principalName||"—"],
+  [tr("phoneLabel"),o.phone||"—"],
+  [tr("email"),o.email||"—"],
+  [tr("whatsapp"),o.whatsapp||o.phone||"—"],
+  [tr("websiteLabel"),o.website||"—"],
+  [tr("governorate"),o.governorate||"—"],
+  [tr("district"),o.district||"—"],
+  [tr("neighborhood"),o.neighborhood||"—"],
+  [ar?"العنوان":"Address",o.address||"—"],
+  [tr("accreditation"),o.verified?tr("docVerified"):tr("statusPending")],
+  [tr("curriculumLabel"),detailCurriculumLabel(o.curriculum)]
+ ];
+ var stageRows=[[tr("stages"),tr("languageLabel"),tr("deliveryLabel"),tr("feeLabel"),tr("currencyLabel"),tr("frequencyLabel"),tr("capacityLabel"),tr("remainingSeatsLabel")]];
+ (offering&&offering.stages?offering.stages:[]).forEach(function(s){
+  stageRows.push([
+   s.stageName||s.stageCode||"—",
+   detailLangLabel(s.languageCode),
+   detailDeliveryLabel(s.deliveryMode),
+   gated||!s.fee?"—":Number(s.fee.amount),
+   gated||!s.fee?"—":(s.fee.currency||"YER"),
+   gated||!s.fee?"—":frequencyLabel(s.fee.frequency),
+   s.capacity==null?"—":s.capacity,
+   s.remainingSeats==null?"—":s.remainingSeats
+  ]);
+ });
+ var subjectRows=[[tr("subjects"),tr("languageLabel"),tr("feeLabel"),tr("currencyLabel")]];
+ asList(offering&&offering.subjects).forEach(function(s){
+  subjectRows.push([s.name,detailLangLabel(s.languageCode),
+   gated||s.amount==null?"—":Number(s.amount), s.currency||"YER"]);
+ });
+ var facilityRows=[[tr("facilitiesLabel"),ar?"الكمية":"Quantity",ar?"متاح":"Available"]];
+ (detailExtras.facilities||[]).forEach(function(x){facilityRows.push([x.name,x.quantity||1,x.available===false?(ar?"لا":"No"):(ar?"نعم":"Yes")])});
+ var serviceRows=[[tr("servicesLabel"),tr("feeLabel"),tr("currencyLabel")]];
+ (detailExtras.services||[]).forEach(function(x){
+  serviceRows.push([x.name,gated||x.price==null?"—":Number(x.price),x.currency||"YER"])});
+ var docRows=[[tr("docType"),tr("docFile"),tr("reqStatus")]];
+ (detailExtras.docs||[]).forEach(function(d){docRows.push([detailDocType(d.docType),d.fileName||"—",d.status||"—"])});
+
+ var blocks=[
+  {type:"title",text:tr("reportTitle")+" — "+tr("reportPlatform")},
+  {type:"heading",text:o.name||"—"},
+  {type:"sub",text:tr("reportIssued")+": "+new Date().toLocaleString(ar?"ar-YE":"en-GB")},
+  {type:"heading",text:tr("identityLabel")},
+  {type:"table",rows:[[ar?"الحقل":"Field",ar?"القيمة":"Value"]].concat(meta)},
+  {type:"heading",text:tr("stageFeesLabel")},
+  {type:"table",rows:stageRows},
+  {type:"heading",text:tr("orgSubjectsLabel")},
+  {type:"table",rows:subjectRows}
+ ];
+ if(facilityRows.length>1||serviceRows.length>1){
+  blocks.push({type:"heading",text:tr("facilitiesLabel")},{type:"table",rows:facilityRows},
+   {type:"heading",text:tr("servicesLabel")},{type:"table",rows:serviceRows});
+ }
+ if((detailExtras.docs||[]).length)blocks.push({type:"heading",text:tr("myDocuments")},{type:"table",rows:docRows});
+
+ return {
+  name:o.name||"institution",
+  title:tr("reportTitle"),
+  logo:orgLogo(o),
+  meta:meta,
+  sheets:[
+   {name:ar?"البيانات الأساسية":"Details",rows:meta},
+   {name:ar?"المراحل والرسوم":"Stages and fees",rows:stageRows},
+   {name:ar?"المواد":"Subjects",rows:subjectRows},
+   {name:ar?"المرافق":"Facilities",rows:facilityRows},
+   {name:ar?"الخدمات":"Services",rows:serviceRows}
+  ],
+  blocks:blocks,
+  gated:gated
+ };
+}
+// The printed sheet is a standalone document with the platform letterhead and the
+// institution logo, not a screenshot of the dashboard.
+function printInstitution(){
+ var report=institutionReport();
+ var o=currentOrg||{};
+ var ar=lang==="ar";
+ var head='<header class="print-head"><div class="print-brand"><span class="print-mark">م</span><div><b>'+
+  esc(tr("reportPlatform"))+'</b><small>'+(ar?"مدرستي — منصة التعليم اليمنية":"Madrasati — Yemen education platform")+'</small></div></div>'+
+  '<div class="print-org"><img src="'+esc(report.logo)+'" alt=""><div><b>'+esc(o.name||"—")+'</b><small>'+
+  esc(orgTypeLabel(o.type))+'</small></div></div></header>';
+ var body=report.blocks.map(function(b){
+  if(b.type==="title")return '<h1>'+esc(b.text)+'</h1>';
+  if(b.type==="heading")return '<h2>'+esc(b.text)+'</h2>';
+  if(b.type==="sub")return '<p class="print-sub">'+esc(b.text)+'</p>';
+  if(b.type==="table")return '<table class="print-tbl">'+b.rows.map(function(r,i){
+   return '<tr>'+r.map(function(c){return (i===0?"<th>":"<td>")+esc(c==null?"":c)+(i===0?"</th>":"</td>")}).join("")+'</tr>'
+  }).join("")+'</table>';
+  return "<p>"+esc(b.text)+"</p>";
+ }).join("");
+ var foot='<footer class="print-foot">'+esc(tr("reportPlatform"))+' · '+esc(tr("reportIssued"))+': '+
+  esc(new Date().toLocaleDateString(ar?"ar-YE":"en-GB"))+'</footer>';
+ var w=window.open("","_blank");
+ if(!w){alert(ar?"تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة.":"Could not open the print window. Allow pop-ups.");return}
+ w.document.write('<!doctype html><html lang="'+lang+'" dir="'+(ar?"rtl":"ltr")+'"><head><meta charset="utf-8">'+
+  '<title>'+esc(report.title+" — "+(o.name||""))+'</title><style>'+
+  'body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#1F2937;margin:24px}'+
+  '.print-head{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:3px solid #1F5D46;padding-bottom:12px;margin-bottom:18px}'+
+  '.print-brand,.print-org{display:flex;gap:10px;align-items:center}'+
+  '.print-mark{display:inline-flex;width:40px;height:40px;border-radius:10px;background:#1F5D46;color:#fff;align-items:center;justify-content:center;font-weight:700;font-size:20px}'+
+  '.print-org img{width:56px;height:56px;object-fit:contain}'+
+  '.print-head small{display:block;color:#6B7280;font-size:11px}'+
+  'h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;color:#174837;margin:18px 0 6px;border-inline-start:4px solid #B55A3C;padding-inline-start:8px}'+
+  '.print-sub{color:#6B7280;font-size:12px;margin:0 0 12px}'+
+  '.print-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:12px}'+
+  '.print-tbl th,.print-tbl td{border:1px solid #E7DED3;padding:6px 8px;text-align:start}'+
+  '.print-tbl th{background:#F1F5F2;font-weight:700}'+
+  '.print-foot{margin-top:20px;border-top:1px solid #E7DED3;padding-top:8px;color:#6B7280;font-size:11px}'+
+  '@page{size:A4;margin:12mm}'+
+  '</style></head><body>'+head+body+foot+
+  '<script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>');
+ w.document.close();
+}
+function exportInstitution(format){
+ var report=institutionReport();
+ if(!window.InstitutionReport){alert(lang==="ar"?"وحدة التصدير غير محمّلة.":"Export module not loaded.");return}
+ if(format==="xlsx")return window.InstitutionReport.exportXlsx(report);
+ if(format==="docx")return window.InstitutionReport.exportDocx(report);
+ // PDF keeps the browser's own PDF writer: correct Arabic shaping in a PDF needs
+ // an embedded font, which a no-build SPA cannot ship. The print-ready report is
+ // the same document, so "Save as PDF" gives the intended result.
+ return printInstitution();
 }
 
 function tabBar(tabs,active){
@@ -1704,24 +2049,6 @@ function tabBar(tabs,active){
 }
 let sectionTab="overview";
 function setSectionTab(v){sectionTab=v;render()}
-
-function academicPage(){
- const tabs=[["stages","stages"],["grades","grades"],["subjects","subjects"],["curricula","curricula"],["languages","teachingLanguages"],["methods","teachingMethods"]];
- if(!tabs.some(x=>x[0]===sectionTab)) sectionTab="stages";
- const cards={
-  stages:["المرحلة الابتدائية","المرحلة الإعدادية","المرحلة الثانوية"],
-  grades:["الصف الأول","الصف الثاني","الصف الثالث"],
-  subjects:["الرياضيات","العلوم","اللغة العربية"],
-  curricula:["المنهج الوطني","المنهج الدولي","مناهج مخصصة"],
-  languages:["العربية","الإنجليزية","الفرنسية"],
-  methods:["حضوري","عن بُعد","مدمج"]
- };
- const titleMap={stages:"stages",grades:"grades",subjects:"subjects",curricula:"curricula",languages:"teachingLanguages",methods:"teachingMethods"};
- return adminShell(`<div class="welcome"><div><h1>${tr("academic")}</h1><p>${tr("genericNote")}</p></div></div>
- ${tabBar(tabs,sectionTab)}
- <section class="panel"><div class="panel-title"><div><h2>${tr(titleMap[sectionTab])}</h2><p>${tr("sampleContent")}</p></div><button class="btn brown">${icon("plus",15)} ${lang==="ar"?"إضافة":"Add"}</button></div>
- <div class="reference-grid">${cards[sectionTab].map((x,i)=>`<div class="reference-card"><div class="ref-icon">${icon(i%2?"college":"school",19)}</div><div><b>${x}</b><span>${lang==="ar"?"فعال":"Active"}</span></div><div class="crud-actions"><button class="crud edit">${icon("edit",14)}</button><button class="crud delete">${icon("trash",14)}</button></div></div>`).join("")}</div></section>`)
-}
 
 /* ---------- Locations admin: live catalog + controlled adds (Phase A: A5) ---------- */
 var locAdmin={tab:"governorates",rows:[],counts:{},loading:false,loadedTab:null,error:null,
@@ -2215,7 +2542,7 @@ function verifyPage(){
  return adminShell(body+'</div>');
 }
 
-var publicRoutes=["home","private","government","colleges","institutes","teachers","register"];
+var publicRoutes=["home","private","government","colleges","institutes","teachers","register","detail"];
 var adminOnlyRoutes=["admin","institutions","schools","institutesAdmin","collegesAdmin","teachersAdmin","students","bookings","verify","academic","locations","reports","access","settings","offers","ads","slides"];
 
 function handleLogout(){
@@ -2337,7 +2664,7 @@ function render(){
   if(typeof adminInstitutionsPage==="function")html=adminInstitutionsPage("schools");
   else html=adminShell('<div class="welcome"><div><h1>'+tr("schools")+'</h1><p>'+tr("genericNote")+'</p></div></div><section class="panel"><div class="empty-state">'+(lang==="ar"?"وحدة المدارس غير متصلة بعد.":"The schools module is not connected yet.")+'</div></section>');
  }
- else if(r==="detail")html=adminShell(detailBlock());
+ else if(r==="detail")html=detailPage();
  else if(r==="academic")html=academicPage();
  else if(r==="locations")html=locationsPage();
  else if(r==="access")html=accessPage();

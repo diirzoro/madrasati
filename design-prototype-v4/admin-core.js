@@ -204,20 +204,37 @@
     colleges:["college","university"]
   };
   // Card view: the same organization core the detail screen shows, condensed to
-  // what identifies an institution at a glance — logo, type, location, principal
-  // and a direct WhatsApp channel.
+  // what identifies an institution at a glance — logo, type, owner avatar and
+  // name, location, and a direct WhatsApp channel. Phone and email carry
+  // dir="ltr" so the leading "+967" stays on the left in the Arabic (RTL) shell.
+  function orgOwnerName(o){return o.principalName||o.ownerName||""}
+  function avatarFor(o){
+    var name=orgOwnerName(o);
+    var initials=name.trim().split(/\s+/).slice(0,2).map(function(w){return w.charAt(0)}).join("");
+    var img=o.ownerAvatar||o.ownerImage||o.ownerAvatarUrl;
+    if(img)return '<span class="owner-avatar"><img src="'+esc(img)+'" alt="'+esc(name)+'" loading="lazy"></span>';
+    return '<span class="owner-avatar" aria-hidden="true">'+esc(initials||"—")+'</span>';
+  }
+  function contactLine(o){
+    var out="";
+    if(o.phone)out+='<div class="org-card-line">'+icon("phone",13)+'<span class="ltr-num" dir="ltr">'+esc(o.phone)+'</span></div>';
+    if(o.email)out+='<div class="org-card-line">'+icon("mail",13)+'<span class="ltr-num" dir="ltr">'+esc(o.email)+'</span></div>';
+    return out;
+  }
   function orgCard(o){
     var place=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
     var wa=o.whatsapp||o.phone;
+    var owner=orgOwnerName(o);
     return '<article class="org-card">'+
       '<div class="org-card-head"><div class="org-card-logo"><img src="'+esc(orgLogo(o))+'" alt="'+esc(o.name)+'" loading="lazy"></div>'+
       '<div class="org-card-id"><h3>'+esc(o.name)+'</h3><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div>'+
       '<div class="org-card-badges">'+badge(o.verified?"verified":o.verificationStatus||"pending")+
       badge(o.registrationOpen?"active":"inactive")+'</div></div></div>'+
+      '<div class="org-card-owner">'+avatarFor(o)+'<div><span class="owner-role">'+
+      esc(t("المالك / المدير","Owner / principal"))+'</span><b>'+esc(owner||t("غير مرتبط بمالك","No owner linked"))+'</b></div></div>'+
       '<div class="org-card-meta">'+
       '<div class="org-card-line">'+icon("pin",13)+'<span>'+esc(place||"—")+'</span></div>'+
-      (o.principalName?'<div class="org-card-line">'+icon("user",13)+'<span>'+esc(o.principalName)+'</span></div>':"")+
-      (o.phone?'<div class="org-card-line">'+icon("phone",13)+'<span dir="ltr">'+esc(o.phone)+'</span></div>':"")+
+      contactLine(o)+
       '</div>'+
       '<div class="org-card-actions">'+
       '<button class="btn green" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+' '+t("التفاصيل","Details")+'</button>'+
@@ -234,12 +251,14 @@
     var url="/api/organizations?type="+encodeURIComponent(ac.institutionType)+"&limit=100";
     if(ac.institutionSearch)url+="&search="+encodeURIComponent(ac.institutionSearch);
     load(key,url,function(d){return{items:listOf(d),total:Number(d&&d.total||listOf(d).length)}});
+    // All five institution types are always one tap away. A sidebar entry
+    // (schools / institutes / colleges) only decides which tab is selected on
+    // arrival; it never hides the rest of the catalog.
     var allTypes=[["private_school",t("مدارس خاصة","Private schools")],["government_school",t("مدارس حكومية","Government schools")],
       ["college",t("كليات","Colleges")],["university",t("جامعات","Universities")],["institute",t("معاهد","Institutes")]];
-    var types=allowed?allTypes.filter(function(x){return allowed.indexOf(x[0])>-1}):allTypes;
     var body=head(t("المؤسسات التعليمية","Educational institutions"),t("إدارة المؤسسات من مصدر موحد.","Manage institutions through the shared organization core."),
-      '<button class="btn green" onclick="acOrgFormOpen(\'add\',null)">'+icon("plus",15)+' '+t("إضافة","Add")+'</button>');
-    if(types.length>1)body+='<div class="section-tabs ac-tabs">'+types.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
+      '<button class="btn green" onclick="acOrgFormOpen(\'add\',null)">'+icon("plus",15)+' '+t("إضافة","Add")+'</button>')+
+      '<div class="org-type-tabs">'+allTypes.map(function(x){return '<button class="'+(ac.institutionType===x[0]?"active":"")+
       '" onclick="acInstitutionType(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+'</div>';
     body+=adminOrgForm()+'<section class="panel">'+
       '<form class="toolbar" onsubmit="acInstitutionSearch(event)"><input id="ac-org-q" value="'+esc(ac.institutionSearch)+
@@ -251,15 +270,22 @@
     var d=ac.cache[key];if(!d)body+=state(key);else if(!d.items.length)body+='<div class="empty-state">'+t("لا توجد مؤسسات.","No institutions.")+'</div>';
     else if(ac.institutionsView==="cards")body+='<div class="org-grid">'+d.items.map(orgCard).join("")+'</div>';
     else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المؤسسة","Institution")+'</th><th>'+
-      t("الموقع","Location")+'</th><th>'+t("التحقق","Verification")+'</th><th>'+t("التسجيل","Registration")+
-      '</th><th></th></tr></thead><tbody>'+d.items.map(function(o){return '<tr><td><b>'+esc(o.name)+'</b><div class="entity-sub">'+
-      esc(o.email||o.phone||"—")+'</div></td><td>'+esc([o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ")||"—")+
-      '</td><td>'+badge(o.verified?"verified":o.verificationStatus||"pending")+'</td><td>'+badge(o.registrationOpen?"active":"inactive")+
-      '</td><td><div class="crud-actions"><button class="crud view" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+
-      '</button><button class="crud edit" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+
-      '</button><button class="crud verify" onclick="acOrgVerify(\''+o.id+'\','+(o.verified?"true":"false")+')">'+
-      icon(o.verified?"x":"check",14)+'</button><button class="crud delete" onclick="acOrgArchive(\''+o.id+'\')">'+
-      icon("trash",14)+'</button></div></td></tr>'}).join("")+'</tbody></table></div>';
+      t("المالك / المدير","Owner / principal")+'</th><th>'+t("الموقع","Location")+'</th><th>'+t("الاتصال","Contact")+'</th><th>'+
+      t("التحقق","Verification")+'</th><th></th></tr></thead><tbody>'+d.items.map(function(o){
+        var wa=o.whatsapp||o.phone;
+        return '<tr><td><div class="row-entity"><span class="row-logo"><img src="'+esc(orgLogo(o))+'" alt="" loading="lazy"></span><div><b>'+
+        esc(o.name)+'</b><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div></div></div></td>'+
+        '<td><div class="row-entity">'+avatarFor(o)+'<div><b>'+esc(orgOwnerName(o)||"—")+'</b></div></div></td>'+
+        '<td>'+esc([o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ")||"—")+'</td>'+
+        '<td><div class="contact-cell"><span class="ltr-num" dir="ltr">'+esc(o.phone||"—")+'</span>'+
+        (o.email?'<span class="ltr-num" dir="ltr">'+esc(o.email)+'</span>':"")+'</div>'+
+        (wa?waButton(wa,{compact:true,size:13}):"")+'</td>'+
+        '<td>'+badge(o.verified?"verified":o.verificationStatus||"pending")+'</td>'+
+        '<td><div class="crud-actions"><button class="crud view" onclick="go(\'detail?id='+o.id+'\')">'+icon("eye",14)+
+        '</button><button class="crud edit" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+
+        '</button><button class="crud verify" onclick="acOrgVerify(\''+o.id+'\','+(o.verified?"true":"false")+')">'+
+        icon(o.verified?"x":"check",14)+'</button><button class="crud delete" onclick="acOrgArchive(\''+o.id+'\')">'+
+        icon("trash",14)+'</button></div></td></tr>'}).join("")+'</tbody></table></div>';
     return adminShell(body+'</section>')
   };
 
@@ -327,19 +353,107 @@
       '</select></td></tr>'}).join("")+'</tbody></table></div></section>';return adminShell(body)
   };
 
-  window.acAcademicTab=function(tab){ac.academicTab=tab;render()};
+  window.acAcademicTab=function(tab){ac.academicTab=tab;ac.academicForm=null;render()};
+
+  // ---- Global academic catalog (platform admin only) ----
+  // This screen is the ABSTRACT, PRICE-FREE definition layer: stage names, the
+  // grade ladder with its track, subject names, teaching languages and curriculum
+  // classifications. It deliberately carries no amount, no currency and no seat
+  // count — the platform never prices a stage centrally. Prices, capacity,
+  // delivery mode and the teaching language of a specific school live on that
+  // institution's offering instead. The two layers are not interchangeable.
+  var TRACK_OPTIONS=[["",t("عام","General")],["general",t("عام","General")],
+    ["science",t("علمي","Science")],["literary",t("أدبي","Literary")]];
+  function trackLabel(track){
+    if(!track)return t("عام","General");
+    return {science:t("علمي","Science"),literary:t("أدبي","Literary"),general:t("عام","General")}[track]||track;
+  }
+  window.acCatalogFormOpen=function(kind){ac.academicForm={kind:kind,_error:null,_busy:false};render()};
+  window.acCatalogFormClose=function(){ac.academicForm=null;render()};
+  window.acCatalogSave=function(){
+    var f=ac.academicForm;if(!f||f._busy)return;
+    var name=wVal("ac-cat-name"),code=wVal("ac-cat-code");
+    if(!name){f._error=t("الاسم مطلوب.","Name is required.");render();return}
+    if(!code){f._error=t("الرمز مطلوب.","Code is required.");render();return}
+    var payload={name:name,code:code};
+    var url="/api/academic/stages";
+    if(f.kind==="grade"){
+      url="/api/academic/grades";
+      payload.stageId=(document.getElementById("ac-cat-stage")||{}).value||"";
+      var track=(document.getElementById("ac-cat-track")||{}).value||"";
+      if(!payload.stageId){f._error=t("اختر المرحلة.","Select a stage.");render();return}
+      if(track)payload.track=track;
+    }
+    f._busy=true;apiPost(url,payload).then(function(){ac.academicForm=null;
+      delete ac.cache["academic:"+(f.kind==="grade"?"grades":"stages")];
+      // A new catalog row changes the options an offering form can pick from.
+      invalidate("academic:");render()}).catch(function(e){f._busy=false;f._error=errorText(e);render()});
+  };
+  // Saving a track edits the shared grade, which is a catalog decision and not a
+  // tenant one, so the control only appears for the platform admin page.
+  window.acGradeTrackSave=function(id){
+    var sel=document.getElementById("ac-track-"+id);if(!sel)return;
+    apiPatch("/api/academic/grades/"+id,{track:sel.value||null}).then(function(){
+      invalidate("academic:");render()}).catch(function(e){alert(errorText(e))});
+  };
+  function acCatalogForm(){
+    var f=ac.academicForm;if(!f)return "";
+    var isGrade=f.kind==="grade";
+    var stages=ac.cache["academic:stages"]||[];
+    var stageOpts=stages.map(function(s){return wOpt(s.id,s.name)}).join("");
+    return '<section class="panel ac-form"><div class="panel-title"><h2>'+
+      esc(isGrade?t("إضافة صف","Add grade"):t("إضافة مرحلة","Add stage"))+'</h2></div>'+formError(f)+
+      '<div class="ac-form-grid">'+
+      wInput(isGrade?t("اسم الصف","Grade name"):t("اسم المرحلة","Stage name"),"ac-cat-name","",
+        isGrade?t("مثال: الأول ثانوي","e.g. First Secondary"):t("مثال: المرحلة الثانوية","e.g. Secondary stage"))+
+      // The code is the key an institution offering points at, so the example
+      // is a real catalog code and not a subject code such as "MATH".
+      wInput(t("الرمز (يُكتب بالإنجليزية)","Code (Latin letters)"),"ac-cat-code","",
+        isGrade?t("مثال: G12 أو ثالث ثانوي","e.g. G12"):t("مثال: SEC أو ثانوية","e.g. SEC"))+
+      (isGrade?wSel(t("المرحلة","Stage"),"ac-cat-stage",wOpt("",t("— اختر المرحلة —","— Select a stage —"))+stageOpts):"")+
+      (isGrade?wSel(t("المسار","Track"),"ac-cat-track",TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1])}).join("")):"")+
+      '</div><div class="ac-form-actions">'+
+      '<button class="btn green" onclick="acCatalogSave()">'+t("حفظ","Save")+'</button>'+
+      '<button class="btn" onclick="acCatalogFormClose()">'+t("إلغاء","Cancel")+'</button></div></section>';
+  }
   window.academicPage=function(){
-    var defs={stages:["stages",t("المراحل","Stages")],grades:["grades",t("الصفوف","Grades")],
-      subjects:["subjects",t("المواد","Subjects")],curricula:["curricula",t("المناهج","Curricula")],
-      languages:["languages",t("لغات التدريس","Teaching languages")],methods:["teaching-methods",t("طرق التدريس","Teaching methods")]};
-    var def=defs[ac.academicTab]||defs.stages,key="academic:"+ac.academicTab;load(key,"/api/academic/"+def[0],listOf);
-    var body=head(t("البيانات الأكاديمية","Academic data"),t("المرجع الأكاديمي المشترك.","Shared academic reference catalog."))+
+    var defs={
+      stages:["stages",t("المراحل","Stages"),t("أسماء المراحل التعليمية على مستوى المنصة. بدون رسوم أو سعة.","Platform-wide stage names. No fees or capacity here.")],
+      grades:["grades",t("الصفوف","Grades"),t("سلم الصفوف مع المسار: علمي / أدبي / عام.","The grade ladder with its track: science / literary / general.")],
+      subjects:["subjects",t("المواد العامة","Subjects"),t("أسماء المواد العامة المشتركة.","Shared general subject names.")],
+      languages:["languages",t("لغات التدريس","Teaching languages"),t("اللغات المتاحة للتدريس على مستوى المنصة.","Teaching languages available platform-wide.")],
+      curricula:["curricula",t("تصنيفات المناهج","Curriculum classifications"),t("وزاري / أهلي / دولي — تصنيف يُربط بالمادة والمرحلة.","National / private / international — attached to subject and stage.")]
+    };
+    if(!defs[ac.academicTab])ac.academicTab="stages";
+    var def=defs[ac.academicTab],key="academic:"+ac.academicTab;
+    load(key,"/api/academic/"+def[0],listOf);
+    if(ac.academicTab==="grades")load("academic:stages","/api/academic/stages",listOf);
+    var canAdd=(ac.academicTab==="stages"||ac.academicTab==="grades");
+    var body=head(t("البيانات الأكاديمية","Academic data"),def[2],
+      '<button class="btn green" onclick="go(\'schools\')">'+icon("school",15)+' '+t("عروض المؤسسات","Institution offerings")+'</button>'+
+      (canAdd?'<button class="btn brown" onclick="acCatalogFormOpen(\''+(ac.academicTab==="grades"?"grade":"stage")+'\')">'+
+        icon("plus",15)+' '+t("إضافة","Add")+'</button>':""))+
+      '<div class="arch-note">'+icon("shield",15)+'<div><b>'+
+      t("كتالوج عام للمنصة — بدون أسعار","Global platform catalog — no prices")+'</b><span>'+
+      t("هذه الشاشة تعريف مجرد يديره المدير العام. الرسوم والسعة ولغة التدريس وطريقة الحضور تُحدَّد لكل مؤسسة على حدة من صفحة المؤسسة.","This screen is an abstract definition owned by the platform admin. Fees, capacity, teaching language and delivery mode are set per institution from the institution page.")+
+      '</span></div></div>'+
       '<div class="section-tabs ac-tabs">'+Object.keys(defs).map(function(k){return '<button class="'+(ac.academicTab===k?"active":"")+
-      '" onclick="acAcademicTab(\''+k+'\')">'+esc(defs[k][1])+'</button>'}).join("")+'</div><section class="panel"><div class="panel-title"><h2>'+
-      esc(def[1])+'</h2></div>';var rows=ac.cache[key];if(!rows)body+=state(key);else if(!rows.length)body+='<div class="empty-state">'+
-      t("لا توجد بيانات.","No records.")+'</div>';else body+='<div class="reference-grid">'+rows.map(function(r){return '<div class="reference-card">'+
-      '<div class="ref-icon">'+icon("college",18)+'</div><div><b>'+esc(r.name)+'</b><span>'+esc(r.code||r.slug||"")+
-      '</span></div>'+badge(r.isActive===false?"inactive":"active")+'</div>'}).join("")+'</div>';return adminShell(body+'</section>')
+      '" onclick="acAcademicTab(\''+k+'\')">'+esc(defs[k][1])+'</button>'}).join("")+'</div>'+
+      acCatalogForm()+'<section class="panel"><div class="panel-title"><h2>'+esc(def[1])+'</h2></div>';
+    var rows=ac.cache[key];
+    if(!rows)body+=state(key);
+    else if(!rows.length)body+='<div class="empty-state">'+t("لا توجد بيانات.","No records.")+'</div>';
+    else if(ac.academicTab==="grades")body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+
+      t("الصف","Grade")+'</th><th>'+t("الرمز","Code")+'</th><th>'+t("المرحلة","Stage")+
+      '</th><th>'+t("المسار","Track")+'</th></tr></thead><tbody>'+rows.map(function(r){
+        return '<tr><td><b>'+esc(r.name)+'</b></td><td dir="ltr"><code>'+esc(r.code||"—")+'</code></td><td>'+
+          esc(r.stageName||"—")+'</td><td><select id="ac-track-'+r.id+'" class="ac-track-sel" onchange="acGradeTrackSave(\''+r.id+'\')">'+
+          TRACK_OPTIONS.map(function(x){return wOpt(x[0],x[1],r.track||"")}).join("")+'</select>'+
+          '<span class="entity-sub">'+esc(trackLabel(r.track))+'</span></td></tr>'}).join("")+'</tbody></table></div>';
+    else body+='<div class="reference-grid">'+rows.map(function(r){return '<div class="reference-card">'+
+      '<div class="ref-icon">'+icon(ac.academicTab==="languages"?"globe":ac.academicTab==="curricula"?"tag":"college",18)+'</div><div><b>'+esc(r.name)+'</b><span dir="ltr">'+esc(r.code||r.slug||"")+
+      '</span></div>'+badge(r.isActive===false?"inactive":"active")+'</div>'}).join("")+'</div>';
+    return adminShell(body+'</section>')
   };
 
   window.adminReportsPage=function(){
