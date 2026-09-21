@@ -6,7 +6,7 @@ const { Router } = require('express');
 const service = require('./service');
 const { asyncHandler } = require('../common/http');
 const { ForbiddenError } = require('../common/errors');
-const { requireAuth, requireRole } = require('../identity/auth');
+const { requireAuth, requireRole, requireOrgMember } = require('../identity/auth');
 
 const router = Router();
 
@@ -97,6 +97,7 @@ router.delete(
 router.get(
   '/:id/memberships',
   requireAuth,
+  requireOrgMember('id'),
   asyncHandler(async (req, res) => {
     const members = await service.listMemberships(req.params.id, { userId: req.user.id, userRole: req.user.role });
     res.json(members);
@@ -141,15 +142,8 @@ router.delete(
 router.get(
    '/:id/campuses',
    requireAuth,
+   requireOrgMember('id'),
    asyncHandler(async (req, res) => {
-     // Check if user has permission to access this organization
-     if (req.user.role === 'owner') {
-       const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
-       if (!isOwner) {
-         throw new ForbiddenError('Not authorized to access this organization');
-       }
-     }
-     // Admins can access any organization
      const campuses = await service.listCampuses(req.params.id);
      res.json(campuses);
    })
@@ -176,15 +170,8 @@ router.post(
 router.get(
    '/:id/facilities',
    requireAuth,
+   requireOrgMember('id'),
    asyncHandler(async (req, res) => {
-     // Check if user has permission to access this organization
-     if (req.user.role === 'owner') {
-       const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
-       if (!isOwner) {
-         throw new ForbiddenError('Not authorized to access this organization');
-       }
-     }
-     // Admins can access any organization
      const facilities = await service.listFacilities(req.params.id);
      res.json(facilities);
    })
@@ -211,15 +198,8 @@ router.post(
 router.get(
    '/:id/services',
    requireAuth,
+   requireOrgMember('id'),
    asyncHandler(async (req, res) => {
-     // Check if user has permission to access this organization
-     if (req.user.role === 'owner') {
-       const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
-       if (!isOwner) {
-         throw new ForbiddenError('Not authorized to access this organization');
-       }
-     }
-     // Admins can access any organization
      const services = await service.listServices(req.params.id);
      res.json(services);
    })
@@ -246,15 +226,8 @@ router.post(
 router.get(
    '/:id/capabilities',
    requireAuth,
+   requireOrgMember('id'),
    asyncHandler(async (req, res) => {
-     // Check if user has permission to access this organization
-     if (req.user.role === 'owner') {
-       const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
-       if (!isOwner) {
-         throw new ForbiddenError('Not authorized to access this organization');
-       }
-     }
-     // Admins can access any organization
      const caps = await service.listCapabilities(req.params.id);
      res.json(caps);
    })

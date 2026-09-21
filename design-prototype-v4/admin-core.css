@@ -11,10 +11,68 @@
 .ac-summary{display:grid;grid-template-columns:auto 1fr;gap:14px;padding:24px;align-items:center}.ac-summary b{font-size:26px;color:var(--theme-primary,#1f5d46)}
 .ac-error .btn{margin-top:12px}.tbl select{min-height:38px;border:1px solid var(--theme-border,#dde5e0);border-radius:8px;background:var(--theme-surface,#fff);color:inherit}.tbl code{white-space:pre-wrap;word-break:break-word}
 .ac-form-panel{margin-bottom:16px}.ac-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px}.ac-form-grid .form-group{margin:0;display:grid;gap:4px;align-content:start}
-.ac-form-grid .form-group input,.ac-form-grid .form-group select,.ac-form-grid .form-group textarea{width:100%;box-sizing:border-box;min-height:42px}
+.ac-form-grid .form-group input,.ac-form-grid .form-group select,.ac-form-grid .form-group textarea{width:100%;box-sizing:border-box;min-height:44px}
 .ac-field-wide{grid-column:1/-1}.ac-form-actions{display:flex;gap:10px;padding:0 16px 16px}.ac-form-actions .btn{padding:10px 18px}
 .ac-form-error{margin:0 0 12px;padding:10px 12px;border:1px solid #d64545;color:#b33434;background:#fff2f2;border-radius:10px}
 .ac-check{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;padding:6px 0;cursor:pointer;font-size:14px;margin:0}
 .ac-check input{width:18px;height:18px;accent-color:var(--theme-primary,#1f5d46)}.ac-checkgrid{display:grid;gap:4px}
 .ac-hint{color:var(--theme-muted,#6b7280);font-size:12px}
 @media(max-width:1200px){.ac-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.ac-grid-2,.ac-module-grid{grid-template-columns:1fr}.ac-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ac-kpi{padding:14px}.ac-kpi strong{font-size:23px}}@media(max-width:390px){.ac-kpis{grid-template-columns:1fr}}
+
+
+/* =====================================================================
+   Teachers section. A teacher is an independent professional, so the section
+   reuses the institution card shell (org-card, core-hero, core-panel) and adds
+   only what is genuinely new: a repeatable row, a password field, a filter bar
+   and the touch sizes that section needs. Palette is unchanged:
+   #1F5D46 / #174837 / #B55A3C / #FAF7F2.
+   ===================================================================== */
+
+/* --- repeatable rows: priced subjects, weekly slots, qualifications --- */
+.ac-repeat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;
+ margin-bottom:10px;padding:12px;border:1px solid var(--theme-border,#dde5e0);border-radius:12px;
+ background:var(--theme-surface,#fff)}
+.ac-repeat-row .form-group{margin:0}
+.ac-repeat-row .crud.delete{align-self:end;margin-bottom:1px}
+.ac-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* --- password field with an explicit show/hide control --- */
+.ac-pass-wrap{display:flex;gap:8px;align-items:center}
+.ac-pass-wrap input{flex:1;min-width:0}
+.ac-pass-toggle{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+
+/* --- the teaching-mode checkbox grid and the derived mode chip --- */
+.ac-checkgrid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.ac-mode-summary{margin-top:8px}
+
+/* --- filter bar above the list --- */
+.ac-filter-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;padding:0 16px 14px}
+.ac-filter-bar .form-group{margin:0;display:grid;gap:4px}
+.ac-filter-bar .form-group input,.ac-filter-bar .form-group select{width:100%;box-sizing:border-box;min-height:44px}
+
+/* The design memo asks for 44x44 touch targets; the export trio and the filter
+   selects were measuring 37-43px on a 360px Android viewport. Scoped to the
+   teacher screens so the shared shell keeps its own sizing. */
+.ac-teacher-detail .export-group .core-action{min-width:44px}
+.ac-teacher-detail .core-action,.ac-teacher-detail .wa-btn,.ac-teacher-detail select{min-height:44px}
+
+/* --- the teacher card: a circular avatar in the square logo slot --- */
+.owner-avatar-lg{width:74px;height:74px;flex:0 0 74px;font-size:22px}
+.core-logo .owner-avatar{width:100%;height:100%;border-radius:14px}
+.teacher-card{cursor:pointer}
+.teacher-card .org-card-actions .wa-btn{min-height:44px}
+.chip-lang{color:var(--theme-muted,#6b7280);font-weight:600}
+.gated-value{color:var(--theme-muted,#6b7280);font-weight:600;font-size:12px}
+
+@media(max-width:760px){
+ .ac-repeat-row{grid-template-columns:1fr}
+ .ac-repeat-row .crud.delete{justify-self:flex-end}
+ .ac-filter-bar{grid-template-columns:1fr}
+ .ac-pass-wrap{flex-direction:column;align-items:stretch}
+}
+
+/* A table row is a link to the institution full screen, so it must look and
+   behave like one: pointer cursor, a hover affordance, and a keyboard path. */
+.tbl tbody tr.row-click{cursor:pointer}
+.tbl tbody tr.row-click:hover,.tbl tbody tr.row-click:focus-visible{background:#f4f9f6}
+.tbl tbody tr.row-click:focus-visible{outline:2px solid var(--theme-primary,#1f5d46);outline-offset:-2px}

@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS teacher_subjects (
 
 -- Teacher stages
 CREATE TABLE IF NOT EXISTS teacher_stages (
-  id UUID PRIMARY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   teacher_id UUID NOT NULL REFERENCES teacher_profiles(id) ON DELETE CASCADE,
   stage_id UUID NOT NULL REFERENCES academic_stages(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -1,7 +1,6 @@
 // server/pg-app.js
-// Parallel PostgreSQL-backed API entry point (port 4003).
-// This file does NOT modify or replace server/index.js (SQLite, port 4002).
-// Both runtimes can coexist during Phase 2B/2C.
+// PostgreSQL-backed API entry point. Port comes from PG_PORT (default 4003).
+// Also exported as the app consumed by the Netlify function wrapper.
 
 require('dotenv').config();
 
@@ -38,17 +37,6 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ status: 'error', error: err.message });
   }
 });
-
-// ---------- compat routes (SQLite-era API paths for frontend) ----------
-// Must be mounted BEFORE identity router so /api/users and /api/login
-// are handled by compat (no auth required) instead of identity (auth required).
-try {
-  const compatRouter = require('./modules/compat/compat-routes');
-  app.use(compatRouter);
-  console.log('[pg-app] mounted: /api/login, /api/users (compat)');
-} catch (err) {
-  console.warn('[pg-app] compat routes not loaded:', err.message);
-}
 
 // Public marketing banner images (uploaded by marketing admin).
 // Private org documents stay outside any static directory.

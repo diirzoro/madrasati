@@ -9,8 +9,7 @@
     "surface": "#FFFFFF",
     "text": "#1F2937",
     "muted": "#6B7280",
-    "border": "#E7DED3",
-    "hero": "assets/themes/education-green/hero.jpg"
+    "border": "#E7DED3"
   },
   "navy-gold": {
     "name_ar": "الكحلي والذهبي",
@@ -22,8 +21,7 @@
     "surface": "#FFFFFF",
     "text": "#1D2733",
     "muted": "#6A7280",
-    "border": "#E4DDCF",
-    "hero": "assets/themes/navy-gold/hero.jpg"
+    "border": "#E4DDCF"
   },
   "burgundy-sand": {
     "name_ar": "الخمري والرملي",
@@ -35,8 +33,7 @@
     "surface": "#FFFFFF",
     "text": "#2B2527",
     "muted": "#746A6D",
-    "border": "#E5D9CB",
-    "hero": "assets/themes/burgundy-sand/hero.jpg"
+    "border": "#E5D9CB"
   },
   "teal-desert": {
     "name_ar": "التركواز والصحراء",
@@ -48,8 +45,7 @@
     "surface": "#FFFFFF",
     "text": "#1E2E2E",
     "muted": "#697777",
-    "border": "#E2DBCF",
-    "hero": "assets/themes/teal-desert/hero.jpg"
+    "border": "#E2DBCF"
   },
   "plum-rose": {
     "name_ar": "البنفسجي والوردي الترابي",
@@ -61,8 +57,7 @@
     "surface": "#FFFFFF",
     "text": "#2E2730",
     "muted": "#756B77",
-    "border": "#E7DADF",
-    "hero": "assets/themes/plum-rose/hero.jpg"
+    "border": "#E7DADF"
   },
   "petrol-bronze": {
     "name_ar": "البترولي والبرونزي",
@@ -74,7 +69,6 @@
     "surface": "#FFFFFF",
     "text": "#1E2930",
     "muted": "#68777D",
-    "border": "#E3DDD3",
-    "hero": "assets/themes/petrol-bronze/hero.jpg"
+    "border": "#E3DDD3"
   }
 }

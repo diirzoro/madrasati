@@ -10,7 +10,7 @@ function mapAuditLog(row) {
   if (!row) return null;
   return {
     id: row.id, actorUserId: row.actor_user_id, actorName: row.actor_name,
-    action: row.action, entityType: row.entity_type, entityId: row.entity_id,
+    action: row.action, entityType: row.object_type, entityId: row.object_id,
     organizationId: row.organization_id, oldValues: row.old_values,
     newValues: row.new_values, reason: row.reason, correlationId: row.correlation_id,
     createdAt: row.created_at,

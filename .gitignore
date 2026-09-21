@@ -26,6 +26,8 @@ tmp/
 temp/
 coverage/
 .cache/
+# preview-up.sh pid files and server logs
+/.run/
 
 # Local databases / data
 *.sqlite
@@ -59,8 +61,6 @@ coverage/
 *.pfx
 
 # Runtime-focused repository: retain development material locally
-/AGENTS.md
-/docs/
 /theme-pack/
 /scripts/update_taher_reference.ps1
 /db/init_sqlite.sql

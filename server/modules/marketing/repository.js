@@ -6,6 +6,17 @@
 const { query } = require('../common/pool');
 const { parseJson } = require('../common/http');
 
+// `placement` is a TEXT[] column. node-postgres turns a JS array into a proper
+// array parameter, while JSON.stringify would send `["ticker"]` — which the
+// array literal parser rejects with 22P02. Objects are still stringified, for
+// the JSONB columns.
+function toParam(value) {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value;
+}
+
 // ---------------------------------------------------------------------------
 // hero_slides
 // ---------------------------------------------------------------------------
@@ -46,7 +57,7 @@ async function countHeroSlides() {
 
 async function createHeroSlide(fields) {
   const keys = Object.keys(fields);
-  const values = keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' ? JSON.stringify(fields[k]) : fields[k]));
+  const values = keys.map((k) => toParam(fields[k]));
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await query(
     `INSERT INTO hero_slides (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
@@ -57,7 +68,7 @@ async function createHeroSlide(fields) {
 
 async function updateHeroSlide(id, updates) {
   const keys = Object.keys(updates);
-  const values = keys.map((k) => (updates[k] !== null && typeof updates[k] === 'object' ? JSON.stringify(updates[k]) : updates[k]));
+  const values = keys.map((k) => toParam(updates[k]));
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
   values.push(id);
   const { rows } = await query(
@@ -106,7 +117,7 @@ async function findAdvertisementById(id) {
 
 async function createAdvertisement(fields) {
   const keys = Object.keys(fields);
-  const values = keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' ? JSON.stringify(fields[k]) : fields[k]));
+  const values = keys.map((k) => toParam(fields[k]));
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await query(
     `INSERT INTO advertisements (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
@@ -117,7 +128,7 @@ async function createAdvertisement(fields) {
 
 async function updateAdvertisement(id, updates) {
   const keys = Object.keys(updates);
-  const values = keys.map((k) => (updates[k] !== null && typeof updates[k] === 'object' ? JSON.stringify(updates[k]) : updates[k]));
+  const values = keys.map((k) => toParam(updates[k]));
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
   values.push(id);
   const { rows } = await query(
@@ -179,7 +190,7 @@ async function findOfferById(id) {
 
 async function createOffer(fields) {
   const keys = Object.keys(fields);
-  const values = keys.map((k) => (fields[k] !== null && typeof fields[k] === 'object' ? JSON.stringify(fields[k]) : fields[k]));
+  const values = keys.map((k) => toParam(fields[k]));
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await query(
     `INSERT INTO offers (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
@@ -190,7 +201,7 @@ async function createOffer(fields) {
 
 async function updateOffer(id, updates) {
   const keys = Object.keys(updates);
-  const values = keys.map((k) => (updates[k] !== null && typeof updates[k] === 'object' ? JSON.stringify(updates[k]) : updates[k]));
+  const values = keys.map((k) => toParam(updates[k]));
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
   values.push(id);
   const { rows } = await query(

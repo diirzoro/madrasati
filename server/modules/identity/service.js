@@ -5,7 +5,7 @@
 
 const bcrypt = require('bcryptjs');
 const repo = require('./repository');
-const { ValidationError, UnauthorizedError, ConflictError, NotFoundError, AppError } = require('../common/errors');
+const { ValidationError, UnauthorizedError, ConflictError, NotFoundError, ForbiddenError, AppError } = require('../common/errors');
 const { writeAudit } = require('../common/audit');
 const { validatePhoneForCountry } = require('../common/phone');
 
@@ -14,13 +14,27 @@ const VALID_STATUS = ['active', 'suspended', 'pending', 'deleted'];
 
 function mapUser(row) {
   if (!row) return null;
+  const role = row.role || 'client';
+  const organizationId = row.organization_id || null;
   return {
     id: row.id,
     name: row.name,
     email: row.email,
-    role: row.role || 'client',
+    role,
     phone: row.phone,
     status: row.status || 'active',
+    // Institution affiliation. A teacher who belongs to an institution is staff
+    // of that institution (organization_memberships); a teacher with none is the
+    // independent freelancer whose profile lives in teacher_profiles. The two are
+    // different arrangements and the screen must not blur them.
+    organizationId,
+    organizationName: row.organization_name || null,
+    organizationType: row.organization_type || null,
+    organizationVerified: row.organization_verified == null ? null : Boolean(row.organization_verified),
+    membershipRole: row.membership_role || null,
+    membershipStatus: row.membership_status || null,
+    teacherKind: role === 'teacher' ? (organizationId ? 'institutional' : 'freelancer') : null,
+    isProtected: Boolean(row.is_protected),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -101,6 +115,14 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
     if (profile) {
       await saveRegistrationProfile(created.id, profile, client);
     }
+    // Written on the same client so the user row and its audit entry commit together.
+    await writeAudit({
+      actorUserId: actorUserId || created.id,
+      action: 'create',
+      entityType: 'user',
+      entityId: String(created.id),
+      newValues: { email: safeEmail, role: safeRole },
+    }, client);
     await client.query('COMMIT');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (e) { /* noop */ }
@@ -109,13 +131,6 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
     client.release();
   }
   const full = await repo.findUserById(created.id);
-  await writeAudit({
-    actorUserId: actorUserId || created.id,
-    action: 'create',
-    entityType: 'user',
-    entityId: String(created.id),
-    newValues: { email: safeEmail, role: safeRole },
-  });
   return mapUser(full);
 }
 
@@ -195,7 +210,23 @@ async function loginUser({ email, password }) {
   return mapUser(row);
 }
 
+// Protected system accounts (db/seed-fixed-users.js, users.is_protected) exist
+// to be the permanent role fixtures every environment can rely on, so deleting
+// one silently breaks logins and the ownership demos. Deletion has two API
+// doors and both must be shut: DELETE /api/users/:id, and PATCH /api/users/:id
+// with status 'deleted' -- the latter is the same soft delete wearing a hat.
+async function assertDeletable(userId) {
+  const target = await repo.findUserById(userId);
+  if (!target) throw new NotFoundError('User not found');
+  if (target.is_protected) {
+    throw new ForbiddenError('This is a protected system account and cannot be deleted.');
+  }
+  return target;
+}
+
 async function updateUserByAdmin(userId, { name, email, phone, role, status, institutionType, actorUserId }) {
+  if (status === 'deleted') await assertDeletable(userId);
+
   if (status && !VALID_STATUS.includes(status)) throw new ValidationError('Invalid user status');
   const fields = {};
   if (name !== undefined) fields.name = sanitizeName(name);
@@ -229,6 +260,7 @@ async function updateUserByAdmin(userId, { name, email, phone, role, status, ins
 }
 
 async function deleteUser(userId, actorUserId) {
+  await assertDeletable(userId);
   const deleted = await repo.softDeleteUser(userId);
   if (!deleted) throw new NotFoundError('User not found');
   await writeAudit({

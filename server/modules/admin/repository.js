@@ -8,7 +8,7 @@ async function listAuditLogs({ actorUserId, entityType, organizationId, offset =
   const conditions = [];
   const params = [];
   if (actorUserId) { params.push(actorUserId); conditions.push(`al.actor_user_id = $${params.length}`); }
-  if (entityType) { params.push(entityType); conditions.push(`al.entity_type = $${params.length}`); }
+  if (entityType) { params.push(entityType); conditions.push(`al.object_type = $${params.length}`); }
   if (organizationId) { params.push(organizationId); conditions.push(`al.organization_id = $${params.length}`); }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await query(
@@ -91,7 +91,7 @@ async function dashboardMetrics() {
              (SELECT COUNT(*)::int FROM hero_slides) AS slides,
              (SELECT COUNT(*)::int FROM advertisements) AS advertisements,
              (SELECT COUNT(*)::int FROM offers) AS offers`),
-    query(`SELECT al.id, al.action, al.entity_type, al.entity_id, al.created_at, u.name AS actor_name
+                 query(`SELECT al.id, al.action, al.object_type, al.object_id, al.created_at, u.name AS actor_name
            FROM audit_logs al LEFT JOIN users u ON u.id = al.actor_user_id
            ORDER BY al.created_at DESC LIMIT 8`),
   ]);

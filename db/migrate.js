@@ -14,6 +14,16 @@ const { Pool } = require('pg');
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
+async function ensureMigrationTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+}
+
 async function getAppliedMigrations(pool) {
   const res = await pool.query('SELECT name FROM schema_migrations ORDER BY id');
   return new Set(res.rows.map(r => r.name));
@@ -54,21 +64,30 @@ async function runMigration(pool, filePath, name) {
 async function migrateUp() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
+    await ensureMigrationTable(pool);
     const applied = await getAppliedMigrations(pool);
     const files = getMigrationFiles();
     const pending = files.filter(f => !applied.has(f));
 
     if (pending.length === 0) {
       console.log('All migrations are already applied.');
-      return;
+    } else {
+      console.log(`Running ${pending.length} pending migration(s)...\n`);
+      for (const file of pending) {
+        const filePath = path.join(MIGRATIONS_DIR, file);
+        await runMigration(pool, filePath, file);
+      }
+      console.log('\nDone.');
     }
 
-    console.log(`Running ${pending.length} pending migration(s)...\n`);
-    for (const file of pending) {
-      const filePath = path.join(MIGRATIONS_DIR, file);
-      await runMigration(pool, filePath, file);
-    }
-    console.log('\nDone.');
+    // Runs unconditionally, including when nothing was pending: the seven
+    // protected test accounts (db/seed-fixed-users.js) must exist in every
+    // environment, and re-seeding is what repairs a deleted or drifted one.
+    console.log('\nSeeding protected system accounts...');
+    const { seed } = require('./seed-fixed-users');
+    const summary = await seed(pool);
+    console.log(`  protected accounts: ${summary.accounts.length}`);
+    summary.links.forEach((link) => console.log(`  linked: ${link}`));
   } finally {
     await pool.end();
   }
@@ -77,6 +96,7 @@ async function migrateUp() {
 async function showStatus() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
+    await ensureMigrationTable(pool);
     const applied = await getAppliedMigrations(pool);
     const files = getMigrationFiles();
 

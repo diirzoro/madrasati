@@ -1,10 +1,14 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Local development can use DATABASE_URL.
+// Netlify Database exposes NETLIFY_DB_URL to builds/functions/agents.
+// Keep DATABASE_URL as the first choice so existing local deployments remain compatible.
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NETLIFY_DB_URL;
+
 if (!DATABASE_URL) {
   throw new Error(
-    'DATABASE_URL is not set. Copy .env.example to .env and configure your PostgreSQL connection string.'
+    'No PostgreSQL connection string found. Set DATABASE_URL locally or connect a Netlify Database so NETLIFY_DB_URL is available.'
   );
 }
 

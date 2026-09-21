@@ -75,11 +75,11 @@ async function listNotifications(userId, { offset = 0, limit = 20 } = {}) {
   return rows;
 }
 
-async function createNotification({ userId, title, body, notificationType, entityType, entityId }) {
+async function createNotification({ userId, eventType, title, body, entityType, entityId, organizationId, channel }) {
   const { rows } = await query(
-    `INSERT INTO notifications (user_id, title, body, notification_type, entity_type, entity_id)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [userId, title, body || null, notificationType || 'info', entityType || null, entityId || null]
+    `INSERT INTO notifications (user_id, organization_id, event_type, title, body, channel, related_entity_type, related_entity_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+    [userId, organizationId || null, eventType || 'info', title, body || '', channel || 'in_app', entityType || null, entityId || null]
   );
   return rows[0];
 }
