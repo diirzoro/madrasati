@@ -374,30 +374,81 @@ added and edited on **its own dedicated route**, built by the same `formPage()`:
 - The public country read stays open; the admin read (`/countries/manage`)
   includes a deactivated country so it can be re-enabled.
 
-### 8.4 Long forms are tabbed, not stacked
+### 8.4 Long forms are a wizard, not one scroll
 
-A form that carries several unrelated concerns does not become one long column.
-The teacher add/edit screen is the reference: four horizontal tabs inside the
-same `.uf-card`, one concern each.
+A form that carries several unrelated concerns is not a long vertical stack and
+not a set of empty steps waiting for a pop-up. It is an ordered wizard: one step
+visible at a time, each step a real editing surface with its own controls, and one
+navigation bar for the whole form.
+
+The four steps are declared in one place per form, and the strip, the guard and
+the "go to the problem" behaviour all read that same list, so they cannot disagree
+about what a step is or where a field lives.
+
+**Teacher** (`#/teachersAdmin/new`, `…/edit/:id`):
 
 ```text
-البيانات الأساسية            Basic info
-المواد والأسعار والعروض      Subjects, pricing and offers
-أوقات التوفر والجدول         Availability and schedule
-المؤهلات والخبرات            Qualifications and experience
+1 البيانات الأساسية            who the teacher is: name, contact, photo, location
+2 المواد والأسعار والعروض      one priced row per subject, each with its own place,
+                              currency, billing period, language, discount and promo
+3 أوقات التوفر والجدول         the weekly windows the teacher accepts bookings in
+4 المؤهلات والخبرات            qualifications, and the stages they are qualified for
 ```
 
-- The strip (`.uf-tabs`) spans both grid tracks and sits above the fields.
-- Switching a tab runs the form's own draft sync first, so a value typed on one
-  tab is never lost when another tab renders — the same draft map the dynamic
-  rows already used.
-- A repeatable list (priced subjects, weekly slots, qualifications, grade names)
-  is always **a button that appends one row plus a delete button per row**, never
-  a count field that has to be committed before the rows it describes can
-  appear. That is the pattern used for teacher subjects, availability,
-  qualifications, and the stage grade ladder.
+**Institution** (`#/schools/new`, `#/schools/edit/:id`) — every institution type,
+because all five share one core:
 
-### 8.5 The stage grade ladder
+```text
+1 المعلومات الأساسية          name, type, logo (upload), contact, address and location
+2 المراحل والرسوم والسعة       the stages it teaches, with its own fee, currency,
+                              billing period, language, delivery mode and capacity
+3 المواد والتخصصات            the subjects it teaches, with a language and a fee each
+4 الوثائق والتراخيص            licence / ownership / accreditation file uploads
+```
+
+Rules the wizard obeys:
+
+- **One footer, never two.** The step strip is at the top; the footer is a single
+  bar holding Cancel, the step counter (n / 4), Back and either Next or the one
+  Save. A form no longer shows a save/cancel pair repeated on every step.
+- **Strict validation.** Nothing is submitted while a required field on *any* step
+  is empty. The guard walks the steps in order, opens the step that owns the first
+  missing field, rings that field and names it in the message
+  («أكمل الحقل المطلوب: … — في خطوة «…»»), so the user is told what is missing and
+  where. `ufValidate()` reads the rules once; `render()` re-applies the mark after
+  the repaint, so the highlight survives the re-render that shows the step.
+- **No native prompts.** A subject the catalog lacks is proposed from real fields
+  inside the step, with its own validation, not from a `window.prompt`.
+- **A repeatable list is a button that appends one row plus a delete button per
+  row** — teacher subjects, availability, qualifications; institution stages,
+  subjects, documents. Never a count field that must be committed before the rows
+  it describes can appear.
+- **Draft sync before every step change**, so a value typed on one step is never
+  lost when another step renders.
+
+### 8.5 Real uploads, not file paths
+
+A field that carries an image is a real upload control: a file picker, an
+immediate local preview, and explicit change and remove actions. The stored path
+is the only thing the form submits, so nothing else about the payload changes.
+
+| Endpoint | Guard | Purpose |
+|---|---|---|
+| `POST /api/admin/uploads/image?scope=avatars\|logos\|documents` | `requireRole('admin')` | Raw image body, original name in `X-File-Name`; returns `{path, mime, size, url}`. |
+| `POST /api/documents/upload?organizationId=&docType=` | owner of that institution, or admin | An institution's licence / accreditation file. Private: streamed as an attachment, never served statically. |
+
+The image endpoint decides the type by **sniffing the magic bytes**, never by the
+extension the client claims, and refuses anything that is not JPG, PNG or WEBP
+(WEBP is checked at its `WEBP` marker, not just the `RIFF` header). Every stored
+name is random and the file lands in the folder its scope names. The directory
+`/uploads/images` is served statically, which is exactly why the validation is
+strict: anything that reaches it is publicly readable by design, so only genuine
+images can. Institution documents deliberately stay out of it.
+
+Teacher avatars and institution logos both come from this one endpoint, so the
+"change file / remove" behaviour cannot differ between the two screens.
+
+### 8.6 The stage grade ladder
 
 Adding a stage carries its grades with it, so the platform admin does not have to
 create each grade afterwards:
@@ -412,14 +463,14 @@ create each grade afterwards:
   because that code is what an institution offering points at — never a subject
   code such as `MATH`.
 
-### 8.6 What this does not touch
+### 8.7 What this does not touch
 
 The exception is the authentication screens. Login and sign-up keep their
 current split layout and side imagery (`auth-pages.css` / `auth-pages.js`);
 they are only required to stay responsive.
 
 The form system itself is UI, CSS and routing: it does not add, remove or rename
-a column, and it changes no endpoint's payload. Two **additive, re-runnable**
+a column, and it changes no endpoint's payload. Three **additive, re-runnable**
 migrations were needed by the features in this phase and are the only schema
 movement:
 
@@ -427,11 +478,21 @@ movement:
 |---|---|
 | `036_locations_country_admin.sql` | `locations_countries.name_en`, so a country has a bilingual name; plus an index on `code` |
 | `037_teacher_subject_promo.sql` | `teacher_pricing.discount_percent` + `promo_label`, so a promotion rides on the same priced row as the list price instead of contradicting it |
+| `038_teacher_subject_mode.sql` | `teacher_pricing.location_mode`, so the *place* a lesson happens is declared per subject, in the same three tokens the weekly availability already uses |
 
-Both are nullable-only additions, so every pre-existing row keeps its exact
+All three are nullable-only additions, so every pre-existing row keeps its exact
 meaning. Never edit an applied migration — add a new numbered one.
 
-### 8.7 Tenant isolation of the priced offering
+**The place of a lesson is per subject.** The teacher-level booleans the public
+directory filters on (`offers_online`, `travels_to_student_home`,
+`accepts_student_home`) are now *derived* from the subject rows whenever a save
+carries subjects, on both create and update, so a profile cannot claim to teach
+online while none of its subjects says so. There is one source of truth and the
+two layers cannot contradict each other. The location mode is a property of the
+offer, like the delivery mode of an institution offering, so it stays visible to
+an anonymous reader; the price beside it does not.
+
+### 8.8 Tenant isolation of the priced offering
 
 The platform catalog (`#/academic`) is an abstract, price-free definition. The
 money lives in the institution's own offering, and that offering is per tenant:
@@ -451,7 +512,7 @@ money lives in the institution's own offering, and that offering is per tenant:
   from the «مقترحات المؤسسات» tab of `#/academic`. A global catalog row is never
   up for review, and the review route is admin-only on the server.
 
-### 8.8 General form capabilities
+### 8.9 General form capabilities
 
 Forms should support:
 - comfortable inputs

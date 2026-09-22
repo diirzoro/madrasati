@@ -1604,15 +1604,180 @@ function formPage(opts){
      (o.subtitle?'<p>'+esc(o.subtitle)+'</p>':"")+'</div>':"")+
    '<section class="uf-card">'+
     (o.error?'<div class="ac-form-error">'+esc(o.error)+'</div>':"")+
+    (o.tabs||"")+
     '<div class="uf-grid">'+(o.body||"")+'</div>'+
     (o.foot||"")+
-    '<div class="uf-actions">'+
+    // A wizard form supplies its own footer (Back / Next / one Save), so the
+    // default pair is replaced rather than repeated on every step.
+    (o.actions||('<div class="uf-actions">'+
      '<button type="button" class="btn green uf-save"'+(o.busy?" disabled":"")+' onclick="'+o.onSave+'">'+
       esc(o.busy?(ar?"جاري الحفظ...":"Saving..."):(o.saveLabel||(ar?"حفظ البيانات":"Save data")))+'</button>'+
      '<button type="button" class="btn uf-cancel" onclick="'+cancel+'">'+esc(ar?"إلغاء":"Cancel")+'</button>'+
-    '</div>'+
+    '</div>'))+
    '</section>'+
   '</div>');
+}
+
+/* ---------- Shared wizard pieces ----------
+   A long form is split into ordered steps. Three primitives are shared by every
+   tabbed form so the behaviour cannot drift between modules: the step strip, the
+   Back/Next/Save footer, and the strict validator that refuses to submit while a
+   required field is empty and sends the user to the step that owns it. */
+
+// The step strip. `defs` is [[key,label],…]; `active` is the current key.
+function ufTabStrip(defs,active,handler){
+ return '<div class="uf-tabs uf-wizard-tabs">'+
+  defs.map(function(x){
+   return '<button type="button" class="'+(active===x[0]?"active":"")+
+    '" onclick="'+handler+'(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+
+  '</div>';
+}
+
+// The footer. Back is disabled on the first step, Next becomes the single Save on
+// the last one, and Cancel never disappears — all on one bar, never duplicated.
+function ufWizardFooter(o){
+ var ar=lang==="ar";
+ var first=o.index<=0,last=o.index>=o.total-1;
+ return '<div class="uf-actions uf-wizard-actions">'+
+  '<button type="button" class="btn uf-cancel" onclick="'+o.onCancel+'">'+esc(ar?"إلغاء":"Cancel")+'</button>'+
+  '<span class="uf-step-count">'+esc((o.index+1)+" / "+o.total)+'</span>'+
+  '<button type="button" class="btn uf-back-step"'+(first?" disabled":"")+' onclick="'+o.onBack+'">'+
+   esc(ar?"السابق":"Back")+'</button>'+
+  (last
+   ?'<button type="button" class="btn green uf-save"'+(o.busy?" disabled":"")+' onclick="'+o.onSave+'">'+
+     esc(o.busy?(ar?"جاري الحفظ...":"Saving..."):(o.saveLabel||(ar?"حفظ البيانات":"Save data")))+'</button>'
+   :'<button type="button" class="btn green uf-next-step" onclick="'+o.onNext+'">'+
+     esc(ar?"التالي":"Next")+'</button>')+
+ '</div>';
+}
+
+// Strict validation. Each form declares its required controls once, with the step
+// that owns each one, so the guard and the "jump to the offending field" behaviour
+// cannot disagree about what is missing or where it lives.
+function ufValidate(rules){
+ for(var i=0;i<(rules||[]).length;i++){
+  var r=rules[i];
+  var el=document.getElementById(r.id);
+  var raw=el?(r.kind==="checkbox"?(el.checked?"1":""):String(el.value==null?"":el.value).trim()):"";
+  var bad=!raw;
+  if(!bad&&r.kind==="number")bad=isNaN(Number(raw))||Number(raw)<0;
+  if(!bad&&r.min&&raw.length<r.min)bad=true;
+  if(bad)return {tab:r.tab,id:r.id,label:r.label||r.id};
+ }
+ return null;
+}
+
+// The step the form should open on after a failed submit, plus the field to ring.
+// render() re-paints the whole page, so the mark is applied after the paint.
+var ufPendingInvalid=null;
+function ufApplyInvalid(){
+ var hit=ufPendingInvalid;ufPendingInvalid=null;
+ if(!hit)return;
+ var el=document.getElementById(hit.id);
+ if(!el)return;
+ el.classList.add("uf-invalid");
+ var group=el.closest?el.closest(".form-group"):null;
+ if(group)group.classList.add("uf-invalid-group");
+ try{el.focus({preventScroll:false})}catch(e){try{el.focus()}catch(e2){}}
+}
+// A failed submit must also say *what* is missing, not only ring the field.
+function ufValidationMessage(hit){
+ if(!hit)return "";
+ var ar=lang==="ar";
+ return (ar?"أكمل الحقل المطلوب: ":"Complete the required field: ")+hit.label+
+  (ar?" — في خطوة «":" — in step \"")+hit.tabLabel+(ar?"».":"\".");
+}
+
+/* ---------- Real file uploads ----------
+   A form field that carries an image or a document is a real upload control: a
+   file picker, a thumbnail preview, and explicit change/remove actions. The
+   stored path is what the form submits, so nothing else about the payload changes.
+   The bytes go up as a raw body (no multipart dependency) the same way the
+   marketing banner upload already worked. */
+function ufUploadPath(id){
+ var el=document.getElementById(id+"-val");
+ return el?String(el.value||""):"";
+}
+function ufProgress(id,text){
+ var el=document.getElementById(id+"-status");
+ if(el)el.textContent=text||"";
+}
+function ufPickFile(input){
+ input.click();
+}
+window.ufImageUploadFile=function(input,id,scope){
+ var file=input.files&&input.files[0];
+ if(!file)return;
+ var val=document.getElementById(id+"-val");
+ var prev=document.getElementById(id+"-preview");
+ var img=document.getElementById(id+"-img");
+ var ph=document.getElementById(id+"-ph");
+ // A local preview paints immediately, so the user sees the choice before the
+ // upload finishes and never wonders whether the picker worked.
+ try{
+  if(prev&&window.URL&&URL.createObjectURL){
+   var url=URL.createObjectURL(file);
+   if(img)img.src=url;
+   if(prev)prev.style.display="";
+   if(ph)ph.style.display="none";
+  }
+ }catch(e){}
+ ufProgress(id,lang==="ar"?"جاري الرفع...":"Uploading...");
+ fetch(API_BASE+'/api/admin/uploads/image?scope='+encodeURIComponent(scope||"images"),{
+  method:'POST',credentials:'include',
+  headers:{'Content-Type':'application/octet-stream','X-File-Name':file.name},
+  body:file
+ }).then(function(r){
+  return r.text().then(function(t){
+   var d=null;try{d=JSON.parse(t)}catch(e){d=t}
+   if(!r.ok)throw new Error((d&&d.error)||'upload failed');
+   return d;});
+ }).then(function(d){
+  if(val)val.value=d.path||"";
+  if(img&&d.url)img.src=d.url;
+  ufProgress(id,lang==="ar"?"تم الرفع":"Uploaded");
+ }).catch(function(e){
+  if(val)val.value="";
+  if(prev)prev.style.display="none";
+  if(ph)ph.style.display="";
+  ufProgress(id,"");
+  alert(e.message||"upload failed");
+ });
+};
+window.ufUploadClear=function(id){
+ var val=document.getElementById(id+"-val");if(val)val.value="";
+ var prev=document.getElementById(id+"-preview");if(prev)prev.style.display="none";
+ var ph=document.getElementById(id+"-ph");if(ph)ph.style.display="";
+ var input=document.getElementById(id);if(input)input.value="";
+ ufProgress(id,"");
+};
+
+// scope: which upload folder the file lands in (avatars / logos / documents).
+function ufImageUpload(id,label,current,scope,opts){
+ var o=opts||{},ar=lang==="ar";
+ var has=!!current;
+ return '<div class="form-group uf-upload-group">'+
+  '<label>'+esc(label)+'</label>'+
+  '<div class="uf-upload">'+
+   '<div class="uf-upload-preview" id="'+id+'-preview"'+(has?"":' style="display:none"')+'>'+
+    '<img id="'+id+'-img" src="'+esc(has?current:"")+'" alt="">'+
+   '</div>'+
+   '<div class="uf-upload-empty" id="'+id+'-ph"'+(has?' style="display:none"':"")+'>'+
+    icon("download",20)+'<span>'+esc(ar?"لم يُرفع ملف بعد":"No file uploaded yet")+'</span>'+
+   '</div>'+
+   '<div class="uf-upload-actions">'+
+    '<input type="file" id="'+id+'" class="uf-file-input" accept="'+
+      esc(o.accept||"image/png,image/jpeg,image/webp")+'" onchange="ufImageUploadFile(this,\''+id+'\',\''+esc(scope||"images")+'\')">'+
+    '<button type="button" class="btn" onclick="document.getElementById(\''+id+'\').click()">'+
+      icon("plus",14)+' '+(has?(ar?"تغيير الملف":"Change file"):(ar?"اختيار ملف":"Choose file"))+'</button>'+
+    '<button type="button" class="btn uf-upload-remove" onclick="ufUploadClear(\''+id+'\')">'+
+      icon("trash",14)+' '+(ar?"حذف":"Remove")+'</button>'+
+    '<span class="uf-upload-status" id="'+id+'-status"></span>'+
+   '</div>'+
+   '<input type="hidden" id="'+id+'-val" value="'+esc(current||"")+'">'+
+  '</div>'+
+  (o.hint?'<small class="ac-hint">'+esc(o.hint)+'</small>':"")+
+ '</div>';
 }
 var dashboardData={pendingRegistrations:0,connected:false};
 
@@ -3137,6 +3302,9 @@ function render(){
  }
   document.getElementById("app").innerHTML=html;
   stampTableLabels();
+  // A rejected submit repaints the page, so the mark that names the missing field
+  // is applied after the paint rather than being lost with the previous DOM.
+  ufApplyInvalid();
   if(publicRoutes.includes(r))syncFilterControls();
   // Dynamic hero slider: mount ONLY on home, destroy everywhere else so no
   // duplicate intervals survive navigation (returning to #/home remounts once).

@@ -2392,6 +2392,53 @@ img{max-width:100%}
  .uf-tabs button{flex:1 1 auto;min-height:44px;padding:9px 12px;font-size:12.5px}
 }
 
+/* --- Wizard navigation: one bar, never two competing footers --- */
+.uf-wizard-actions{align-items:center}
+.uf-step-count{margin-inline-end:auto;font-size:12.5px;font-weight:700;color:var(--muted);
+ padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--white)}
+.uf-wizard-actions .uf-save,.uf-wizard-actions .uf-next-step{margin-inline-start:0}
+/* The step strip marks where the user is, and the completed steps stay reachable. */
+.uf-wizard-tabs{counter-reset:ufstep}
+.uf-wizard-tabs button{counter-increment:ufstep}
+.uf-wizard-tabs button::before{
+ content:counter(ufstep);display:inline-flex;align-items:center;justify-content:center;
+ width:20px;height:20px;border-radius:50%;margin-inline-end:7px;font-size:11px;font-weight:800;
+ background:var(--cream);color:var(--muted);border:1px solid var(--line)}
+.uf-wizard-tabs button.active::before{background:#fff;color:var(--theme-primary,#1f5d46);border-color:#fff}
+
+/* --- Strict validation: the refused field is named, not just outlined --- */
+.uf-invalid-group>label{color:#B3341F}
+.uf-invalid,.uf-invalid:focus{
+ border-color:#D64545!important;
+ box-shadow:0 0 0 3px rgba(214,69,69,.16)!important;
+ background:rgba(214,69,69,.04)!important}
+
+/* --- Real uploads: preview, then explicit change / remove --- */
+.uf-upload{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.uf-upload-preview{width:96px;height:96px;flex:0 0 96px;border:1px solid var(--line);border-radius:10px;
+ background:var(--cream);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.uf-upload-preview img{width:100%;height:100%;object-fit:cover}
+.uf-upload-empty{width:96px;height:96px;flex:0 0 96px;border:1px dashed var(--line);border-radius:10px;
+ background:var(--cream);color:var(--muted);display:flex;flex-direction:column;gap:4px;
+ align-items:center;justify-content:center;text-align:center;font-size:10.5px;padding:6px}
+.uf-upload-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.uf-upload-actions .btn{min-height:40px;display:inline-flex;align-items:center;gap:6px}
+.uf-upload-remove{color:#B3341F;border-color:#E7C7C0}
+/* The picker itself is driven by the labelled button, so it never shows twice. */
+.uf-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.uf-upload-status{font-size:12px;font-weight:600;color:var(--theme-primary,#1f5d46)}
+/* The nested "a catalog subject the platform lacks" block reads as a sub-section. */
+.ac-subfield{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.ac-subfield .core-h3{margin-bottom:10px}
+@media (max-width:768px){
+ .uf-wizard-actions{flex-direction:column-reverse;align-items:stretch}
+ .uf-step-count{margin-inline-end:0;text-align:center;order:1}
+ .uf-wizard-actions .btn{width:100%;min-height:44px}
+ .uf-upload,.uf-upload-actions{width:100%}
+ .uf-upload-preview,.uf-upload-empty{width:100%;flex:0 0 auto;height:140px}
+ .uf-upload-actions .btn{width:100%;justify-content:center}
+}
+
 /* --- Print: the report is its own document, the app chrome is not printed --- */
 @media print{
  .admin-top,.public-top,.public-rail,.sidebar,.admin-side,.bottom-stats,.view-toggle,.toolbar,

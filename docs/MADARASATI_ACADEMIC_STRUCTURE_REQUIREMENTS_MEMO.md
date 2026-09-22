@@ -1216,3 +1216,87 @@ governorate, alongside the ISO `countryCode` older callers send.
 The advertisements and offers sections were deferred by the same instruction, so
 their forms keep the shape they had.
 
+## 38. Teacher and Institution Form Rebuild — Implementation Record (22 September 2026)
+
+Records the form rework so the memo and the code agree. It adds no new authority
+and changes no price rule.
+
+### Migration 038
+
+| Migration | Change |
+|---|---|
+| `038_teacher_subject_mode.sql` | `teacher_pricing.location_mode` (`online` / `student_home` / `teacher_location`, NULL = not declared), the same vocabulary as `teacher_availability.location_mode`. |
+
+### The place of a lesson is a property of the subject
+
+`teacher_pricing` is one row per (teacher, subject) and already carried the price,
+currency, billing period, language, discount and promo. The place a lesson happens
+now sits on the same row, because an online lesson and a lesson at the student's
+home are two different offers rather than two flags on a profile.
+
+Consequences that must be preserved:
+
+1. The teacher-level booleans `offers_online`, `travels_to_student_home` and
+   `accepts_student_home` are **derived** from the subject rows on every save that
+   carries subjects (create and update). They are never a second, separately typed
+   answer to the same question, so the profile cannot contradict its subjects.
+   Deriving is skipped when the payload does not carry subjects, so a partial update
+   never clears a teacher's declared modes.
+2. The derived values are keyed by **column** name, because that is what the
+   repository writes. Returning camelCase here is a silent no-op.
+3. The token is validated on its own terms (`prepareLocationMode`): these three
+   values are lower-case, unlike `CURRENCIES` / `LANGUAGES`, so the upper-casing
+   `assertEnum` cannot be used for them.
+4. `location_mode` is a property of the offer, like an institution offering's
+   delivery mode, so an anonymous reader still sees it. The amount, currency,
+   billing period, discount and promo beside it are withheld (`pricingGated`).
+5. The admin-only write routes (`POST /api/teachers`, `PATCH /api/teachers/:id`)
+   now answer with the **ungated** teacher. A successful write must not reply with
+   the money it has just stored removed.
+
+### The institution wizard writes the offering it collects
+
+The institution add/edit screen is four steps: identity, stages with their fees and
+seats, subjects with their languages and fees, and licence documents. The money
+still lives in the institution's own offering, and the platform catalog still
+carries no amount.
+
+- In **edit** mode the offering and document list are read from
+  `/api/academic/org/:orgId/offering` and `/api/documents?organizationId=`.
+- The institution must exist before its offering, subjects and documents can be
+  written, so on create the remaining steps run **after** the organization row is
+  created, each as its own call. A failing offer does not discard the rest: the
+  failures are named back to the user and the screen reopens on the offering step
+  with an explanation rather than claiming a clean save.
+- A subject the catalog lacks is proposed from real fields and created against the
+  institution (staying `pending` for platform-admin approval), never in the global
+  catalog.
+- A licence file attaches to the existing private document pipeline
+  (`POST /api/documents/upload`), so nothing about document privacy changes.
+
+### Image uploads
+
+`POST /api/admin/uploads/image?scope=avatars|logos|documents` (admin-only) accepts
+a raw image body and stores it under `uploads/images/<scope>/` with a random name,
+returning the path the form submits. The type is decided by sniffing the magic
+bytes (JPG / PNG / WEBP, with the WEBP marker checked at its offset), never by the
+extension, and the size is capped at 4 MB. `/uploads/images` is served statically,
+which is exactly why only genuine images may reach it; institution documents stay
+outside any static directory and are streamed as attachments.
+
+### UI
+
+- Both wizards share one implementation of the step strip, the footer and the
+  guard (`ufTabStrip`, `ufWizardFooter`, `ufValidate` in `app.js`), so the behaviour
+  cannot drift between the two screens.
+- The teacher's teaching modes and academic stages moved out of step 1: the modes
+  belong with the subject they price, and the stages belong with the qualifications
+  they describe. Step 1 is identity, contact and location only.
+- The avatar became a real upload with a preview and change/remove, replacing the
+  URL text field.
+- A subject missing from the catalog is proposed from real fields with its own
+  validation, not from `window.prompt`.
+- The teacher detail view and the exported teacher sheet show the teaching place
+  per subject, next to the price it belongs to.
+
+

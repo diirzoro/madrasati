@@ -166,14 +166,25 @@ absent by design.
   72%-control grid on desktop, one column with 44px targets below 768px, and the
   [ إلغاء ] + [ حفظ البيانات ] footer. Auth screens (login / sign-up) keep their
   current split layout and side imagery, and only need to stay responsive.
-- **A form with several concerns is tabbed, not stacked.** The teacher add/edit
-  screen is the reference: `.uf-tabs` inside the same card
-  (basic info · subjects/pricing/offers · availability · qualifications), and the
-  draft sync runs before a tab switch so nothing typed is lost.
+- **A form with several concerns is a wizard, not one scroll.** `.uf-tabs` names
+  the steps; the footer is a single bar (Cancel · counter · Back · Next, or the one
+  Save on the last step) — never a save/cancel pair repeated per step. The teacher
+  screen is `basic · subjects/pricing/offers · availability · qualifications`; the
+  institution screen is `basic · stages/fees/capacity · subjects · documents`. The
+  draft sync runs before a step change, so nothing typed is lost.
+- **Strict validation before any submit.** A required field left empty on *any*
+  step stops the save: the form opens the step that owns it, rings the field and
+  names it («أكمل الحقل المطلوب: … — في خطوة «…»»). Declare the rules once
+  (`ufValidate`) with the step that owns each field, so the guard and the
+  "go to the problem" behaviour cannot disagree.
+- **A field carrying an image is a real upload, never a path.** `ufImageUpload`
+  gives a picker, an immediate preview and change/remove; only the stored path is
+  submitted. Images go to `POST /api/admin/uploads/image?scope=avatars|logos|documents`
+  (admin-only, magic-byte sniffed, random names, 4 MB). Institution documents go
+  to the private `POST /api/documents/upload` and are never served statically.
 - **A repeatable list is a button that appends one row plus a delete button per
   row** — never a count field that must be committed before the rows it describes
-  can appear. Used by teacher subjects, availability, qualifications and the
-  stage grade ladder.
+  can appear. Never a `window.prompt` where real fields belong.
 - Responsive down to 360px, 44×44 touch targets, no horizontal scrolling, RTL
   drawer from the right and LTR from the left. No separate mobile product.
 
@@ -254,6 +265,12 @@ curl /api/academic/org/:orgId/offering/public  # public; pricing gated
 curl '/api/advertisements?placement=ticker'    # published ticker strip
 curl /api/teachers?limit=5                     # public directory, prices gated
 curl /api/teachers/form-catalog                # what the teacher form may pick
+curl /api/academic/org-subjects                # admin queue of institution proposals
+
+# a form image (avatar / logo), raw body, original name in the header
+curl -X POST '/api/admin/uploads/image?scope=logos' \
+  -H 'Content-Type: application/octet-stream' -H 'X-File-Name: logo.png' \
+  --data-binary @logo.png                      # admin only; sniffed, 4 MB cap
 ```
 
 A change to a file under `design-prototype-v4/` is not verified by `node --check`

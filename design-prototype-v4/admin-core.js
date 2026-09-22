@@ -42,16 +42,82 @@
 
   // ---- institutions: add / edit ----
   var orgTypeOps=[["private_school"],["government_school"],["college"],["university"],["institute"]];
+  /* ---------- institutions: a four-step wizard ----------
+     A school is not one flat record: it has an identity, a priced offering, the
+     subjects it teaches and the licences that prove it may operate. Those are four
+     different concerns, so the add/edit screen is four ordered steps rather than a
+     long vertical scroll. The catalog stays price-free; every amount collected
+     here lands in THIS institution's offering, so changing one school's fees never
+     touches another's. */
+  var ORG_STEPS=[["basic","المعلومات الأساسية"],["offering","المراحل والرسوم والسعة"],
+    ["subjects","المواد والتخصصات"],["documents","الوثائق والتراخيص"]];
+  var ORG_STEPS_EN=[["basic","Basic information"],["offering","Stages, fees and capacity"],
+    ["subjects","Subjects and specialisations"],["documents","Documents and licences"]];
+  function orgStepDefs(){return lang==="ar"?ORG_STEPS:ORG_STEPS_EN}
+  function orgStepIndex(tab){
+    var d=orgStepDefs();
+    for(var i=0;i<d.length;i++){if(d[i][0]===tab)return i}
+    return 0;
+  }
+  function orgStepLabel(tab){
+    var d=orgStepDefs();
+    for(var i=0;i<d.length;i++){if(d[i][0]===tab)return d[i][1]}
+    return tab;
+  }
+  function acOrgStep(delta){
+    var f=ac.orgForm;if(!f)return;
+    acOrgDraft();
+    var d=orgStepDefs();
+    var i=Math.max(0,Math.min(d.length-1,orgStepIndex(f.tab)+delta));
+    f.tab=d[i][0];render();
+  }
+  window.acOrgTab=function(tab){var f=ac.orgForm;if(!f)return;acOrgDraft();f.tab=tab;render()};
+
   window.acOrgEdit=function(id){var key="institutions:"+ac.institutionType+":"+ac.institutionSearch;
     var rows=(ac.cache[key]||{}).items||[];for(var i=0;i<rows.length;i++){if(rows[i].id===id){acOrgFormOpen("edit",rows[i]);return}}};
   window.acOrgFormOpen=function(mode,o){acOrgFormInit(mode,o);
     var target=route()+(mode==="edit"?"/edit/"+encodeURIComponent(o.id):"/new");
     if(("#/"+target)===location.hash)render();else go(target)};
+
   // Adding or editing happens on its own route (#/schools/new, #/schools/edit/:id),
   // never inside the list and never in a squeezed pop-up.
-  function acOrgFormInit(mode,o){ac.orgForm={mode:mode,row:o||null,gov:"",govId:"",dist:"",_error:null,draft:{}};
+  function acOrgFormInit(mode,o){
+    ac.orgForm={mode:mode,row:o||null,gov:"",govId:"",dist:"",_error:null,draft:{},
+      tab:"basic",stages:[],subjects:[],docs:[],_refsLoaded:false};
     if(mode==="edit"&&o){ac.orgForm.gov=o.governorate||"";ac.orgForm.dist=o.district||""}
-    if(!ac.cache.locGovs)load("locGovs","/api/locations/governorates")};
+    if(!ac.cache.locGovs)load("locGovs","/api/locations/governorates");
+    acOrgLoadRefs();
+  }
+  // The catalog stages/subjects are reference data; the offering and the document
+  // list belong to the institution and only exist once it does.
+  function acOrgLoadRefs(){
+    var f=ac.orgForm;if(!f)return;
+    if(!ac.cache["orgRef:stages"])load("orgRef:stages","/api/academic/stages",listOf);
+    if(!ac.cache["orgRef:subjects"])load("orgRef:subjects","/api/academic/subjects",listOf);
+    var id=f.row&&f.row.id;
+    if(id&&!f._refsLoaded){
+      f._refsLoaded=true;
+      var enc=encodeURIComponent(id);
+      apiGet("/api/academic/org/"+enc+"/offering").then(function(off){
+        var g=ac.orgForm;if(!g||!g.row||String(g.row.id)!==String(id))return;
+        g.stages=(off&&off.stages?off.stages:[]).map(function(s){
+          return{stageId:String(s.stageId),amount:s.fee&&s.fee.amount!=null?String(s.fee.amount):"",
+            currency:(s.fee&&s.fee.currency)||"YER",frequency:(s.fee&&s.fee.frequency)||"yearly",
+            capacity:s.capacity==null?"":String(s.capacity),
+            languageCode:s.languageCode||"AR",deliveryMode:s.deliveryMode||"on_site"}});
+        g.subjects=(off&&off.subjects?off.subjects:[]).map(function(s){
+          return{subjectId:String(s.subjectId),name:s.name||"",
+            languageCode:s.languageCode||"AR",
+            amount:s.amount!=null?String(s.amount):"",
+            currency:s.currency||"YER",frequency:s.frequency||"yearly"}});
+        render()}).catch(function(){});
+      apiGet("/api/documents?organizationId="+enc).then(function(docs){
+        var g=ac.orgForm;if(!g||!g.row||String(g.row.id)!==String(id))return;
+        g.docs=asList(docs).map(function(d){
+          return{docType:d.docType,file:null,name:d.fileName,uploaded:true,status:d.status}});
+        render()}).catch(function(){});
+    }
+  }
   window.acOrgFormClose=function(){ac.orgForm=null;
     var target=route();if(("#/"+target)===location.hash)render();else go(target)};
   window.acOrgGov=function(code){ac.orgForm.gov=code||"";ac.orgForm.govId="";ac.orgForm.dist="";
@@ -64,28 +130,234 @@
   function acOrgDistOptions(){if(!ac.orgForm.govId)return wOpt("",t("— بدون مديرية —","— No district —"),ac.orgForm.dist);
     var out=wOpt("",t("— بدون مديرية —","— No district —"),ac.orgForm.dist);
     (ac.cache["locDist:"+ac.orgForm.govId]||[]).forEach(function(d){out+=wOpt(d.code,d.name||d.code,ac.orgForm.dist)});return out}
-  window.acOrgSave=function(){var f=ac.orgForm;if(!f||f._busy)return;
+
+  /* ---- step 2: the stages this institution teaches, with its own fee and seats ---- */
+  function orgRefStages(){return ac.cache["orgRef:stages"]||[]}
+  function orgRefSubjects(){return ac.cache["orgRef:subjects"]||[]}
+  window.acOrgStageAdd=function(){
+    var f=ac.orgForm;if(!f)return;acOrgDraft();
+    var used={};f.stages.forEach(function(s){used[String(s.stageId)]=1});
+    var pick="";var list=orgRefStages();
+    for(var i=0;i<list.length;i++){if(!used[String(list[i].id)]){pick=String(list[i].id);break}}
+    if(!pick){f._error=t("لا توجد مرحلة متاحة للإضافة — كل مراحل الكتالوج مضافة بالفعل.",
+      "No stage left to add — every catalog stage is already offered.");render();return}
+    f.stages.push({stageId:pick,amount:"",currency:"YER",frequency:"yearly",capacity:"",
+      languageCode:"AR",deliveryMode:"on_site"});
+    f._error=null;render()};
+  window.acOrgStageRemove=function(i){var f=ac.orgForm;if(!f)return;acOrgDraft();f.stages.splice(i,1);render()};
+  function acOrgStageSync(){var f=ac.orgForm;if(!f)return;
+    f.stages.forEach(function(s,i){
+      ["stage","amount","currency","frequency","capacity","lang","mode"].forEach(function(k){
+        var el=document.getElementById("ac-org-st-"+i+"-"+k);if(!el)return;
+        if(k==="stage")s.stageId=el.value;
+        else if(k==="amount")s.amount=String(el.value||"").trim();
+        else if(k==="currency")s.currency=el.value;
+        else if(k==="frequency")s.frequency=el.value;
+        else if(k==="capacity")s.capacity=String(el.value||"").trim();
+        else if(k==="lang")s.languageCode=el.value;
+        else s.deliveryMode=el.value})})}
+
+  /* ---- step 3: the subjects it teaches, with an optional fee each ---- */
+  window.acOrgSubjectAdd=function(){
+    var f=ac.orgForm;if(!f)return;acOrgDraft();
+    var used={};f.subjects.forEach(function(s){used[String(s.subjectId)]=1});
+    var pick="";var list=orgRefSubjects();
+    for(var i=0;i<list.length;i++){if(!used[String(list[i].id)]){pick=String(list[i].id);break}}
+    if(!pick){f._error=t("لا توجد مادة متاحة للإضافة — كل مواد الكتالوج مضافة بالفعل. استخدم الاقتراح أدناه لمادة جديدة.",
+      "No subject left to add — every catalog subject is already offered. Use the proposal below for a new one.");render();return}
+    f.subjects.push({subjectId:pick,name:"",languageCode:"AR",amount:"",currency:"YER",frequency:"yearly"});
+    f._error=null;render()};
+  window.acOrgSubjectRemove=function(i){var f=ac.orgForm;if(!f)return;acOrgDraft();f.subjects.splice(i,1);render()};
+  function acOrgSubjectSync(){var f=ac.orgForm;if(!f)return;
+    f.subjects.forEach(function(s,i){
+      ["subject","lang","amount","currency","frequency"].forEach(function(k){
+        var el=document.getElementById("ac-org-sub-"+i+"-"+k);if(!el)return;
+        if(k==="subject")s.subjectId=el.value;
+        else if(k==="lang")s.languageCode=el.value;
+        else if(k==="amount")s.amount=String(el.value||"").trim();
+        else if(k==="currency")s.currency=el.value;
+        else s.frequency=el.value})})}
+  // A subject the catalog lacks: proposed for THIS institution, pending admin review.
+  window.acOrgProposeSubject=function(){
+    var f=ac.orgForm;if(!f||f._busy)return;acOrgDraft();
+    var nameEl=document.getElementById("ac-org-newsub-ar");
+    var enEl=document.getElementById("ac-org-newsub-en");
+    var name=nameEl?String(nameEl.value||"").trim():"";
+    var nameEn=enEl?String(enEl.value||"").trim():"";
+    if(name.length<2){
+      f._error=t("اكتب اسم المادة بالعربية (حرفان على الأقل) قبل الإرسال.",
+        "Enter the subject name in Arabic (at least two characters) before submitting.");
+      ufPendingInvalid={tab:"subjects",id:"ac-org-newsub-ar",label:t("اسم المادة (عربي)","Subject name (Arabic)")};
+      render();return;
+    }
+    // Without an institution there is nothing to attach the proposal to yet, so it
+    // is held and created right after the institution itself is saved.
+    if(f.mode==="add"){
+      f.subjects.push({subjectId:"",name:name,nameEn:nameEn,languageCode:"AR",amount:"",currency:"YER",
+        frequency:"yearly",proposed:true});
+      if(nameEl)nameEl.value="";if(enEl)enEl.value="";
+      f._error=null;render();return;
+    }
+    f._busy=true;f._error=null;
+    apiPost("/api/academic/org/"+encodeURIComponent(f.row.id)+"/subjects",
+      {name:name,languageCode:"AR"}).then(function(){
+        f._busy=false;if(nameEl)nameEl.value="";if(enEl)enEl.value="";
+        delete ac.cache["orgRef:subjects"];render()})
+      .catch(function(e){f._busy=false;f._error=errorText(e);render()})};
+
+  /* ---- step 4: licences and accreditation files ---- */
+  window.acOrgDocAdd=function(){
+    var f=ac.orgForm;if(!f)return;
+    var type=(document.getElementById("ac-org-doc-type")||{}).value||"license";
+    var input=document.getElementById("ac-org-doc-file");
+    var file=input&&input.files&&input.files[0];
+    if(!file){
+      f._error=t("اختر ملف الرخصة أولاً.","Choose the licence file first.");
+      ufPendingInvalid={tab:"documents",id:"ac-org-doc-file",label:t("الملف","File")};
+      render();return;
+    }
+    f.docs.push({docType:type,file:file,name:file.name,uploaded:false});
+    f._error=null;
+    if(input)input.value="";
+    render();
+  };
+  window.acOrgDocRemove=function(i){
+    var f=ac.orgForm;if(!f)return;f.docs.splice(i,1);render()};
+
+  // Every required control, declared once with the step that owns it.
+  function orgRequiredRules(){
+    var rules=[{tab:"basic",id:"ac-org-name",label:t("اسم المؤسسة","Institution name"),min:2}];
+    (ac.orgForm&&ac.orgForm.stages||[]).forEach(function(s,i){
+      rules.push({tab:"offering",id:"ac-org-st-"+i+"-amount",kind:"number",
+        label:t("رسوم المرحلة","Stage fee")});
+    });
+    return rules;
+  }
+  function orgFirstProblem(){
+    var f=ac.orgForm;
+    var rules=orgRequiredRules();
+    var order=orgStepDefs().map(function(x){return x[0]});
+    for(var s=0;s<order.length;s++){
+      var hit=ufValidate(rules.filter(function(r){return r.tab===order[s]}));
+      if(hit)return hit;
+    }
+    return null;
+  }
+
+  function acOrgDraft(){
+    var f=ac.orgForm;if(!f)return;
+    ["ac-org-name","ac-org-email","ac-org-phone","ac-org-website","ac-org-desc","ac-org-address",
+     "ac-org-neigh","ac-org-gov","ac-org-dist","ac-org-reg","ac-org-type",
+     "ac-org-logo-upload-val","ac-org-newsub-ar","ac-org-newsub-en"].forEach(function(id){
+      var el=document.getElementById(id);if(el)f.draft[id]=el.value});
+    acOrgStageSync();acOrgSubjectSync();
+  }
+
+  window.acOrgSave=function(){
+    var f=ac.orgForm;if(!f||f._busy)return;
     if(f.mode==="edit"&&!f.row){f._error=t("تعذر تحميل المؤسسة. أعد المحاولة من القائمة.","Could not load the institution. Retry from the list.");render();return}
+    acOrgDraft();
+    // Strict validation: nothing is written while a required field on any step is
+    // empty. The user is sent to the step that owns the missing field.
+    var problem=orgFirstProblem();
+    if(problem){
+      problem.tabLabel=orgStepLabel(problem.tab);
+      f.tab=problem.tab;f._error=ufValidationMessage(problem);ufPendingInvalid=problem;render();return;
+    }
     if(f.gov&&!f.govId){var list=ac.cache.locGovs||[];for(var i=0;i<list.length;i++){if(list[i].code===f.gov){f.govId=list[i].id;break}}}
     if(f.govId)load("locDist:"+f.govId,"/api/locations/districts?governorateId="+f.govId);
-    f._error=null;var name=wVal("ac-org-name");
-    if(!name){f._error=t("اسم المؤسسة مطلوب.","Institution name is required.");render();return}
-    var payload={name:name,type:wVal("ac-org-type")||"private_school",email:wVal("ac-org-email"),
-      phone:wVal("ac-org-phone"),website:wVal("ac-org-website"),description:wVal("ac-org-desc"),
-      address:wVal("ac-org-address"),neighborhood:wVal("ac-org-neigh"),
-      registration_open:(wVal("ac-org-reg")||"open")==="open"};
+    var payload={name:wVal("ac-org-name"),type:wVal("ac-org-type")||"private_school",
+      email:wVal("ac-org-email"),phone:wVal("ac-org-phone"),website:wVal("ac-org-website"),
+      description:wVal("ac-org-desc"),address:wVal("ac-org-address"),neighborhood:wVal("ac-org-neigh"),
+      registration_open:(wVal("ac-org-reg")||"open")==="open",
+      image:ufUploadPath("ac-org-logo-upload")};
     var gov=wVal("ac-org-gov");if(gov){payload.governorate_code=gov;var dis=wVal("ac-org-dist");if(dis)payload.district_code=dis}
-    f._busy=true;var req=f.mode==="edit"?apiPut("/api/organizations/"+f.row.id,payload):apiPost("/api/organizations",payload);
-    req.then(function(){ac.orgForm=null;invalidate("institutions:");delete ac.cache.dashboard;
-      var target=route();if(("#/"+target)===location.hash)render();else go(target)})
-      .catch(function(e){f._busy=false;f._error=errorText(e);render()})};
-  function adminOrgForm(){var f=ac.orgForm;if(!f)return "";
-    ["ac-org-name","ac-org-email","ac-org-phone","ac-org-website","ac-org-desc","ac-org-address",
-     "ac-org-neigh","ac-org-gov","ac-org-dist","ac-org-reg"].forEach(function(id){
-      var el=document.getElementById(id);if(el)f.draft[id]=el.value});
-    function fd(id){var d=f.draft[id];if(d!=null)return d;
-      if(f.mode==="edit"&&f.row){var rk={name:"name",email:"email",phone:"phone",website:"website",desc:"description",address:"address",neigh:"neighborhood"}[id.split("-")[2]]||id.split("-")[2];
-        return f.row[rk]===undefined?"":f.row[rk]}return ""}
+    f._busy=true;f._error=null;
+    var req=f.mode==="edit"?apiPut("/api/organizations/"+f.row.id,payload):apiPost("/api/organizations",payload);
+    // The institution must exist before its offering, subjects and documents can be
+    // written, so the remaining steps run in sequence and any failure is reported
+    // instead of being hidden behind a "saved" message.
+    req.then(function(created){
+      var orgId=(created&&created.id)||(f.row&&f.row.id);
+      return acOrgApplySteps(orgId,f).then(function(failures){
+        return {orgId:orgId,failures:failures};
+      });
+    }).then(function(res){
+      f._busy=false;
+      ac.orgForm=null;invalidate("institutions:");delete ac.cache.dashboard;
+      if(res.failures.length){
+        ac.orgForm={mode:"edit",row:{id:res.orgId},gov:"",govId:"",dist:"",tab:"offering",
+          stages:[],subjects:[],docs:[],draft:{},_busy:false,_refsLoaded:false,
+          _error:t("حُفظت بيانات المؤسسة، لكن بعض الخطوات لم تكتمل: ","The institution was saved, but some steps did not complete: ")+res.failures.join(" · ")};
+        var t2="schools/edit/"+encodeURIComponent(res.orgId);
+        if(("#/"+t2)===location.hash)render();else go(t2);
+        return;
+      }
+      var target="schools";if(("#/"+target)===location.hash)render();else go(target);
+    }).catch(function(e){f._busy=false;f._error=errorText(e);render()})};
+
+  // Writes what the other three steps collected. Each call is independent, so one
+  // failing offer does not discard the rest; the failures are named back to the user.
+  function acOrgApplySteps(orgId,f){
+    var failures=[];
+    if(!orgId)return Promise.resolve([t("تعذر تحديد المؤسسة","could not resolve the institution")]);
+    var enc=encodeURIComponent(orgId);
+    var chain=Promise.resolve();
+    f.stages.forEach(function(s){
+      chain=chain.then(function(){
+        return apiPut("/api/academic/org/"+enc+"/offering/stages/"+encodeURIComponent(s.stageId),{
+          deliveryMode:s.deliveryMode,languageCode:s.languageCode,
+          amount:s.amount===""?null:s.amount,currency:s.currency,frequency:s.frequency,
+          capacity:s.capacity===""?null:Number(s.capacity)
+        }).catch(function(e){failures.push(t("المرحلة ","stage ")+(s.stageId)+": "+msgErr(e))});
+      });
+    });
+    // A subject the admin proposed is created first, then offered like the rest.
+    f.subjects.forEach(function(s){
+      chain=chain.then(function(){
+        if(s.proposed){
+          return apiPost("/api/academic/org/"+enc+"/subjects",
+            {name:s.name,nameEn:s.nameEn||undefined,languageCode:s.languageCode||"AR"})
+            .catch(function(e){failures.push(t("المادة المقترحة ","proposed subject ")+(s.name)+": "+msgErr(e))});
+        }
+        if(!s.subjectId)return null;
+        return apiPut("/api/academic/org/"+enc+"/offering/subjects/"+encodeURIComponent(s.subjectId),{
+          languageCode:s.languageCode,
+          fee_amount:s.amount===""?null:s.amount,currency:s.currency,frequency:s.frequency
+        }).catch(function(e){failures.push(t("المادة ","subject ")+(s.subjectId)+": "+msgErr(e))});
+      });
+    });
+    f.docs.forEach(function(d){
+      if(!d.file)return;
+      chain=chain.then(function(){
+        return fetch(API_BASE+'/api/documents/upload?organizationId='+enc+'&docType='+encodeURIComponent(d.docType),{
+          method:'POST',credentials:'include',
+          headers:{'Content-Type':'application/octet-stream','X-File-Name':d.name},
+          body:d.file
+        }).then(function(r){
+          if(!r.ok)return r.text().then(function(txt){
+            var m=null;try{m=JSON.parse(txt).error}catch(e){}
+            failures.push(t("الوثيقة ","document ")+d.name+": "+(m||r.status));});
+        }).catch(function(e){failures.push(t("الوثيقة ","document ")+d.name+": "+e.message)});
+      });
+    });
+    return chain.then(function(){return failures});
+  }
+
+  function adminOrgForm(){
+    var f=ac.orgForm;if(!f)return "";
+    // Reading the visible fields back first keeps a step switch from dropping what
+    // was typed, the same contract the other wizard forms use.
+    if(!f._refsLoaded)acOrgLoadRefs();
+    var fdv=function(id){
+      if(f.draft[id]!=null)return f.draft[id];
+      if(f.mode==="edit"&&f.row){
+        var rk={name:"name",email:"email",phone:"phone",website:"website",desc:"description",
+          address:"address",neigh:"neighborhood",image:"image"}[id.split("-")[2]]||id.split("-")[2];
+        return f.row[rk]===undefined?"":f.row[rk];
+      }
+      return "";
+    };
     if(f.gov&&!f.govId){var list=ac.cache.locGovs||[];for(var i=0;i<list.length;i++){if(list[i].code===f.gov){f.govId=list[i].id;break}}}
     if(f.govId)load("locDist:"+f.govId,"/api/locations/districts?governorateId="+f.govId);
     var typeSelVal=f.draft["ac-org-type"]!=null?f.draft["ac-org-type"]:(f.mode==="edit"?(f.row.type||"private_school"):ac.institutionType);
@@ -95,20 +367,137 @@
       '<div class="loading-inline"><div class="loader"></div></div>':
       '<select id="ac-org-dist" onchange="acOrgDist(this.value)">'+acOrgDistOptions()+'</select>'):
       '<small class="ac-hint">'+t("اختر المحافظة أولاً.","Choose a governorate first.")+'</small>';
-    return formPage({back:route(),error:formError(f)?f._error:null,busy:f._busy,onSave:"acOrgSave()",onCancel:"acOrgFormClose()",
-      title:f.mode==="edit"?t("تعديل مؤسسة","Edit institution"):t("إضافة مؤسسة","Add institution"),
-      subtitle:t("بيانات المؤسسة الأساسية. تُحدَّد الرسوم والسعة لاحقاً داخل عرض المؤسسة لا هنا.","Core institution record. Fees and capacity live in the institution offering, not here."),
-      body:wInput(t("الاسم *","Name *"),"ac-org-name",fd("ac-org-name"),t("اسم المؤسسة","Institution name"))+
-      wSel(t("النوع","Type"),"ac-org-type",typeStr)+wInput(t("البريد الإلكتروني","Email"),"ac-org-email",fd("ac-org-email"),"")+
-      wInput(t("الهاتف","Phone"),"ac-org-phone",fd("ac-org-phone"),t("+967...","+967..."))+
-      wInput(t("الموقع الإلكتروني","Website"),"ac-org-website",fd("ac-org-website"),"https://")+
-      '<div class="form-group"><label>'+t("التسجيل","Registration")+'</label><select id="ac-org-reg">'+wOpt("open",t("مفتوح","Open"),regOpen)+
-      wOpt("closed",t("مغلق","Closed"),regOpen)+'</select></div>'+
+
+    var basicStep=
+      wInput(t("اسم المؤسسة *","Institution name *"),"ac-org-name",fdv("ac-org-name"),t("اسم المؤسسة","Institution name"))+
+      wSel(t("النوع","Type"),"ac-org-type",typeStr)+
+      // A real upload with preview and change/remove, not a path to retype.
+      ufImageUpload("ac-org-logo-upload",t("شعار المؤسسة","Institution logo"),fdv("ac-org-logo-upload-val"),"logos",
+        {hint:t("JPG أو PNG أو WEBP، بحد أقصى 4 ميجابايت. يظهر الشعار على البطاقة وصفحة التفاصيل.",
+          "JPG, PNG or WEBP, up to 4 MB. The logo appears on the card and the detail page.")})+
+      wInput(t("البريد الإلكتروني","Email"),"ac-org-email",fdv("ac-org-email"),"")+
+      wInput(t("الهاتف","Phone"),"ac-org-phone",fdv("ac-org-phone"),t("+967...","+967..."))+
+      wInput(t("الموقع الإلكتروني","Website"),"ac-org-website",fdv("ac-org-website"),"https://")+
+      '<div class="form-group"><label>'+t("التسجيل","Registration")+'</label><select id="ac-org-reg">'+
+        wOpt("open",t("مفتوح","Open"),regOpen)+wOpt("closed",t("مغلق","Closed"),regOpen)+'</select></div>'+
       wSel(t("المحافظة","Governorate"),"ac-org-gov",acOrgGovOptions(),true)+
       '<div class="form-group ac-field-wide"><label>'+t("المديرية","District")+'</label>'+distSlot+'</div>'+
-      wInput(t("الحي","Neighborhood"),"ac-org-neigh",fd("ac-org-neigh"),"",true)+
-      wInput(t("العنوان","Address"),"ac-org-address",fd("ac-org-address"),"",true)+
-      wArea(t("الوصف","Description"),"ac-org-desc",fd("ac-org-desc"))})
+      wInput(t("الحي","Neighborhood"),"ac-org-neigh",fdv("ac-org-neigh"),"",true)+
+      wInput(t("العنوان","Address"),"ac-org-address",fdv("ac-org-address"),"",true)+
+      wArea(t("الوصف","Description"),"ac-org-desc",fdv("ac-org-desc"));
+
+    var stageRows=f.stages.map(function(s,i){
+      var stageOpts=orgRefStages().map(function(x){return wOpt(String(x.id),x.name,s.stageId)}).join("");
+      return '<div class="ac-repeat-row">'+
+        '<div class="form-group"><label>'+t("المرحلة","Stage")+'</label><select id="ac-org-st-'+i+'-stage">'+stageOpts+'</select></div>'+
+        '<div class="form-group"><label>'+t("الرسوم *","Fee *")+'</label><input id="ac-org-st-'+i+'-amount" type="number" min="0" step="0.01" value="'+esc(s.amount)+'" placeholder="0.00"></div>'+
+        '<div class="form-group"><label>'+t("العملة","Currency")+'</label><select id="ac-org-st-'+i+'-currency">'+
+          ["YER","SAR","USD"].map(function(c){return wOpt(c,c,s.currency)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("الدورية","Billing")+'</label><select id="ac-org-st-'+i+'-frequency">'+
+          [["yearly",t("سنوي","Yearly")],["termly",t("فصلي","Termly")],["monthly",t("شهري","Monthly")]]
+            .map(function(x){return wOpt(x[0],x[1],s.frequency)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("لغة التدريس","Language")+'</label><select id="ac-org-st-'+i+'-lang">'+
+          [["AR",t("العربية","Arabic")],["EN",t("الإنجليزية","English")]]
+            .map(function(x){return wOpt(x[0],x[1],s.languageCode)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("طريقة الحضور","Delivery")+'</label><select id="ac-org-st-'+i+'-mode">'+
+          [["on_site",t("حضوري","On-site")],["online",t("عن بُعد","Online")],["hybrid",t("مدمج","Blended")]]
+            .map(function(x){return wOpt(x[0],x[1],s.deliveryMode)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("السعة","Capacity")+'</label><input id="ac-org-st-'+i+'-capacity" type="number" min="0" dir="ltr" value="'+esc(s.capacity)+'" placeholder="—">'+
+        '<small class="ac-hint">'+t("اتركها فارغة إن لم تُعلن. المقاعد المتبقية تُحسب آلياً.","Leave empty if undeclared; remaining seats are computed.")+'</small></div>'+
+        '<button type="button" class="crud delete" title="'+t("حذف المرحلة","Remove stage")+'" onclick="acOrgStageRemove('+i+')">'+icon("trash",14)+'</button>'+
+        '</div>'}).join("");
+    var offeringStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("المراحل التي تدرّسها هذه المؤسسة, ورسومها وسعتها","The stages this institution teaches, with its fees and seats")+'</h3>'+
+        '<button type="button" class="btn" onclick="acOrgStageAdd()">'+icon("plus",14)+' '+t("إضافة مرحلة","Add stage")+'</button></div>'+
+      '<p class="ac-field-wide uf-wide ac-hint">'+
+        t("الرسوم والسعة خاصة بهذه المؤسسة وحدها؛ تغييرها لا يمس أي مؤسسة أخرى. الكتالوج العام بلا أسعار.",
+          "Fees and seats belong to this institution alone; changing them never touches another. The global catalog carries no prices.")+'</p>'+
+      (stageRows||'<div class="empty-state">'+t("لم تُضف مراحل بعد. أضف مرحلة لكل صف تدرّسه المؤسسة.",
+        "No stages yet. Add one for each level the institution teaches.")+'</div>');
+
+    var subjectRows=f.subjects.map(function(s,i){
+      if(s.proposed){
+        return '<div class="ac-repeat-row">'+
+          '<div class="form-group"><label>'+t("مادة مقترحة","Proposed subject")+'</label>'+
+          '<input value="'+esc(s.name)+'" readonly></div>'+
+          '<div class="form-group"><label>'+t("الحالة","Status")+'</label>'+
+          '<div><span class="badge wait">'+t("بانتظار اعتماد المدير العام","pending platform-admin approval")+'</span></div></div>'+
+          '<button type="button" class="crud delete" title="'+t("حذف","Remove")+'" onclick="acOrgSubjectRemove('+i+')">'+icon("trash",14)+'</button>'+
+          '</div>';
+      }
+      var subjOpts=orgRefSubjects().map(function(x){return wOpt(String(x.id),x.name,s.subjectId)}).join("");
+      return '<div class="ac-repeat-row">'+
+        '<div class="form-group"><label>'+t("المادة","Subject")+'</label><select id="ac-org-sub-'+i+'-subject">'+subjOpts+'</select></div>'+
+        '<div class="form-group"><label>'+t("لغة التدريس","Language")+'</label><select id="ac-org-sub-'+i+'-lang">'+
+          [["AR",t("العربية","Arabic")],["EN",t("الإنجليزية","English")]]
+            .map(function(x){return wOpt(x[0],x[1],s.languageCode)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("الرسوم","Fee")+'</label><input id="ac-org-sub-'+i+'-amount" type="number" min="0" step="0.01" value="'+esc(s.amount)+'" placeholder="—"></div>'+
+        '<div class="form-group"><label>'+t("العملة","Currency")+'</label><select id="ac-org-sub-'+i+'-currency">'+
+          ["YER","SAR","USD"].map(function(c){return wOpt(c,c,s.currency)}).join("")+'</select></div>'+
+        '<div class="form-group"><label>'+t("الدورية","Billing")+'</label><select id="ac-org-sub-'+i+'-frequency">'+
+          [["yearly",t("سنوي","Yearly")],["termly",t("فصلي","Termly")],["monthly",t("شهري","Monthly")]]
+            .map(function(x){return wOpt(x[0],x[1],s.frequency)}).join("")+'</select></div>'+
+        '<button type="button" class="crud delete" title="'+t("حذف المادة","Remove subject")+'" onclick="acOrgSubjectRemove('+i+')">'+icon("trash",14)+'</button>'+
+        '</div>'}).join("");
+    var subjectsStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("المواد واللغات المعتمدة","Subjects and approved languages")+'</h3>'+
+        '<button type="button" class="btn" onclick="acOrgSubjectAdd()">'+icon("plus",14)+' '+t("إضافة مادة","Add subject")+'</button></div>'+
+      (subjectRows||'<div class="empty-state">'+t("لم تُضف مواد بعد.","No subjects yet.")+'</div>')+
+      '<div class="ac-subfield ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("مادة غير موجودة في الكتالوج العام","A subject missing from the global catalog")+'</h3>'+
+        '<div class="ac-repeat-row">'+
+        '<div class="form-group"><label>'+t("اسم المادة (عربي)","Subject name (Arabic)")+'</label>'+
+        '<input id="ac-org-newsub-ar" value="" placeholder="'+t("مثال: الروبوتات","e.g. Robotics")+'"></div>'+
+        '<div class="form-group"><label>'+t("اسم المادة (إنجليزي)","Subject name (English)")+'</label>'+
+        '<input id="ac-org-newsub-en" dir="ltr" value=""></div>'+
+        '<button type="button" class="btn brown" onclick="acOrgProposeSubject()">'+icon("plus",14)+' '+
+        t("إرسال للاعتماد","Submit for approval")+'</button></div>'+
+        '<p class="ac-hint">'+t("تُضاف المادة لهذه المؤسسة وتبقى بانتظار اعتماد المدير العام. لغة التدريس والرسوم تُضبطان في سطر المادة.",
+          "The subject is added for this institution and stays pending platform-admin approval. Its language and fee are set on the subject row.")+'</p></div>';
+
+    var docTypes=[["license",t("ترخيص","Licence")],["ownership",t("إثبات ملكية","Ownership")],
+      ["authorization",t("تفويض","Authorization")],["registration",t("تسجيل","Registration")],
+      ["accreditation",t("اعتماد","Accreditation")],["other",t("أخرى","Other")]];
+    var docList=f.docs.map(function(d,i){
+      return '<div class="ac-repeat-row">'+
+        '<div class="form-group"><label>'+t("النوع","Type")+'</label>'+
+        '<input value="'+esc((docTypes.filter(function(x){return x[0]===d.docType})[0]||["",d.docType])[1])+'" readonly></div>'+
+        '<div class="form-group"><label>'+t("الملف","File")+'</label><input value="'+esc(d.name||"")+'" readonly></div>'+
+        '<div class="form-group"><label>'+t("الحالة","Status")+'</label><div>'+
+        (d.uploaded?'<span class="badge wait">'+esc(statusLabel(d.status||"pending"))+'</span>':
+          '<span class="badge wait">'+t("سيُرفع عند الحفظ","uploads on save")+'</span>')+
+        '</div></div>'+
+        '<button type="button" class="crud delete" title="'+t("حذف","Remove")+'" onclick="acOrgDocRemove('+i+')">'+icon("trash",14)+'</button>'+
+        '</div>'}).join("");
+    var documentsStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("التراخيص والاعتمادات","Licences and accreditation")+'</h3></div>'+
+      (docList||'<div class="empty-state">'+t("لا وثائق مرفوعة بعد.","No documents uploaded yet.")+'</div>')+
+      '<div class="ac-subfield ac-field-wide uf-wide"><h3 class="core-h3">'+t("رفع وثيقة","Upload a document")+'</h3>'+
+      '<div class="ac-repeat-row">'+
+      '<div class="form-group"><label>'+t("نوع الوثيقة","Document type")+'</label>'+
+      '<select id="ac-org-doc-type">'+docTypes.map(function(x){return wOpt(x[0],x[1],"license")}).join("")+'</select></div>'+
+      '<div class="form-group"><label>'+t("الملف (PDF أو صورة، 10 ميجابايت)","File (PDF or image, up to 10 MB)")+'</label>'+
+      '<input type="file" id="ac-org-doc-file" accept="application/pdf,image/jpeg,image/png,image/webp"></div>'+
+      '<button type="button" class="btn" onclick="acOrgDocAdd()">'+icon("download",14)+' '+t("إضافة الوثيقة","Add document")+'</button>'+
+      '</div><p class="ac-hint">'+
+      t("الوثائق خاصة ولا تُعرض للزوار؛ تُرفع إلى ملف المؤسسة للمراجعة.",
+        "Documents are private and are not shown to visitors; they go to the institution file for review.")+'</p></div>';
+
+    var stepBodies={basic:basicStep,offering:offeringStep,subjects:subjectsStep,documents:documentsStep};
+    var idx=orgStepIndex(f.tab);
+    return formPage({back:route(),error:f._error,busy:f._busy,
+      onSave:"acOrgSave()",onCancel:"acOrgFormClose()",
+      title:f.mode==="edit"?t("تعديل مؤسسة","Edit institution"):t("إضافة مؤسسة","Add institution"),
+      subtitle:t("بيانات المؤسسة, ثم مراحلها ورسومها, ثم موادها, ثم وثائقها.",
+        "The institution's record, then its stages and fees, then its subjects, then its documents."),
+      tabs:'<div class="ac-field-wide uf-wide">'+ufTabStrip(orgStepDefs(),f.tab,"acOrgTab")+'</div>',
+      body:(stepBodies[f.tab]||basicStep),
+      actions:ufWizardFooter({index:idx,total:orgStepDefs().length,
+        busy:f._busy,onCancel:"acOrgFormClose()",
+        onBack:"acOrgStep(-1)",onNext:"acOrgStep(1)",onSave:"acOrgSave()"})});
   }
   // The dedicated route is also the entry point on a refresh or a shared link, so
   // "edit" resolves its row from whatever list is already cached and falls back
@@ -121,9 +510,11 @@
         Object.keys(ac.cache).forEach(function(k){if(k.indexOf("institutions:")===0){
           ((ac.cache[k]||{}).items||[]).forEach(function(x){if(String(x.id)===String(id))row=x})}});
         if(row)acOrgFormInit("edit",row);
-        else{ac.orgForm={mode:"edit",row:null,gov:"",govId:"",dist:"",_error:null,draft:{},_loading:true};
+        else{ac.orgForm={mode:"edit",row:null,gov:"",govId:"",dist:"",_error:null,draft:{},
+          tab:"basic",stages:[],subjects:[],docs:[],_refsLoaded:false,_loading:true};
           apiGet("/api/organizations/"+encodeURIComponent(id)).then(function(r){ac.orgForm.row=r;
-            ac.orgForm.gov=r.governorate||"";ac.orgForm.dist=r.district||"";ac.orgForm._loading=false;render()})
+            ac.orgForm.gov=r.governorate||"";ac.orgForm.dist=r.district||"";
+            ac.orgForm._loading=false;acOrgLoadRefs();render()})
             .catch(function(e){ac.orgForm._error=errorText(e);ac.orgForm._loading=false;render()})}
       } else acOrgFormInit("add",null);
     }
@@ -147,20 +538,74 @@
     ["suspended","موقوف","Suspended"],["deletion_requested","طلب حذف","Deletion requested"],
     ["deletions","قائمة طلبات الحذف","Deletion queue"]];
 
-  // The teacher add/edit form is organised as four horizontal tabs, one concern
-  // each: who the teacher is, what they teach and for how much, when they are
-  // available, and what they are qualified in. Switching tabs syncs the visible
-  // fields into the in-memory draft first, so nothing typed on a previous tab is
-  // lost — the same draft mechanism the dynamic rows already relied on.
+  // The teacher add/edit form is a wizard of four ordered steps, one concern each:
+  // who the teacher is, what they teach (and where, and for how much), when they
+  // are free, and what they are qualified in. Each step is a real editing surface —
+  // not a placeholder waiting for a pop-up — and the fields are distributed so no
+  // step is overloaded: teaching modes belong with the subject they price, and the
+  // academic stages belong with the qualifications they describe.
   var TEACHER_FORM_TABS=[["basic","البيانات الأساسية"],["subjects","المواد والأسعار والعروض"],
     ["availability","أوقات التوفر والجدول"],["qualifications","المؤهلات والخبرات"]];
   var TEACHER_FORM_TABS_EN=[["basic","Basic info"],["subjects","Subjects, pricing and offers"],
     ["availability","Availability and schedule"],["qualifications","Qualifications and experience"]];
+  function teacherStepDefs(){return lang==="ar"?TEACHER_FORM_TABS:TEACHER_FORM_TABS_EN}
+  function teacherStepIndex(tab){
+    var d=teacherStepDefs();
+    for(var i=0;i<d.length;i++){if(d[i][0]===tab)return i}
+    return 0;
+  }
+  function teacherStepLabel(tab){
+    var d=teacherStepDefs();
+    for(var i=0;i<d.length;i++){if(d[i][0]===tab)return d[i][1]}
+    return tab;
+  }
   window.acTeacherFormTab=function(tab){
     var f=ac.teacherForm;if(!f)return;
     acTeacherDraft();
     f.tab=tab;render();
   };
+  // Prev/Next move one step and sync the draft first, so a value typed on the
+  // current step is never lost by the re-render that shows the next one.
+  window.acTeacherStep=function(delta){
+    var f=ac.teacherForm;if(!f)return;
+    acTeacherDraft();
+    var d=teacherStepDefs();
+    var i=Math.max(0,Math.min(d.length-1,teacherStepIndex(f.tab)+delta));
+    f.tab=d[i][0];render();
+  };
+
+  // What each step requires. Declared once, with the step that owns each field, so
+  // the guard and the "jump to the offending step" behaviour cannot disagree.
+  function teacherRequiredRules(){
+    var isAdd=ac.teacherForm&&ac.teacherForm.mode==="add";
+    var rules=[
+      {tab:"basic",id:"ac-t-name",label:t("الاسم الكامل (عربي)","Full name (Arabic)"),min:2},
+      {tab:"basic",id:"ac-t-email",label:t("البريد الإلكتروني","Email"),min:5}
+    ];
+    if(isAdd)rules.push({tab:"basic",id:"ac-t-password",label:t("كلمة المرور","Password"),min:8});
+    // At least one subject, priced: a teacher with nothing to teach cannot be
+    // offered, and the price is what a parent comes to see.
+    rules.push({tab:"subjects",id:"ac-t-sub-0-amount",kind:"number",label:t("سعر المادة","Subject price")});
+    rules.push({tab:"subjects",id:"ac-t-sub-0-mode",label:t("مكان التدريس","Teaching place")});
+    return rules;
+  }
+  // The row-level rule needs a friendlier message than "field missing" when the
+  // teacher simply has not added a subject yet. Steps are walked in order, so a
+  // problem on step 1 is reported before a problem on step 2 — the user fixes the
+  // form from the beginning instead of being sent back and forth.
+  function teacherFirstProblem(){
+    var f=ac.teacherForm;
+    var rules=teacherRequiredRules();
+    var order=teacherStepDefs().map(function(x){return x[0]});
+    for(var s=0;s<order.length;s++){
+      var step=order[s];
+      if(step==="subjects"&&f&&!(f.subjects||[]).length)
+        return {tab:"subjects",id:"ac-t-subject-add",label:t("أضف مادة واحدة على الأقل","Add at least one subject")};
+      var hit=ufValidate(rules.filter(function(r){return r.tab===step}));
+      if(hit)return hit;
+    }
+    return null;
+  }
 
   function teacherCurrencyLabel(c){return c==="SAR"?t("ريال سعودي (SAR)","Saudi riyal (SAR)"):t("ريال يمني (YER)","Yemeni riyal (YER)")}
   function teacherLangLabel(c){return c==="EN"?t("إنجليزي","English"):t("عربي","Arabic")}
@@ -268,6 +713,7 @@
       f.subjects=(r.subjects||[]).map(function(s){
         return{subjectId:String(s.subjectId||s.id),amount:s.amount==null?"":s.amount,
           currency:s.currency||"YER",billingPeriod:s.billingPeriod||"hourly",languageCode:s.languageCode||"AR",
+          locationMode:s.locationMode||"",
           discountPercent:s.discountPercent==null?"":s.discountPercent,promoLabel:s.promoLabel||""}});
     }
     if(mode==="add"){
@@ -310,9 +756,12 @@
     if(subjectId)pick=String(subjectId);
     else{var list=(teacherCatalog()||{}).subjects||[];
       for(var i=0;i<list.length;i++){if(!used[String(list[i].id)]){pick=String(list[i].id);break}}}
-    if(!pick){f._error=t("لا توجد مادة متاحة للإضافة. استخدم + لإضافة مادة جديدة.","No subject left to add. Use + to propose a new one.");return render()}
+    if(!pick){f._error=t("لا توجد مادة متاحة للإضافة. اقترح مادة جديدة من الحقول أدناه.","No subject left to add. Propose a new one from the fields below.");return render()}
+    // The place starts unchosen so the admin makes the decision explicitly; the
+    // strict guard refuses to save a priced subject that does not say where it is
+    // taught.
     f.subjects.push({subjectId:pick,amount:"",currency:"YER",billingPeriod:"hourly",languageCode:"AR",
-      discountPercent:"",promoLabel:""});
+      locationMode:"",discountPercent:"",promoLabel:""});
     f._error=null;render()};
   window.acTeacherSubjectRemove=function(index){
     var f=ac.teacherForm;if(!f)return;
@@ -325,14 +774,25 @@
       if(el("currency"))s.currency=el("currency").value;
       if(el("period"))s.billingPeriod=el("period").value;
       if(el("lang"))s.languageCode=el("lang").value;
+      if(el("mode"))s.locationMode=el("mode").value;
       if(el("discount"))s.discountPercent=String(el("discount").value||"").trim();
       if(el("promo"))s.promoLabel=String(el("promo").value||"").trim();
       if(el("subject"))s.subjectId=el("subject").value})}
-  window.acTeacherNewSubject=function(){
+  // A subject the catalog lacks is proposed from real fields inside the step, not
+  // from a browser prompt: the values are visible, reviewable and part of the form.
+  window.acTeacherProposeSubject=function(){
     var f=ac.teacherForm;if(!f||f._busy)return;
-    var name=(prompt(t("اسم المادة الجديدة بالكامل:","Full name of the new subject:"))||"").trim();
-    if(!name)return;
-    var nameEn=(prompt(t("الاسم الإنجليزي للمادة (اختياري):","English name of the subject (optional):"))||"").trim();
+    acTeacherDraft();
+    var nameEl=document.getElementById("ac-t-newsub-ar");
+    var enEl=document.getElementById("ac-t-newsub-en");
+    var name=nameEl?String(nameEl.value||"").trim():"";
+    var nameEn=enEl?String(enEl.value||"").trim():"";
+    if(name.length<2){
+      f._error=t("اكتب اسم المادة بالعربية (حرفان على الأقل) قبل الإرسال.",
+                 "Enter the subject name in Arabic (at least two characters) before submitting.");
+      ufPendingInvalid={tab:"subjects",id:"ac-t-newsub-ar",label:t("اسم المادة (عربي)","Subject name (Arabic)")};
+      render();return;
+    }
     f._busy=true;f._error=null;
     apiPost("/api/teachers/subjects",{name:name,nameEn:nameEn||undefined}).then(function(row){
       f._busy=false;delete ac.cache.teacherCatalog;
@@ -355,8 +815,18 @@
   window.acTeacherSave=function(){
     var f=ac.teacherForm;if(!f||f._busy)return;f._error=null;
     if(f.mode==="edit"&&!f.row){f._error=t("تعذر تحميل المعلم. أعد المحاولة من القائمة.","Could not load the teacher. Retry from the list.");render();return}
-    var el=function(id){return document.getElementById(id)||{checked:false,value:""}};
     acTeacherDraft();
+    // Strict validation before anything is sent. A missing required field on any
+    // step stops the save, opens the step that owns it, rings the field and says
+    // what is missing — the submission never becomes a half-written record.
+    var problem=teacherFirstProblem();
+    if(problem){
+      problem.tabLabel=teacherStepLabel(problem.tab);
+      f.tab=problem.tab;
+      f._error=ufValidationMessage(problem);
+      ufPendingInvalid=problem;
+      render();return;
+    }
     var body={
       name:wVal("ac-t-name"),nameEn:wVal("ac-t-name-en"),bio:wVal("ac-t-bio"),
       headline:wVal("ac-t-headline"),gender:wVal("ac-t-gender"),
@@ -364,24 +834,31 @@
       addressLine:wVal("ac-t-address"),skills:wVal("ac-t-skills"),
       countryId:wVal("ac-t-country")||null,
       governorateId:wVal("ac-t-gov")||null,districtId:wVal("ac-t-dist")||null,neighborhoodId:wVal("ac-t-hood")||null,
-      offersOnline:el("ac-t-online").checked,travelsToStudentHome:el("ac-t-travel").checked,
-      acceptsStudentHome:el("ac-t-home").checked,avatarUrl:wVal("ac-t-avatar")
+      // The profile photo is uploaded first; the form only carries the stored path.
+      avatarUrl:ufUploadPath("ac-t-avatar-upload")
     };
     var exp=wVal("ac-t-exp");if(exp!=="")body.experienceYears=Number(exp);
     body.stageIds=f.stages;
     body.subjects=f.subjects.map(function(s){
       return{subjectId:Number(s.subjectId),amount:s.amount===""?null:Number(s.amount),
         currency:s.currency,billingPeriod:s.billingPeriod,languageCode:s.languageCode,
+        locationMode:s.locationMode||null,
         // An empty discount is "no promotion", which the server stores as NULL
         // and reads back as undefined — never as a 0% discount.
         discountPercent:(s.discountPercent==null||s.discountPercent==="")?null:Number(s.discountPercent),
         promoLabel:s.promoLabel||null}});
+    // The place of each lesson is the per-subject answer, so the teacher-level
+    // flags the directory filters on are derived from those rows — one source of
+    // truth, and the server re-derives them the same way.
+    var modeList=body.subjects.map(function(s){return s.locationMode}).filter(Boolean);
+    body.offersOnline=modeList.indexOf("online")>-1;
+    body.travelsToStudentHome=modeList.indexOf("student_home")>-1;
+    body.acceptsStudentHome=modeList.indexOf("teacher_location")>-1;
     body.qualifications=f.quals.map(function(q){return{title:q.title,institutionName:q.institutionName,degree:q.degree,year:q.year}}) .filter(function(q){return q.title});
     var el2=function(id){return document.getElementById(id)};
     if(el2("ac-t-skill-input")){var extra=String(el2("ac-t-skill-input").value||"").trim();if(extra)body.skills=(body.skills?body.skills+", ":"")+extra}
     if(f.mode==="add"){
       body.email=wVal("ac-t-email");body.password=wVal("ac-t-password");
-      if(!body.name||!body.email||!body.password){f._error=t("الاسم والبريد وكلمة المرور مطلوبة.","Name, email and password are required.");return render()}
     }
     body.availability=f.avails.map(function(s){
       return{dayOfWeek:s.dayOfWeek,startTime:s.startTime,endTime:s.endTime,locationMode:s.locationMode}});
@@ -498,14 +975,16 @@
       teacher_location:t("في مقر المعلم","At the teacher's place")};
     return map[mode]||mode||"—"}
   var AC_TEACHER_FORM_IDS=["ac-t-name","ac-t-name-en","ac-t-email","ac-t-phone","ac-t-whatsapp","ac-t-address",
-    "ac-t-headline","ac-t-exp","ac-t-gender","ac-t-skills","ac-t-bio","ac-t-avatar","ac-t-password"];
+    "ac-t-headline","ac-t-exp","ac-t-gender","ac-t-skills","ac-t-bio","ac-t-password",
+    // The upload control keeps the stored path in a hidden input, so the path the
+    // admin just uploaded survives a step switch the same way a typed value does.
+    "ac-t-avatar-upload-val"];
   function acTeacherVal(f,id,fallback){
     if(f.draft[id]!=null)return f.draft[id];
     return fallback==null?"":String(fallback)}
   function acTeacherDraft(){var f=ac.teacherForm;if(!f)return;
     AC_TEACHER_FORM_IDS.forEach(function(id){var el=document.getElementById(id);if(el)f.draft[id]=el.value});
     acTeacherSubjectSync();acTeacherQualSync();acTeacherAvailSync()}
-  window.acTeacherModesChanged=function(){acTeacherDraft();render()};
   window.acTeacherAvailAdd=function(){var f=ac.teacherForm;if(!f)return;
     acTeacherDraft();f.avails.push({dayOfWeek:0,startTime:"08:00",endTime:"12:00",locationMode:"online"});render()};
   window.acTeacherAvailRemove=function(index){var f=ac.teacherForm;if(!f)return;
@@ -520,14 +999,17 @@
         else if(k==="end")s.endTime=el.value;
         else s.locationMode=el.value})})}
 
-  // The tab strip sits at the top of the form card and spans both grid tracks.
+
+  // The step strip sits at the top of the form card and spans both grid tracks.
   function teacherFormTabBar(f){
-    var defs=lang==="ar"?TEACHER_FORM_TABS:TEACHER_FORM_TABS_EN;
-    return '<div class="ac-field-wide uf-wide"><div class="ac-tabs uf-tabs">'+
-      defs.map(function(x){
-        return '<button type="button" class="'+(f.tab===x[0]?"active":"")+
-          '" onclick="acTeacherFormTab(\''+x[0]+'\')">'+esc(x[1])+'</button>'}).join("")+
-      '</div></div>';
+    return '<div class="ac-field-wide uf-wide">'+ufTabStrip(teacherStepDefs(),f.tab,"acTeacherFormTab")+'</div>';
+  }
+  // Where a lesson happens, as a per-subject choice. Same three values the weekly
+  // availability uses, so "online" means one thing across the whole profile.
+  function teacherModeOptions(selected){
+    var modes=(teacherCatalog()||{}).availabilityModes||["online","student_home","teacher_location"];
+    return wOpt("",t("— اختر مكان التدريس —","— Choose the place —"),selected||"")+
+      modes.map(function(m){return wOpt(m,acTeacherSlotModeLabel(m),selected||"")}).join("");
   }
 
   function adminTeacherForm(){
@@ -548,8 +1030,9 @@
     if(!countryId&&cat.countries.length)countryId=String(cat.countries[0].id);
     cat.countries.forEach(function(c){countryOptions+=wOpt(String(c.id),c.name,countryId)});
 
+    /* ---- step 2: one priced row per subject, including where it is taught ---- */
     var subjectRows=f.subjects.map(function(s,i){
-      return '<div class="ac-repeat-row">'+
+      return '<div class="ac-repeat-row ac-subject-row">'+
         '<div class="form-group"><label>'+t("المادة","Subject")+'</label><select id="ac-t-sub-'+i+'-subject">'+acTeacherSubjectOptions(s.subjectId)+'</select></div>'+
         '<div class="form-group"><label>'+t("السعر","Price")+'</label><input id="ac-t-sub-'+i+'-amount" type="number" min="0" step="0.01" value="'+esc(s.amount)+'" placeholder="0.00"></div>'+
         '<div class="form-group"><label>'+t("العملة","Currency")+'</label><select id="ac-t-sub-'+i+'-currency">'+
@@ -558,6 +1041,10 @@
           TEACHER_PERIODS.map(function(p){return wOpt(p,teacherPeriodLabel(p),s.billingPeriod)}).join("")+'</select></div>'+
         '<div class="form-group"><label>'+t("لغة التدريس","Teaching language")+'</label><select id="ac-t-sub-'+i+'-lang">'+
           TEACHER_LANGUAGES.map(function(l){return wOpt(l,teacherLangLabel(l),s.languageCode)}).join("")+'</select></div>'+
+        // The place belongs with the price: an online lesson and a lesson at the
+        // student's home are two different offers, not one flag on the profile.
+        '<div class="form-group"><label>'+t("مكان التدريس *","Teaching place *")+'</label><select id="ac-t-sub-'+i+'-mode">'+
+          teacherModeOptions(s.locationMode)+'</select></div>'+
         // The promotion rides on the same priced row as the list price, so a
         // discount can never contradict the amount it discounts.
         '<div class="form-group"><label>'+t("الخصم %","Discount %")+'</label><input id="ac-t-sub-'+i+'-discount" type="number" min="0" max="100" step="0.01" dir="ltr" value="'+esc(s.discountPercent==null?"":s.discountPercent)+'" placeholder="—"></div>'+
@@ -565,6 +1052,7 @@
         '<button type="button" class="crud delete" title="'+t("حذف المادة","Remove subject")+'" onclick="acTeacherSubjectRemove('+i+')">'+icon("trash",14)+'</button>'+
         '</div>'}).join("");
 
+    /* ---- step 3: weekly windows ---- */
     var availRows=f.avails.map(function(s,i){
       return '<div class="ac-repeat-row">'+
         '<div class="form-group"><label>'+t("اليوم","Day")+'</label><select id="ac-t-av-'+i+'-day">'+
@@ -576,6 +1064,7 @@
         '<button type="button" class="crud delete" title="'+t("حذف الوقت","Remove slot")+'" onclick="acTeacherAvailRemove('+i+')">'+icon("trash",14)+'</button>'+
         '</div>'}).join("");
 
+    /* ---- step 4: qualifications ---- */
     var qualRows=f.quals.map(function(q,i){
       return '<div class="ac-repeat-row">'+
         '<div class="form-group"><label>'+t("المؤهل","Qualification")+'</label><input id="ac-t-qual-'+i+'-title" value="'+esc(q.title)+'" placeholder="'+t("مثال: بكالوريوس فيزياء","e.g. BSc Physics")+'"></div>'+
@@ -584,89 +1073,104 @@
         '<div class="form-group"><label>'+t("السنة","Year")+'</label><input id="ac-t-qual-'+i+'-year" type="number" min="1950" max="2100" value="'+esc(q.year)+'"></div>'+
         '<button type="button" class="crud delete" title="'+t("حذف المؤهل","Remove qualification")+'" onclick="acTeacherQualRemove('+i+')">'+icon("trash",14)+'</button>'+
         '</div>'}).join("");
-
+    // The academic stages describe what the teacher is qualified to teach, so they
+    // live with the qualifications rather than among the contact details.
     var stageChips=cat.stages.map(function(st){
       var on=f.stages.indexOf(String(st.id))>-1;
       return '<button type="button" class="core-chip'+(on?"":" off")+'" onclick="acTeacherStageToggle(\''+st.id+'\')">'+
         (on?icon("check",12):icon("plus",12))+' '+esc(st.name)+'</button>'}).join("");
 
-    var live=function(id){var el=document.getElementById(id);return el?el.checked:null};
-    var modesNow=teacherModes({
-      offersOnline:live("ac-t-online")===null?(isAdd?true:Boolean(row.offersOnline)):live("ac-t-online"),
-      travelsToStudentHome:live("ac-t-travel")===null?Boolean(row.travelsToStudentHome):live("ac-t-travel"),
-      acceptsStudentHome:live("ac-t-home")===null?Boolean(row.acceptsStudentHome):live("ac-t-home")});
-
     var curStatus=val("ac-t-status",row.status||"active");
     var curVerif=val("ac-t-verif",row.verificationStatus||"pending");
 
-    return formPage({back:route(),error:f._error,busy:f._busy,onSave:"acTeacherSave()",onCancel:"acTeacherFormClose()",
-      title:isAdd?t("إضافة معلم","Add teacher"):t("تعديل بيانات المعلم","Edit teacher"),
-      subtitle:t("المعلم مستقل: حساب دخول، مواد بأسعارها، أوقات توفر، مؤهلات وموقع.","A teacher is independent: login account, per-subject prices, availability, qualifications and location."),
-      body:teacherFormTabBar(f)+(
-        f.tab==="basic"?(
-        wInput(t("الاسم الكامل (عربي) *","Full name (Arabic) *"),"ac-t-name",val("ac-t-name",row.userName),t("مثال: عبدالله الشامي","e.g. Abdullah Al-Shami"))+
-        wInput(t("الاسم بالإنجليزية","Name in English"),"ac-t-name-en",val("ac-t-name-en",row.nameEn),"Abdullah Al-Shami")+
-        wInput(t("البريد الإلكتروني *","Email *"),"ac-t-email",val("ac-t-email",row.userEmail),"teacher@example.com")+
-        (isAdd?
-          '<div class="form-group"><label>'+t("كلمة المرور *","Password *")+'</label><div class="ac-pass-wrap">'+
-          '<input id="ac-t-password" type="'+(f.showPass?"text":"password")+'" value="'+esc(val("ac-t-password",""))+'" placeholder="'+t("8 أحرف مع حرف كبير ورمز","8+ chars, one capital, one symbol")+'">'+
-          '<button type="button" class="btn ac-pass-toggle" onclick="acTeacherPassToggle()">'+icon("eye",14)+
-          '<span>'+t(f.showPass?"إخفاء":"إظهار",f.showPass?"Hide":"Show")+'</span></button></div>'+
-          '<p class="ac-hint">'+t("تُشفَّر كلمة المرور bcrypt على الخادم ولا تُحفظ كنص.","The password is bcrypt-hashed on the server and never stored as text.")+'</p></div>':
-          wInput(t("كلمة المرور","Password"),"ac-t-password-hidden","",t("لا تُعدّل من هنا — تُدار من حساب المستخدم","Not edited here — it lives on the user account)")))+
-        '<div class="form-group"><label>'+t("الهاتف","Phone")+'</label><input id="ac-t-phone" dir="ltr" value="'+esc(val("ac-t-phone",row.userPhone||row.phone))+'" placeholder="+967 7XX XXX XXX"></div>'+
-        '<div class="form-group"><label>'+t("واتساب","WhatsApp")+'</label><input id="ac-t-whatsapp" dir="ltr" value="'+esc(val("ac-t-whatsapp",row.whatsapp))+'" placeholder="+967 7XX XXX XXX">'+
-        '<p class="ac-hint">'+t("يُترك فارغاً لاستخدام رقم الهاتف نفسه.","Leave empty to use the phone number.")+'</p></div>'+
-        wSel(t("البلد","Country"),"ac-t-country",countryOptions,"","acTeacherCountry()")+
-        wSel(t("المحافظة","Governorate"),"ac-t-gov",teacherGovOptions(f.countryCode,f.govId),"","acTeacherGov()")+
-        wSel(t("المديرية","District"),"ac-t-dist",teacherDistrictOptions(f.govId,f.distId),"","acTeacherDistrict()")+
-        wSel(t("الحي","Neighbourhood"),"ac-t-hood",teacherHoodOptions(f.distId,f.hoodId),"","acTeacherNeighborhood()")+
-        wInput(t("العنوان التفصيلي","Street address"),"ac-t-address",val("ac-t-address",row.addressLine),t("الشارع / أقرب معلم","Street / nearest landmark"),true)+
-        wInput(t("العنوان المهني","Professional headline"),"ac-t-headline",val("ac-t-headline",row.headline),t("مثال: معلم رياضيات خبرة 10 سنوات","e.g. Math teacher, 10 years experience"),true)+
-        wInput(t("سنوات الخبرة","Years of experience"),"ac-t-exp",val("ac-t-exp",row.experienceYears),t("السنوات","years"))+
-        '<div class="form-group"><label>'+t("الجنس","Gender")+'</label><select id="ac-t-gender">'+
-          wOpt("",t("غير محدد","Unspecified"),val("ac-t-gender",row.gender))+
-          wOpt("male",t("ذكر","Male"),val("ac-t-gender",row.gender))+
-          wOpt("female",t("أنثى","Female"),val("ac-t-gender",row.gender))+'</select></div>'+
-        wInput(t("المهارات (مفصولة بفاصلة)","Skills (comma separated)"),"ac-t-skills",val("ac-t-skills",(row.skills||[]).join(", ")),t("برمجة, روبوتيكس, مختبرات","Programming, robotics, labs"),true)+
-        wInput(t("رابط الصورة الرمزية","Avatar URL"),"ac-t-avatar",val("ac-t-avatar",row.avatarUrl),"/uploads/avatars/teacher.png",true)+
-        wArea(t("نبذة","Bio"),"ac-t-bio",val("ac-t-bio",row.bio))+
-        '<div class="form-group ac-field-wide"><label>'+t("طرق التدريس","Teaching modes")+'</label>'+
-          '<div class="ac-checkgrid">'+
-          wCheck(t("دروس عن بعد","Online lessons"),"ac-t-online",f.draft["ac-t-online"]!=null?f.draft["ac-t-online"]:(isAdd?true:Boolean(row.offersOnline)))+
-          wCheck(t("الانتقال إلى منزل الطالب","Travels to the student\'s home"),"ac-t-travel",f.draft["ac-t-travel"]!=null?f.draft["ac-t-travel"]:Boolean(row.travelsToStudentHome))+
-          wCheck(t("استقبال الطلاب في مقر المعلم","Receives students at their own place"),"ac-t-home",f.draft["ac-t-home"]!=null?f.draft["ac-t-home"]:Boolean(row.acceptsStudentHome))+
-          '</div><div class="core-chips ac-mode-summary">'+
-          (modesNow.length?'<span class="core-chip"><b>'+esc(modesNow.join(" / "))+'</b></span>':
-            '<span class="gated-value">'+t("اختر طريقة تدريس واحدة على الأقل.","Select at least one teaching mode.")+'</span>')+
-          '</div></div>'+
-        '<div class="form-group ac-field-wide"><label>'+t("المستويات الدراسية","Academic stages")+'</label>'+
-          '<div class="core-chips">'+(stageChips||'<span class="gated-value">'+t("لا مراحل في الكتالوج العام.","No stages in the global catalog.")+'</span>')+'</div></div>'+
-        (isAdd?"":wSel(t("الحالة","Status"),"ac-t-status",
-          wOpt("active",t("نشط","Active"),curStatus)+wOpt("inactive",t("غير نشط","Inactive"),curStatus)+
-          wOpt("suspended",t("موقوف","Suspended"),curStatus)))+
-        (isAdd?"":wSel(t("التحقق","Verification"),"ac-t-verif",
-          wOpt("pending",t("بانتظار التحقق","Pending"),curVerif)+wOpt("verified",t("موثق","Verified"),curVerif)+
-          wOpt("rejected",t("مرفوض","Rejected"),curVerif)))
-        ):"" )+(
-        f.tab==="subjects"?(
-      '<div class="core-h3-row"><h3 class="core-h3">'+t("المواد الدراسية والأسعار","Subjects and pricing")+'</h3>'+
-        '<div class="ac-row-actions"><button type="button" class="mini-plus" title="'+
-        t("إضافة مادة غير موجودة في الكتالوج العام","Propose a subject missing from the global catalog")+'" '+
-        (f._busy?"disabled":"")+' onclick="acTeacherNewSubject()">'+icon("plus",15)+'</button>'+
-        '<button type="button" class="btn" onclick="acTeacherSubjectAdd()">'+icon("plus",14)+' '+t("إضافة مادة","Add subject")+'</button></div></div>'+
-      (subjectRows||'<div class="empty-state">'+t("لم تُضف مواد بعد. لكل مادة سعرها وعملتها ودوريتها ولغتها.","No subjects yet. Each subject carries its own price, currency, billing period and language.")+'</div>')
-        ):"" )+(
-        f.tab==="availability"?(
-      '<div class="core-h3-row"><h3 class="core-h3">'+t("أوقات التوفر","Weekly availability")+'</h3>'+
+    /* ---- the four steps ---- */
+    var basicStep=
+      wInput(t("الاسم الكامل (عربي) *","Full name (Arabic) *"),"ac-t-name",val("ac-t-name",row.userName),t("مثال: عبدالله الشامي","e.g. Abdullah Al-Shami"))+
+      wInput(t("الاسم بالإنجليزية","Name in English"),"ac-t-name-en",val("ac-t-name-en",row.nameEn),"Abdullah Al-Shami")+
+      wInput(t("البريد الإلكتروني *","Email *"),"ac-t-email",val("ac-t-email",row.userEmail),"teacher@example.com")+
+      (isAdd?
+        '<div class="form-group"><label>'+t("كلمة المرور *","Password *")+'</label><div class="ac-pass-wrap">'+
+        '<input id="ac-t-password" type="'+(f.showPass?"text":"password")+'" value="'+esc(val("ac-t-password",""))+'" placeholder="'+t("8 أحرف مع حرف كبير ورمز","8+ chars, one capital, one symbol")+'">'+
+        '<button type="button" class="btn ac-pass-toggle" onclick="acTeacherPassToggle()">'+icon("eye",14)+
+        '<span>'+t(f.showPass?"إخفاء":"إظهار",f.showPass?"Hide":"Show")+'</span></button></div>'+
+        '<p class="ac-hint">'+t("تُشفَّر كلمة المرور bcrypt على الخادم ولا تُحفظ كنص.","The password is bcrypt-hashed on the server and never stored as text.")+'</p></div>':
+        wInput(t("كلمة المرور","Password"),"ac-t-password-hidden","",t("لا تُعدّل من هنا — تُدار من حساب المستخدم","Not edited here — it lives on the user account)")))+
+      '<div class="form-group"><label>'+t("الهاتف","Phone")+'</label><input id="ac-t-phone" dir="ltr" value="'+esc(val("ac-t-phone",row.userPhone||row.phone))+'" placeholder="+967 7XX XXX XXX"></div>'+
+      '<div class="form-group"><label>'+t("واتساب","WhatsApp")+'</label><input id="ac-t-whatsapp" dir="ltr" value="'+esc(val("ac-t-whatsapp",row.whatsapp))+'" placeholder="+967 7XX XXX XXX"></div>'+
+      wInput(t("العنوان المهني","Professional headline"),"ac-t-headline",val("ac-t-headline",row.headline),t("مثال: معلم رياضيات خبرة 10 سنوات","e.g. Math teacher, 10 years experience"),true)+
+      wInput(t("سنوات الخبرة","Years of experience"),"ac-t-exp",val("ac-t-exp",row.experienceYears),t("السنوات","years"))+
+      '<div class="form-group"><label>'+t("الجنس","Gender")+'</label><select id="ac-t-gender">'+
+        wOpt("",t("غير محدد","Unspecified"),val("ac-t-gender",row.gender))+
+        wOpt("male",t("ذكر","Male"),val("ac-t-gender",row.gender))+
+        wOpt("female",t("أنثى","Female"),val("ac-t-gender",row.gender))+'</select></div>'+
+      wInput(t("المهارات (مفصولة بفاصلة)","Skills (comma separated)"),"ac-t-skills",val("ac-t-skills",(row.skills||[]).join(", ")),t("برمجة, روبوتيكس, مختبرات","Programming, robotics, labs"),true)+
+      wArea(t("نبذة","Bio"),"ac-t-bio",val("ac-t-bio",row.bio))+
+      // A real upload with a preview and change/remove, not a path the admin has to
+      // know. The stored path is what the form submits.
+      ufImageUpload("ac-t-avatar-upload",t("الصورة الشخصية","Profile photo"),val("ac-t-avatar-upload-val",row.avatarUrl),"avatars",
+        {hint:t("JPG أو PNG أو WEBP، بحد أقصى 4 ميجابايت.","JPG, PNG or WEBP, up to 4 MB.")})+
+      wSel(t("البلد","Country"),"ac-t-country",countryOptions,"","acTeacherCountry()")+
+      wSel(t("المحافظة","Governorate"),"ac-t-gov",teacherGovOptions(f.countryCode,f.govId),"","acTeacherGov()")+
+      wSel(t("المديرية","District"),"ac-t-dist",teacherDistrictOptions(f.govId,f.distId),"","acTeacherDistrict()")+
+      wSel(t("الحي","Neighbourhood"),"ac-t-hood",teacherHoodOptions(f.distId,f.hoodId),"","acTeacherNeighborhood()")+
+      wInput(t("العنوان التفصيلي","Street address"),"ac-t-address",val("ac-t-address",row.addressLine),t("الشارع / أقرب معلم","Street / nearest landmark"),true)+
+      (isAdd?"":wSel(t("الحالة","Status"),"ac-t-status",
+        wOpt("active",t("نشط","Active"),curStatus)+wOpt("inactive",t("غير نشط","Inactive"),curStatus)+
+        wOpt("suspended",t("موقوف","Suspended"),curStatus)))+
+      (isAdd?"":wSel(t("التحقق","Verification"),"ac-t-verif",
+        wOpt("pending",t("بانتظار التحقق","Pending"),curVerif)+wOpt("verified",t("موثق","Verified"),curVerif)+
+        wOpt("rejected",t("مرفوض","Rejected"),curVerif)));
+
+    var subjectsStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("المواد: لكل مادة سعرها ومكان تدريسها","Subjects: a price and a place each")+'</h3>'+
+        '<div class="ac-row-actions">'+
+        '<button type="button" class="btn" id="ac-t-subject-add" onclick="acTeacherSubjectAdd()">'+icon("plus",14)+' '+
+        t("إضافة مادة من الكتالوج","Add a catalog subject")+'</button></div></div>'+
+      (subjectRows||'<div class="empty-state">'+t("لم تُضف مواد بعد. أضف مادة من الكتالوج، أو اقترح مادة جديدة بالأسفل.",
+        "No subjects yet. Add one from the catalog, or propose a new one below.")+'</div>')+
+      // A subject the catalog lacks is proposed with real fields, not a browser
+      // prompt, and stays pending until the platform admin approves it.
+      '<div class="ac-subfield ac-field-wide uf-wide"><h3 class="core-h3">'+
+        t("مادة غير موجودة في الكتالوج العام","A subject missing from the global catalog")+'</h3>'+
+        '<div class="ac-repeat-row">'+
+        '<div class="form-group"><label>'+t("اسم المادة (عربي)","Subject name (Arabic)")+'</label>'+
+        '<input id="ac-t-newsub-ar" value="" placeholder="'+t("مثال: الروبوتات","e.g. Robotics")+'"></div>'+
+        '<div class="form-group"><label>'+t("اسم المادة (إنجليزي)","Subject name (English)")+'</label>'+
+        '<input id="ac-t-newsub-en" dir="ltr" value=""></div>'+
+        '<button type="button" class="btn brown" '+(f._busy?"disabled":"")+' onclick="acTeacherProposeSubject()">'+
+        icon("plus",14)+' '+t("إرسال للاعتماد","Submit for approval")+'</button>'+
+        '</div><p class="ac-hint">'+t("تُضاف المادة لهذه المنصة بانتظار اعتماد المدير العام، وتُختار تلقائياً بعد الاعتماد.",
+          "The subject is submitted for platform-admin approval and selected automatically once approved.")+'</p></div>';
+
+    var availabilityStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+t("أوقات التوفر الأسبوعية","Weekly availability")+'</h3>'+
         '<button type="button" class="btn" onclick="acTeacherAvailAdd()">'+icon("plus",14)+' '+t("إضافة وقت","Add slot")+'</button></div>'+
-      (availRows||'<div class="empty-state">'+t("لم تُضف أوقات توفر بعد.","No availability added yet.")+'</div>')
-        ):"" )+(
-        f.tab==="qualifications"?(
-      '<div class="core-h3-row"><h3 class="core-h3">'+t("المؤهلات والخبرات","Qualifications and experience")+'</h3>'+
+      (availRows||'<div class="empty-state">'+t("لم تُضف أوقات توفر بعد. أضف وقتاً لكل نافذة يستقبل فيها المعلم الحجوزات.",
+        "No availability yet. Add a slot for each window the teacher accepts bookings.")+'</div>');
+
+    var qualificationsStep=
+      '<div class="core-h3-row ac-field-wide uf-wide"><h3 class="core-h3">'+t("المؤهلات والخبرات","Qualifications and experience")+'</h3>'+
         '<button type="button" class="btn" onclick="acTeacherQualAdd()">'+icon("plus",14)+' '+t("إضافة مؤهل","Add qualification")+'</button></div>'+
-      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')
-        ):"" )})
+      (qualRows||'<div class="empty-state">'+t("لم تُضف مؤهلات بعد.","No qualifications added yet.")+'</div>')+
+      // The stages sit here because they describe what the teacher is qualified for.
+      '<div class="form-group ac-field-wide uf-wide"><label>'+t("المستويات والدرجات العلمية التي يدرّسها","Academic stages and levels taught")+'</label>'+
+        '<div class="core-chips">'+(stageChips||'<span class="gated-value">'+t("لا مراحل في الكتالوج العام.","No stages in the global catalog.")+'</span>')+'</div>'+
+        '<small class="ac-hint">'+t("اختر كل مستوى يستطيع تدريسه.","Select every level the teacher can teach.")+'</small></div>';
+
+    var stepBodies={basic:basicStep,subjects:subjectsStep,availability:availabilityStep,qualifications:qualificationsStep};
+    var idx=teacherStepIndex(f.tab);
+
+    return formPage({back:route(),error:f._error,busy:f._busy,
+      onSave:"acTeacherSave()",onCancel:"acTeacherFormClose()",
+      title:isAdd?t("إضافة معلم","Add teacher"):t("تعديل بيانات المعلم","Edit teacher"),
+      subtitle:t("المعلم مستقل: حساب دخول، مواد بأسعارها ومكان تدريسها، أوقات توفر، مؤهلات وموقع.",
+        "A teacher is independent: login account, per-subject price and place, availability, qualifications and location."),
+      tabs:teacherFormTabBar(f),
+      body:(stepBodies[f.tab]||basicStep),
+      actions:ufWizardFooter({index:idx,total:teacherStepDefs().length,
+        busy:f._busy,onCancel:"acTeacherFormClose()",
+        onBack:"acTeacherStep(-1)",onNext:"acTeacherStep(1)",onSave:"acTeacherSave()"})});
   }
   // ---- detail ----
   function teacherBadgeRow(r){
@@ -773,6 +1277,9 @@
             (s.promoLabel?'<div class="entity-sub">'+esc(s.promoLabel)+'</div>':"");
         }
         return '<tr><td><b>'+esc(s.name)+'</b></td>'+
+          // Where this subject is taught sits next to its price: the two are one
+          // offer, so the reader never has to look in a different panel for it.
+          '<td>'+esc(s.locationMode?acTeacherSlotModeLabel(s.locationMode):"—")+'</td>'+
           '<td>'+price+promo+'</td>'+
           '<td>'+esc(s.currency||"—")+'</td>'+
           '<td>'+esc(teacherPeriodLabel(s.billingPeriod))+'</td>'+
@@ -780,11 +1287,11 @@
           '<td>'+(s.isActive===false?badge("inactive"):badge("active"))+'</td></tr>'}).join("");
       body+='<div class="panel core-panel"><div class="panel-title"><h3>'+t("المواد الدراسية والأسعار","Subjects and pricing")+'</h3>'+
         '<button class="btn green" onclick="acTeacherEdit(\''+r.id+'\')">'+icon("edit",14)+' '+t("تعديل الأسعار","Edit prices")+'</button></div>'+
-        '<p class="ac-hint">'+t("كل مادة يحملها المعلم لها سعرها وعملتها ودوريتها ولغتها الخاصة — الرسوم ليست على مستوى المنصة.",
-          "Every subject a teacher carries has its own price, currency, billing period and language — nothing is priced at platform level.")+'</p>'+
+        '<p class="ac-hint">'+t("كل مادة يحملها المعلم لها مكان تدريسها وسعرها وعملتها ودوريتها ولغتها الخاصة — الرسوم ليست على مستوى المنصة.",
+          "Every subject a teacher carries has its own teaching place, price, currency, billing period and language — nothing is priced at platform level.")+'</p>'+
         '<div class="table-wrap"><table class="tbl"><thead><tr>'+
-        ['المادة','السعر','العملة','الدورية','لغة التدريس','الحالة'].map(function(h){return '<th>'+t(h,h)+'</th>'}).join("")+
-        '</tr></thead><tbody>'+(rows||'<tr><td colspan="6">'+t("لا مواد مسجلة.","No subjects recorded.")+'</td></tr>')+'</tbody></table></div></div>';
+        ['المادة','مكان التدريس','السعر','العملة','الدورية','لغة التدريس','الحالة'].map(function(h){return '<th>'+t(h,h)+'</th>'}).join("")+
+        '</tr></thead><tbody>'+(rows||'<tr><td colspan="7">'+t("لا مواد مسجلة.","No subjects recorded.")+'</td></tr>')+'</tbody></table></div></div>';
     }
 
     if(d.tab==="documents"){
@@ -865,7 +1372,7 @@
       [t("الحالة","Status"),statusLabel(r.status)],
       [t("التحقق","Verification"),statusLabel(r.verificationStatus||"pending")]];
     var subjectSheet=[[t("المادة","Subject"),t("السعر","Price"),t("العملة","Currency"),t("الدورية","Billing"),t("لغة التدريس","Language")]]
-      .concat((r.subjects||[]).map(function(s){return[s.name,s.amount==null?"":s.amount,s.currency||"",teacherPeriodLabel(s.billingPeriod),teacherLangLabel(s.languageCode)]}));
+      .concat((r.subjects||[]).map(function(s){return[s.name,s.locationMode?acTeacherSlotModeLabel(s.locationMode):"",s.amount==null?"":s.amount,s.currency||"",teacherPeriodLabel(s.billingPeriod),teacherLangLabel(s.languageCode)]}));
     var availSheet=[[t("اليوم","Day"),t("من","From"),t("إلى","To"),t("المكان","Place")]]
       .concat((r.availability||[]).map(function(s){return[acTeacherDayLabel(s.dayOfWeek),s.startTime,s.endTime,acTeacherSlotModeLabel(s.locationMode)]}));
     var qualSheet=[[t("المؤهل","Qualification"),t("الجهة","Institution"),t("الدرجة","Degree"),t("السنة","Year")]]
