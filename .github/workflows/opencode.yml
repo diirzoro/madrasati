@@ -37,5 +37,5 @@ jobs:
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         with:
-          model: deepseek/deepseek-v4.1-flash
+          model: deepseek/deepseek-flash
           prompt: ${{ github.event.inputs.prompt || github.event.comment.body }}
