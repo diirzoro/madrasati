@@ -51,10 +51,101 @@ async function listNeighborhoods({ district, districtId } = {}) {
 
 async function listCountries() {
   const rows = await repo.listCountries();
-  return rows.map((r) => ({
-    id: r.id, code: r.code, name: r.name, callingCode: r.calling_code || null,
-    isDefault: Boolean(r.is_default),
-  }));
+  return rows.map(mapCountry);
+}
+
+function mapCountry(r) {
+  if (!r) return null;
+  return {
+    id: r.id, code: r.code, name: r.name, nameEn: r.name_en || null,
+    callingCode: r.calling_code || null, isDefault: Boolean(r.is_default),
+    isActive: r.is_active !== false, sortOrder: Number(r.sort_order || 0),
+    governorateCount: r.governorate_count == null ? undefined : Number(r.governorate_count),
+  };
+}
+
+// Admin read: includes inactive countries so a deactivated one can be re-enabled
+// instead of disappearing from the screen that manages it.
+async function listAllCountries() {
+  const rows = await repo.listAllCountries();
+  return rows.map(mapCountry);
+}
+
+const ISO2 = /^[A-Z]{2}$/;
+const CALLING_CODE = /^[0-9]{1,4}$/;
+
+// A country is the root of the location tree (country -> governorate -> district
+// -> neighborhood), so it is the one row every other location depends on. The
+// Arabic name is required — it is what the RTL shell renders — and the ISO code
+// plus the calling code are validated here rather than left to the UNIQUE
+// constraint, so the admin form gets a readable message instead of a 500.
+async function createCountry({ name, nameEn, code, callingCode, sortOrder }, { actorUserId } = {}) {
+  const ar = requireArName(name, 'country');
+  const duplicate = await repo.findCountryByName(ar);
+  if (duplicate) throw new ConflictError('Country already exists.');
+
+  let iso = null;
+  if (code !== undefined && code !== null && String(code).trim() !== '') {
+    iso = String(code).trim().toUpperCase();
+    if (!ISO2.test(iso)) throw new ValidationError('Country code must be two Latin letters (ISO 3166-1 alpha-2).');
+    const clash = await repo.findCountryByCode(iso);
+    if (clash) throw new ConflictError('Country code is already in use.');
+  }
+
+  let calling = null;
+  if (callingCode !== undefined && callingCode !== null && String(callingCode).trim() !== '') {
+    calling = String(callingCode).trim().replace(/^\+/, '');
+    if (!CALLING_CODE.test(calling)) throw new ValidationError('Calling code must be 1 to 4 digits.');
+  }
+
+  const row = await repo.insertCountry({
+    code: iso, name: ar,
+    nameEn: nameEn ? String(nameEn).trim() || null : null,
+    callingCode: calling,
+    sortOrder: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 0,
+  });
+  await writeAudit({ actorUserId: actorUserId || null, action: 'create', entityType: 'country', entityId: String(row.id), newValues: { name: ar, code: iso } });
+  return mapCountry(row);
+}
+
+async function updateCountry(id, data = {}, { actorUserId } = {}) {
+  const existing = await repo.findCountryById(Number(id));
+  if (!existing) throw new NotFoundError('Country not found');
+
+  const fields = {};
+  if (data.name !== undefined) fields.name = requireArName(data.name, 'country');
+  if (data.nameEn !== undefined) fields.nameEn = data.nameEn ? String(data.nameEn).trim() || null : null;
+  if (data.code !== undefined) {
+    if (data.code === null || String(data.code).trim() === '') fields.code = null;
+    else {
+      const iso = String(data.code).trim().toUpperCase();
+      if (!ISO2.test(iso)) throw new ValidationError('Country code must be two Latin letters (ISO 3166-1 alpha-2).');
+      const clash = await repo.findCountryByCode(iso);
+      if (clash && Number(clash.id) !== Number(id)) throw new ConflictError('Country code is already in use.');
+      fields.code = iso;
+    }
+  }
+  if (data.callingCode !== undefined) {
+    if (data.callingCode === null || String(data.callingCode).trim() === '') fields.callingCode = null;
+    else {
+      const calling = String(data.callingCode).trim().replace(/^\+/, '');
+      if (!CALLING_CODE.test(calling)) throw new ValidationError('Calling code must be 1 to 4 digits.');
+      fields.callingCode = calling;
+    }
+  }
+  if (data.sortOrder !== undefined) fields.sortOrder = Number.isFinite(Number(data.sortOrder)) ? Number(data.sortOrder) : 0;
+  if (data.isActive !== undefined) fields.isActive = Boolean(data.isActive);
+
+  // The country every organization and teacher already points at cannot be
+  // deactivated out from under them; the default row is the fallback the
+  // governorate cascade resolves to when no country is given.
+  if (fields.isActive === false && existing.is_default) {
+    throw new ValidationError('The default country cannot be deactivated.');
+  }
+
+  const row = await repo.updateCountry(Number(id), fields);
+  await writeAudit({ actorUserId: actorUserId || null, action: 'update', entityType: 'country', entityId: String(id), newValues: fields });
+  return mapCountry(row);
 }
 
 // ---------- admin writes (A5 "+") ----------
@@ -64,11 +155,20 @@ function requireArName(name, what) {
   return v;
 }
 
-async function createGovernorate({ name, nameEn, code, countryCode, latitude, longitude }, { actorUserId } = {}) {
+async function createGovernorate({ name, nameEn, code, countryCode, countryId, latitude, longitude }, { actorUserId } = {}) {
   const ar = requireArName(name, 'governorate');
   const dup = await repo.findGovernorateByName(ar);
   if (dup) throw new ConflictError('Governorate already exists.');
-  const country = countryCode ? await repo.findCountryByCode(String(countryCode).toUpperCase()) : await repo.findDefaultCountry();
+  // The cascade adds a governorate from the country it belongs to, so a numeric
+  // countryId is accepted alongside the ISO countryCode the older callers send.
+  // With neither, the default country is used, which is the previous behaviour.
+  let country = null;
+  if (countryId !== undefined && countryId !== null && String(countryId).trim() !== '') {
+    country = await repo.findCountryById(Number(countryId));
+    if (!country) throw new ValidationError('Parent country does not exist.');
+  } else {
+    country = countryCode ? await repo.findCountryByCode(String(countryCode).toUpperCase()) : await repo.findDefaultCountry();
+  }
   const row = await repo.insertGovernorate({
     name: ar, nameEn: nameEn ? String(nameEn).trim() || null : null,
     code: code ? String(code).trim() || null : null,
@@ -189,7 +289,8 @@ async function reviewLocationRequest(id, { decision, reviewNotes }, { actorUserI
 }
 
 module.exports = {
-  listCountries, listGovernorates, listDistricts, listNeighborhoods,
+  listCountries, listAllCountries, createCountry, updateCountry,
+  listGovernorates, listDistricts, listNeighborhoods,
   createGovernorate, createDistrict, createNeighborhood,
   submitLocationRequest, listLocationRequests, reviewLocationRequest,
 };

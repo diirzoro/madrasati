@@ -42,6 +42,12 @@ app.get('/api/health', async (_req, res) => {
 // Private org documents stay outside any static directory.
 app.use('/uploads/marketing', express.static(path.join(__dirname, 'uploads', 'marketing')));
 
+// Public form imagery: teacher avatars and institution logos uploaded through the
+// admin forms. Only images that passed magic-byte sniffing are ever written here,
+// and filenames are random, so the directory holds nothing but served images —
+// unlike org documents, which stay private and are streamed as attachments.
+app.use('/uploads/images', express.static(path.join(__dirname, 'uploads', 'images')));
+
 // ---------- module routers ----------
 // Each module exports { router } from its index.js.
 // Routers are mounted lazily so missing modules don't crash the app.

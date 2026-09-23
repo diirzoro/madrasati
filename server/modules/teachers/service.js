@@ -110,7 +110,10 @@ function mapTeacher(row, { canSeePricing = false } = {}) {
   if (!row) return null;
   const gated = !canSeePricing;
   const subjects = (Array.isArray(row.subject_list) ? row.subject_list : []).map((s) => (
-    gated ? Object.assign({}, s, { amount: null, currency: null, billingPeriod: null }) : s
+    // A discount is a pricing fact, so it is withheld with the price it modifies:
+    // an anonymous visitor must not be able to derive the amount from a percentage.
+    gated ? Object.assign({}, s, { amount: null, currency: null, billingPeriod: null,
+      discountPercent: null, promoLabel: null }) : s
   ));
   const verified = Boolean(row.verified);
   return {
@@ -299,6 +302,13 @@ function prepareSubjectEntries(rawEntries) {
       billingPeriod: (text(entry.billingPeriod) || 'hourly').toLowerCase(),
       languageCode: assertEnum(entry.languageCode, LANGUAGES, 'languageCode'),
       description: text(entry.description),
+      discountPercent: prepareDiscount(entry.discountPercent),
+      promoLabel: text(entry.promoLabel),
+      // Where this particular subject is taught. The same three values the weekly
+      // availability uses, so a lesson's place means one thing across the profile.
+      // These tokens are lower-case, so they are validated on their own terms
+      // rather than through assertEnum (which upper-cases for CURRENCIES/LANGUAGES).
+      locationMode: prepareLocationMode(entry.locationMode),
     };
   }).map((entry) => {
     if (!BILLING_PERIODS.includes(entry.billingPeriod)) {
@@ -306,6 +316,30 @@ function prepareSubjectEntries(rawEntries) {
     }
     return entry;
   });
+}
+
+// The place a lesson happens is one of three lower-case tokens shared with the
+// weekly availability. It is validated here without upper-casing, so the value the
+// form sends is the value the CHECK constraint accepts.
+function prepareLocationMode(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const v = String(raw).trim().toLowerCase();
+  if (!AVAILABILITY_MODES.includes(v)) {
+    throw new ValidationError(`locationMode must be one of: ${AVAILABILITY_MODES.join(', ')}.`);
+  }
+  return v;
+}
+
+// A promotional discount is optional and rides on the same priced row as the
+// list price. An empty value clears the promotion; anything outside 0-100 is
+// refused here so the form gets a readable message instead of a constraint 500.
+function prepareDiscount(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new ValidationError('discountPercent must be a number between 0 and 100.');
+  }
+  return Math.round(n * 100) / 100;
 }
 
 // A weekly slot is one (day, start, end, where) window. Overlapping slots are
@@ -361,6 +395,22 @@ function prepareProfileFields(data = {}) {
   return fields;
 }
 
+// The place a lesson happens is declared per subject now, so the teacher-level
+// booleans the directory filters on are derived from those rows rather than typed
+// again. Deriving keeps one source of truth: a profile can no longer claim to
+// teach online while none of its subjects says so. It only runs when the payload
+// actually carries subjects, so a partial update never silently clears them.
+// The result is keyed by COLUMN name, because that is what the repository writes.
+function deriveModeFlags(subjects) {
+  if (!Array.isArray(subjects)) return null;
+  const modes = subjects.map((s) => s && s.locationMode).filter(Boolean);
+  return {
+    offers_online: modes.includes('online'),
+    travels_to_student_home: modes.includes('student_home'),
+    accepts_student_home: modes.includes('teacher_location'),
+  };
+}
+
 async function createTeacher({ data = {}, actorUserId }) {
   const name = required(data.name, 'name', 2);
   const email = required(data.email, 'email', 5).toLowerCase();
@@ -400,6 +450,10 @@ async function createTeacher({ data = {}, actorUserId }) {
 
   const subjects = prepareSubjectEntries(data.subjects);
   const fields = prepareProfileFields(data);
+  // The subject rows decide where lessons happen, so the profile flags follow them
+  // instead of being a second, separately-typed answer to the same question.
+  const derived = deriveModeFlags(subjects);
+  if (derived) Object.assign(fields, derived);
   const passwordHash = await bcrypt.hash(password, 10);
   const client = await repo.getClient();
   let userId;
@@ -464,13 +518,22 @@ async function createTeacher({ data = {}, actorUserId }) {
   } finally {
     client.release();
   }
-  return getTeacher(profile.id);
+  // The write routes are admin-only, so the actor is entitled to the priced view;
+  // returning the gated shape here would answer a successful write with the money
+  // it just stored removed.
+  return getTeacher(profile.id, { canSeePricing: true });
 }
 
 async function updateTeacher({ id, data = {}, actorUserId }) {
   const current = await repo.findTeacherProfileById(id);
   if (!current) throw new NotFoundError('Teacher not found');
   const fields = prepareProfileFields(data);
+  // Same rule as create: when the payload carries the subject rows, they are what
+  // decides where lessons happen, so the profile flags are re-derived from them.
+  // The rows are prepared once here and reused for the actual replace below.
+  const subjects = prepareSubjectEntries(data.subjects);
+  const derived = deriveModeFlags(subjects);
+  if (derived) Object.assign(fields, derived);
   if (data.whatsapp !== undefined && text(data.whatsapp)) {
     const country = current.country_id ? await repo.findCountryById(current.country_id) : null;
     try {
@@ -526,7 +589,6 @@ async function updateTeacher({ id, data = {}, actorUserId }) {
     fields.verified = v === 'verified';
   }
 
-  const subjects = prepareSubjectEntries(data.subjects);
   const client = await repo.getClient();
   try {
     await client.query('BEGIN');
@@ -570,7 +632,7 @@ async function updateTeacher({ id, data = {}, actorUserId }) {
   } finally {
     client.release();
   }
-  return getTeacher(id);
+  return getTeacher(id, { canSeePricing: true });
 }
 
 // Suspend / activate: freezes the teacher's visibility without touching a single

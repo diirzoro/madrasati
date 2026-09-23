@@ -2253,6 +2253,192 @@ img{max-width:100%}
  .org-type-tabs button,.ac-tabs button{padding:9px 12px;font-size:12.5px}
 }
 
+/* =====================================================================
+   Universal dedicated form system (UI / CSS / routing only — no schema).
+   Every add/edit screen is its own page: a back link to the list, one white
+   card centred at max-width 760px, a label/control grid that collapses to a
+   single column under 768px, and the two footer actions. Field chrome is the
+   memo's: 6-8px radius, a light grey 1px border that defaults to #d1d5db and
+   follows the active theme in dark mode, a 38-40px control height and a
+   uniform 16px vertical rhythm. The six themes and the palette are untouched.
+   ===================================================================== */
+.uf-page{max-width:760px;margin:0 auto;display:grid;gap:14px}
+.uf-back{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;
+ min-height:40px;padding:0 16px;border:1px solid var(--line);border-radius:8px;background:var(--white);
+ color:var(--theme-primary,#1f5d46);font-weight:700;font-size:13px;cursor:pointer}
+.uf-back:hover{border-color:var(--theme-primary,#1f5d46)}
+.uf-head h1{margin:0;font-size:20px;font-weight:800;color:var(--ink)}
+.uf-head p{margin:6px 0 0;font-size:13px;line-height:1.7;color:var(--muted)}
+.uf-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:22px;
+ box-shadow:0 1px 2px rgba(30,55,45,.05),0 12px 30px rgba(30,55,45,.06)}
+.uf-grid{display:grid;gap:16px;--uf-border:#d1d5db}
+:root[data-theme="dark"] .uf-grid{--uf-border:#324039}
+.uf-grid>*{min-width:0}
+.uf-grid .form-group{display:grid;grid-template-columns:minmax(0,28%) minmax(0,1fr);
+ gap:4px 16px;align-items:center;margin:0}
+.uf-grid .form-group>label{margin:0;align-self:center;font-size:13.5px;font-weight:600;
+ color:var(--ink);text-align:start}
+.uf-grid .form-group input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),
+.uf-grid .form-group select{width:100%;height:40px;min-height:40px;padding:0 12px;
+ border:1px solid var(--uf-border);border-radius:8px;background:var(--white);color:var(--ink);
+ font:inherit;font-size:13.5px}
+.uf-grid .form-group textarea{width:100%;min-height:104px;padding:10px 12px;line-height:1.7;
+ border:1px solid var(--uf-border);border-radius:8px;background:var(--white);color:var(--ink);
+ font:inherit;font-size:13.5px;resize:vertical}
+.uf-grid .form-group input:focus,.uf-grid .form-group select:focus,.uf-grid .form-group textarea:focus{
+ border-color:var(--theme-primary,#1f5d46);outline:none;box-shadow:0 0 0 3px rgba(31,93,70,.13)}
+/* A field that is structurally full-width — a textarea, a repeatable row's
+   group, a section heading — spans both grid tracks instead of being squeezed
+   into the control column. */
+.uf-grid .ac-form-error,.uf-grid .ac-field-wide,.uf-grid .ac-repeat-row,
+.uf-grid .core-h3-row,.uf-grid .ac-checkgrid,.uf-grid .core-chips,.uf-grid .uf-wide{grid-column:1/-1}
+/* Helper text and secondary rows sit under the control, not in the label gutter. */
+.uf-grid .form-group>.ac-hint,.uf-grid .form-group>p,.uf-grid .form-group>small{grid-column:1/-1}
+.uf-grid .ac-repeat-row{margin-bottom:0;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.uf-grid .ac-repeat-row .form-group{grid-template-columns:1fr}
+/* Two-up field pairs keep their own two columns inside a full-width row, so the
+   label sits above its control rather than in the 28% gutter. */
+.uf-grid .form-row2{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.uf-grid .form-row2 .form-group{grid-template-columns:1fr;gap:6px;align-items:start}
+.uf-grid .core-h3-row{margin-top:4px}
+.uf-grid .uf-help{font-size:12px;color:var(--muted)}
+.uf-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;
+ margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.uf-actions .btn{display:inline-flex;align-items:center;justify-content:center;
+ min-height:40px;padding:0 24px;border-radius:8px}
+@media (max-width:768px){
+ .uf-card{padding:16px;border-radius:10px}
+ .uf-grid{gap:14px}
+ .uf-grid .form-group{grid-template-columns:1fr;gap:6px;align-items:start}
+ .uf-grid .form-group>label{align-self:start}
+ .uf-grid .form-group input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),
+ .uf-grid .form-group select{height:44px;min-height:44px;font-size:14px}
+ .uf-grid .form-group textarea{min-height:112px;font-size:14px}
+ .uf-actions{flex-direction:column-reverse}
+ .uf-actions .btn{width:100%;min-height:44px}
+ .uf-back{width:100%;min-height:44px}
+}
+
+/* =====================================================================
+   Compact, fully responsive tables.
+   The base table was built at 42px rows with 11px padding and a 900px minimum,
+   which forced horizontal scrolling on a 14" laptop and looked oversized next to
+   the rest of the shell. This layer tightens the row to a 32px rhythm, lets the
+   table shrink to its container instead of a fixed minimum, and scales the density
+   up again only on genuinely large desktop displays. Palette and fonts unchanged.
+   ===================================================================== */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tbl{width:100%;table-layout:auto}
+.tbl th,.tbl td{padding:6px 9px}
+.tbl th{height:30px;font-size:10px;line-height:1.25}
+.tbl td{height:auto;font-size:11px;line-height:1.4}
+.tbl tbody tr{min-height:0}
+.tbl code,.tbl .ltr-num{font-size:11px}
+/* A cell that does not need to wrap pushes the table wide; let long values break
+   instead so the layout stays inside its column on narrow screens. */
+.tbl td,.tbl th{overflow-wrap:anywhere}
+.tbl th{white-space:nowrap}
+
+/* --- The entity cell: a small square logo beside the name --- */
+.row-entity{display:flex;align-items:center;gap:9px;min-width:0}
+.row-entity>div{min-width:0}
+.row-entity b{font-size:11.5px;line-height:1.35}
+.row-logo{width:32px;height:32px;flex:0 0 32px;border-radius:8px;border:1px solid var(--line);
+ background:var(--cream);display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+.row-logo img{width:100%;height:100%;object-fit:contain}
+
+/* A whole row and a whole card are the target, so both need a pointer and a
+   visible hover/focus affordance — the eye icon is a shortcut, not the only way in. */
+.org-card{cursor:pointer}
+.org-card:focus-visible,.tbl tbody tr.row-click:focus-visible{outline:2px solid var(--theme-primary,#1f5d46);outline-offset:-2px}
+
+/* Large desktop (20"-30"): the extra room goes into density, not into a wider
+   single column, so a long catalog still shows more rows per screen. */
+@media (min-width:1700px){
+ .tbl th,.tbl td{padding:7px 11px}
+ .tbl td{font-size:11.5px}
+}
+@media (min-width:2100px){
+ .tbl th{padding:8px 13px;height:34px}
+ .tbl td{padding:8px 13px;font-size:12px}
+ .row-logo{width:36px;height:36px;flex:0 0 36px}
+}
+/* Tablet / small laptop: narrow the fixed content so the table fits without a
+   horizontal scrollbar for the common case. */
+@media (max-width:1200px){
+ .tbl{min-width:0}
+ .tbl th,.tbl td{padding:6px 8px}
+}
+@media (max-width:900px){
+ .tbl td{font-size:10.5px}
+ .row-logo{width:28px;height:28px;flex:0 0 28px;border-radius:7px}
+ .row-entity{padding:2px 0}
+ .contact-cell{font-size:10.5px}
+}
+
+/* --- The teacher form tab strip: four concerns, one card ---
+   The form was a single tall column; the four tabs split it into who the teacher
+   is, what they teach and for how much, when they are free, and what they are
+   qualified in. The strip spans both grid tracks so it sits above the fields. */
+.uf-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 14px;margin:0 0 4px;
+ border-bottom:1px solid var(--line)}
+.uf-tabs button{border:1px solid var(--line);background:var(--white);color:var(--muted);
+ border-radius:999px;padding:9px 16px;font:inherit;font-size:13px;font-weight:700;
+ cursor:pointer;min-height:40px;transition:.18s}
+.uf-tabs button:hover{border-color:var(--theme-primary,#1f5d46);color:var(--theme-primary,#1f5d46)}
+.uf-tabs button.active{background:var(--theme-primary,#1f5d46);border-color:var(--theme-primary,#1f5d46);color:#fff}
+@media (max-width:768px){
+ .uf-tabs{gap:6px}
+ .uf-tabs button{flex:1 1 auto;min-height:44px;padding:9px 12px;font-size:12.5px}
+}
+
+/* --- Wizard navigation: one bar, never two competing footers --- */
+.uf-wizard-actions{align-items:center}
+.uf-step-count{margin-inline-end:auto;font-size:12.5px;font-weight:700;color:var(--muted);
+ padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--white)}
+.uf-wizard-actions .uf-save,.uf-wizard-actions .uf-next-step{margin-inline-start:0}
+/* The step strip marks where the user is, and the completed steps stay reachable. */
+.uf-wizard-tabs{counter-reset:ufstep}
+.uf-wizard-tabs button{counter-increment:ufstep}
+.uf-wizard-tabs button::before{
+ content:counter(ufstep);display:inline-flex;align-items:center;justify-content:center;
+ width:20px;height:20px;border-radius:50%;margin-inline-end:7px;font-size:11px;font-weight:800;
+ background:var(--cream);color:var(--muted);border:1px solid var(--line)}
+.uf-wizard-tabs button.active::before{background:#fff;color:var(--theme-primary,#1f5d46);border-color:#fff}
+
+/* --- Strict validation: the refused field is named, not just outlined --- */
+.uf-invalid-group>label{color:#B3341F}
+.uf-invalid,.uf-invalid:focus{
+ border-color:#D64545!important;
+ box-shadow:0 0 0 3px rgba(214,69,69,.16)!important;
+ background:rgba(214,69,69,.04)!important}
+
+/* --- Real uploads: preview, then explicit change / remove --- */
+.uf-upload{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.uf-upload-preview{width:96px;height:96px;flex:0 0 96px;border:1px solid var(--line);border-radius:10px;
+ background:var(--cream);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.uf-upload-preview img{width:100%;height:100%;object-fit:cover}
+.uf-upload-empty{width:96px;height:96px;flex:0 0 96px;border:1px dashed var(--line);border-radius:10px;
+ background:var(--cream);color:var(--muted);display:flex;flex-direction:column;gap:4px;
+ align-items:center;justify-content:center;text-align:center;font-size:10.5px;padding:6px}
+.uf-upload-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.uf-upload-actions .btn{min-height:40px;display:inline-flex;align-items:center;gap:6px}
+.uf-upload-remove{color:#B3341F;border-color:#E7C7C0}
+/* The picker itself is driven by the labelled button, so it never shows twice. */
+.uf-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.uf-upload-status{font-size:12px;font-weight:600;color:var(--theme-primary,#1f5d46)}
+/* The nested "a catalog subject the platform lacks" block reads as a sub-section. */
+.ac-subfield{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.ac-subfield .core-h3{margin-bottom:10px}
+@media (max-width:768px){
+ .uf-wizard-actions{flex-direction:column-reverse;align-items:stretch}
+ .uf-step-count{margin-inline-end:0;text-align:center;order:1}
+ .uf-wizard-actions .btn{width:100%;min-height:44px}
+ .uf-upload,.uf-upload-actions{width:100%}
+ .uf-upload-preview,.uf-upload-empty{width:100%;flex:0 0 auto;height:140px}
+ .uf-upload-actions .btn{width:100%;justify-content:center}
+}
+
 /* --- Print: the report is its own document, the app chrome is not printed --- */
 @media print{
  .admin-top,.public-top,.public-rail,.sidebar,.admin-side,.bottom-stats,.view-toggle,.toolbar,

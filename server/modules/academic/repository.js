@@ -75,6 +75,24 @@ async function findSubjectById(id) {
   return rows[0] || null;
 }
 
+// Every subject an institution defined for itself, newest first. The global
+// catalog is `organization_id IS NULL`, so this is exactly its mirror image, and
+// the review state is what the platform admin acts on.
+async function listOrgSubjectProposals({ reviewStatus } = {}) {
+  const params = [];
+  let where = 'WHERE s.organization_id IS NOT NULL';
+  if (reviewStatus) { params.push(reviewStatus); where += ` AND s.review_status = $${params.length}`; }
+  const { rows } = await query(
+    `SELECT s.*, o.name AS organization_name, o.type AS organization_type
+       FROM subjects s
+       LEFT JOIN organizations o ON o.id = s.organization_id
+       ${where}
+      ORDER BY s.created_at DESC NULLS LAST, s.name`,
+    params
+  );
+  return rows;
+}
+
 async function findSubjectBySlug(slug) {
   const { rows } = await query(`SELECT id FROM subjects WHERE slug = $1`, [slug]);
   return rows[0] || null;
@@ -370,7 +388,7 @@ async function setOrgTeachingMethods(orgId, methodIds) {
 module.exports = {
   listStages, listGrades, listSubjects, listCurricula, listLanguages, listTeachingMethods,
   createStage, createGrade, updateGrade,
-  findSubjectById, findSubjectBySlug, createOrgSubject, reviewSubject,
+  findSubjectById, findSubjectBySlug, listOrgSubjectProposals, createOrgSubject, reviewSubject,
   listOrgStages, setOrgStages,
   listOrgGrades, setOrgGrades,
   listOrgSubjects, setOrgSubjects,

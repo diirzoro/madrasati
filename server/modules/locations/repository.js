@@ -10,6 +10,48 @@ async function listCountries() {
   return rows;
 }
 
+// The countries list is small and reference-only, but the admin screen also has
+// to show a country it just created and one it has deactivated, so the admin
+// read does not filter on is_active.
+async function listAllCountries() {
+  const { rows } = await query(`SELECT * FROM locations_countries ORDER BY sort_order, name`);
+  return rows;
+}
+
+async function insertCountry({ code, name, nameEn, callingCode, sortOrder }) {
+  const { rows } = await query(
+    `INSERT INTO locations_countries (code, name, name_en, calling_code, sort_order, is_default, is_active)
+     VALUES ($1,$2,$3,$4,$5,false,true) RETURNING *`,
+    [code || null, name, nameEn || null, callingCode || null, sortOrder || 0]
+  );
+  return rows[0];
+}
+
+async function updateCountry(id, { code, name, nameEn, callingCode, sortOrder, isActive }) {
+  const { rows } = await query(
+    `UPDATE locations_countries
+        SET code = COALESCE($2, code),
+            name = COALESCE($3, name),
+            name_en = COALESCE($4, name_en),
+            calling_code = COALESCE($5, calling_code),
+            sort_order = COALESCE($6, sort_order),
+            is_active = COALESCE($7, is_active)
+      WHERE id = $1 RETURNING *`,
+    [id, code ?? null, name ?? null, nameEn ?? null, callingCode ?? null, sortOrder ?? null, isActive ?? null]
+  );
+  return rows[0] || null;
+}
+
+async function findCountryById(id) {
+  const { rows } = await query(`SELECT * FROM locations_countries WHERE id = $1`, [id]);
+  return rows[0] || null;
+}
+
+async function findCountryByName(name) {
+  const { rows } = await query(`SELECT * FROM locations_countries WHERE name = $1`, [name]);
+  return rows[0] || null;
+}
+
 async function listGovernorates() {
   const { rows } = await query(
     `SELECT g.*, c.code AS country_code
@@ -175,6 +217,11 @@ async function updateLocationRequest(id, { status, reviewedBy, reviewNotes }) {
 
 module.exports = {
   listCountries,
+  listAllCountries,
+  insertCountry,
+  updateCountry,
+  findCountryById,
+  findCountryByName,
   findCountryByCode,
   findDefaultCountry,
   listGovernorates,

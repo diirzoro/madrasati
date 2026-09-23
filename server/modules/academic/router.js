@@ -35,6 +35,13 @@ router.patch('/grades/:id', requireAuth, requireRole('admin'), asyncHandler(asyn
 }));
 
 // org-scoped (require auth + tenant membership)
+// The supervision queue behind the institution "+": a subject an institution
+// proposed is a real row in the shared `subjects` table with organization_id
+// set, so the platform admin reviews it here and only an admin can approve it.
+router.get('/org-subjects', requireAuth, requireRole('admin'), asyncHandler(async (r, res) => {
+  res.json(await service.listOrgSubjectProposals({ reviewStatus: r.query.reviewStatus }));
+}));
+
 router.get('/org/:orgId/stages',             requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgStages(r.params.orgId)); }));
 router.get('/org/:orgId/grades',             requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgGrades(r.params.orgId)); }));
 router.get('/org/:orgId/subjects',           requireAuth, requireOrgMember(), asyncHandler(async (r, res) => { res.json(await service.listOrgSubjects(r.params.orgId)); }));

@@ -68,6 +68,19 @@ function mapTeachingMethod(row) {
 async function listStages() { return (await repo.listStages()).map(mapStage); }
 async function listGrades(stageId) { return (await repo.listGrades(stageId)).map(mapGrade); }
 async function listSubjects() { return (await repo.listSubjects()).map(mapSubject); }
+
+// The platform admin's supervision queue for the "+" an institution used: every
+// subject with an organization_id is a proposal, and the review state decides
+// whether it joins that institution's offering. Defaults to the pending ones,
+// because an undecided proposal is the only one that needs attention.
+async function listOrgSubjectProposals({ reviewStatus = 'pending' } = {}) {
+  const rows = await repo.listOrgSubjectProposals({ reviewStatus: reviewStatus || undefined });
+  return rows.map((r) => Object.assign(mapSubject(r), {
+    organizationId: r.organization_id,
+    organizationName: r.organization_name || null,
+    organizationType: r.organization_type || null,
+  }));
+}
 async function listCurricula() { return (await repo.listCurricula()).map(mapCurriculum); }
 async function listLanguages() { return (await repo.listLanguages()).map(mapLanguage); }
 async function listTeachingMethods() { return (await repo.listTeachingMethods()).map(mapTeachingMethod); }
@@ -457,7 +470,7 @@ async function removeSubjectOffer(orgId, subjectId) {
 }
 
 module.exports = {
-  listStages, listGrades, listSubjects, listCurricula, listLanguages, listTeachingMethods,
+  listStages, listGrades, listSubjects, listOrgSubjectProposals, listCurricula, listLanguages, listTeachingMethods,
   createStage, createGrade, updateGrade,
   createOrgSubject, reviewOrgSubject,
   listOrgStages, listOrgGrades, listOrgSubjects, listOrgCurricula, listOrgLanguages, listOrgTeachingMethods,
