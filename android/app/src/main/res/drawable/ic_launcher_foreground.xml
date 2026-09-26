@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Open book: two pages meeting at the spine -->
+    <path
+        android:fillColor="#FAF7F2"
+        android:pathData="M30,72 L54,80 L54,86 L28,78 Z" />
+    <path
+        android:fillColor="#FAF7F2"
+        android:pathData="M78,72 L54,80 L54,86 L80,78 Z" />
+
+    <!-- Graduation cap base -->
+    <path
+        android:fillColor="#FAF7F2"
+        android:pathData="M42,50 L66,50 L61,64 L47,64 Z" />
+
+    <!-- Graduation cap board (mortarboard, seen at an angle) -->
+    <path
+        android:fillColor="#FAF7F2"
+        android:pathData="M54,26 L80,40 L54,54 L28,40 Z" />
+
+    <!-- Tassel cord -->
+    <path
+        android:strokeColor="#B55A3C"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M54,26 L70,40" />
+
+    <!-- Tassel knot -->
+    <path
+        android:fillColor="#B55A3C"
+        android:pathData="M70,36 a4,4 0 1,1 0,8 a4,4 0 1,1 0,-8 Z" />
+</vector>
