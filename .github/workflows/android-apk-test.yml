@@ -23,11 +23,10 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Verify Android SDK
+      - name: Show Android SDK environment
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --version
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          test -d "$ANDROID_HOME" && echo "Android SDK directory exists"
 
       - name: Make Gradle executable
         working-directory: android
