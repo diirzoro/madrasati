@@ -1,0 +1,6 @@
+# Normalize line endings for CI (Linux) so the Gradle wrapper runs cleanly.
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.kt text eol=lf
+*.kts text eol=lf
