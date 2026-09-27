@@ -1299,4 +1299,48 @@ outside any static directory and are streamed as attachments.
 - The teacher detail view and the exported teacher sheet show the teaching place
   per subject, next to the price it belongs to.
 
+## 12. Implementation status — current qoder-test build (development)
+
+Verified against the local development database on 2026-09-26. This section
+records what the code and migrations actually do today; the design intent above
+still governs.
+
+- The global catalogs are populated, not empty: `academic_stages` (9 — KG,
+  PRIMARY, PREP, SECONDARY, DIPLOMA, HIGHER_DIPLOMA, BACHELOR, MASTER,
+  DOCTORATE), `academic_grades` (24: KG1–KG2, G1–G12 and the higher-education
+  years), `subjects` (10), `curricula` (وزاري / أهلي / دولي), `languages`
+  (العربية / الإنجليزية / الفرنسية) and `teaching_methods` (5). The stage `code`
+  is the stable key an offering references, and `academic_stages.name_en`
+  exists.
+- Subjects carry the global/private split: `subjects.organization_id IS NULL`
+  is the platform catalog; a non-null value is an institution's own proposal;
+  `review_status` (pending / approved / rejected) is the moderation lifecycle.
+- Offering rows are real data, not JSONB-only: `organization_stages`,
+  `organization_subjects`, `organization_facilities` and
+  `organization_services` are seeded for the sample institutions, and
+  `academic_grades.track` labels the secondary ladder (science / literary /
+  general, NULL = عام).
+- `remaining_seats` is derived as `capacity - current_students` and is never
+  written by callers. On PostgreSQL 12+ it is a `GENERATED ALWAYS AS (...)
+  STORED` column (migration 023). The local development server is PostgreSQL
+  10, which predates generated columns, so the same contract is enforced there
+  by a BEFORE INSERT OR UPDATE trigger that always overwrites the column.
+  Readers are identical on both; only the mechanism differs.
+- Teachers: per-subject pricing lives on `teacher_pricing` (`subject_id`,
+  `amount`, `currency`, `billing_period`, `language_code`, optional
+  `discount_percent` / `promo_label`, and `location_mode`); deletion is a
+  request (`teacher_deletion_requests`) decided by an admin; documents live in
+  the private `teacher_documents` table.
+- Billable entities stay separate: a stage is priced through
+  `organization_fees` (one definition per scope, enforced by partial unique
+  indexes), a subject carries `organization_subjects.fee_amount`, and a service
+  keeps `organization_services.price`. No amount is derived across them.
+- Local-server compatibility notes (PostgreSQL 10 only, applied to two
+  not-yet-applied migration files): `005_indexes_triggers.sql` uses
+  `EXECUTE PROCEDURE` instead of `EXECUTE FUNCTION`, and
+  `023_academic_capacity_and_fee_uniqueness.sql` implements `remaining_seats`
+  as a trigger-maintained column instead of a generated column. Applied
+  migrations are never edited. Upgrade the server to PostgreSQL 12+ to restore
+  true generated columns.
+
 

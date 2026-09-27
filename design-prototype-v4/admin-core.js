@@ -619,10 +619,16 @@
   function teacherPlace(r){return [r&&r.countryName,r&&r.governorateName,r&&r.districtName,r&&r.neighborhoodName].filter(Boolean).join(" · ")}
   function teacherAvatar(r,small){
     var name=teacherName(r);
-    var initials=name.trim().split(/\s+/).slice(0,2).map(function(w){return w.charAt(0)}).join("");
     var cls="owner-avatar"+(small?"":" owner-avatar-lg");
-    if(r&&r.avatarUrl)return '<span class="'+cls+'"><img src="'+esc(r.avatarUrl)+'" alt="'+esc(name)+'" loading="lazy"></span>';
+    var src="";
+    if(r&&r.avatarUrl)src=r.avatarUrl;
+    else if(typeof MadrasatiMedia!=="undefined"){try{src=MadrasatiMedia.teacherMedia(r).avatar}catch(e){}}
+    if(src)return '<span class="'+cls+'"><img src="'+esc(src)+'" alt="'+esc(name)+'" loading="lazy" onerror="this.style.display=\'none\'"></span>';
+    var initials=name.trim().split(/\s+/).slice(0,2).map(function(w){return w.charAt(0)}).join("");
     return '<span class="'+cls+'" aria-hidden="true">'+esc(initials||"—")+'</span>'}
+  function teacherCover(r){
+    if(typeof MadrasatiMedia!=="undefined"){try{return MadrasatiMedia.teacherMedia(r).cover}catch(e){}}
+    return ""}
   // The three stored flags answer "where can this teacher teach", and the
   // section's vocabulary is exactly (حضوري / عن بعد / مدمج).
   function teacherModes(r){
@@ -1519,7 +1525,7 @@
     // The add/edit screen is its own route (#/teachersAdmin/new, …/edit/:id).
     var sub=routeSub();
     if(sub==="new"||sub==="edit")return adminTeacherFormPage();
-    if(ac.teacherDetail)return adminTeacherDetail(ac.teacherDetail);
+    if(ac.teacherDetail)return adminShell(adminTeacherDetail(ac.teacherDetail));
     teacherLoadCatalog();
     var listUrl=teacherListUrl();
     var rows=teacherRows();

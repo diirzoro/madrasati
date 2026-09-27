@@ -64,6 +64,7 @@ const modules = [
   { name: 'marketplace',    path: '/api/marketplace' },
   { name: 'ownership',      path: '/api/ownership' },
   { name: 'documents',      path: '/api/documents' },
+  { name: 'media',          path: '/api/media' },
   { name: 'admin',          path: '/api/admin' },
   // marketing must mount AFTER admin so /api/admin/* owned by the admin module
   // is matched first, while marketing's own /api/admin/* writes fall through.

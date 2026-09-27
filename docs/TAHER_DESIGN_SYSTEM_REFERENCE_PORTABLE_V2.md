@@ -651,3 +651,16 @@ Agents must:
 - reuse the existing shell and design system
 - change only the requested module/section
 - avoid broad visual rewrites
+
+## 12. Implementation status — current qoder-test build
+
+The approved V4 shell, palette and six theme presets are unchanged by the
+current development build; no visual rewrite was performed. The `?v=` query in
+`index.html` is bumped whenever `app.js` or `styles.css` change so a browser
+never serves a cached copy. New screens added by this build (the teacher and
+institution wizards, the organization academic setup and offering screens, and
+the country admin form) all render through the single `formPage()` builder and
+the single `.uf-page` block, so they inherit the same centred 760px card, the
+40px fields with an 8px radius, the 28/72 label grid and the shared `.uf-tabs`
+wizard footer. Tables continue to paginate and filter server-side, and a whole
+row or whole card remains the click target.
