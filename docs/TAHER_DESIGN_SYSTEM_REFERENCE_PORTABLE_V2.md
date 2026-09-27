@@ -664,3 +664,9 @@ the single `.uf-page` block, so they inherit the same centred 760px card, the
 40px fields with an 8px radius, the 28/72 label grid and the shared `.uf-tabs`
 wizard footer. Tables continue to paginate and filter server-side, and a whole
 row or whole card remains the click target.
+
+The superseded `design-prototype-v4/temp-v4/` detail template pack and the
+unused `assets/images/school-logo-*.svg` placeholders were removed. The live
+detail pages use the shared shell and the entity media resolver described above;
+the remaining project images and generic reference images are still used by
+that resolver or by the public pages.
