@@ -39,6 +39,9 @@ function mapOrganization(row) {
     website: row.website,
     image: row.image,
     gallery: parseJson(row.gallery, []),
+    // Entity-owned media registry (see modules/media): { logo, cover, gallery,
+    // facilities, documents }. Keyed on this organization's id.
+    media: (row.media && typeof row.media === 'object') ? row.media : parseJson(row.media, null),
     facilities: parseJson(row.facilities, []),
     offers: parseJson(row.offers, []),
     offersCount: row.offers_count || 0,
@@ -63,6 +66,7 @@ function mapOrganization(row) {
     feeDetails: parseJson(row.fee_details, {}),
     grades: parseJson(row.grades, []),
     seatsAvailable: row.seats_available,
+    workingHours: parseJson(row.working_hours, null),
     registrationOpen: row.registration_open == null ? null : Boolean(row.registration_open),
     gender: row.gender,
     curriculum: row.curriculum,

@@ -1,0 +1,10 @@
+<resources>
+    <color name="brand_primary">#1F5D46</color>
+    <color name="brand_primary_dark">#174837</color>
+    <color name="brand_accent">#B55A3C</color>
+    <color name="brand_background">#FAF7F2</color>
+    <color name="brand_surface">#FFFFFF</color>
+    <color name="brand_text">#1F2937</color>
+    <color name="brand_muted">#6B7280</color>
+    <color name="ic_launcher_background">#1F5D46</color>
+</resources>
