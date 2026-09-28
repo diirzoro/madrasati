@@ -287,6 +287,24 @@ Use:
 
 Avoid tiny detail modals for complex entities.
 
+### Institution detail layout and teacher profile
+
+The five institution types use one `rd-*` detail document in both the public
+and dashboard shells. It has a light cover with the institution's own identity,
+status badges and contact links, section tabs, paired facts and description,
+full-width programs and subjects, teacher and facility panels, a map and
+gallery row, documents, and an action bar. The design is scoped to `.rd-page`
+and follows the selected theme preset. The selected institution's API data,
+routes and media resolver remain the source of the content. No dashboard or
+directory layout changes as part of this institution detail design.
+
+The teacher profile retains its `ed-*` editorial document and its own cover,
+figures, tabs, and subject, pricing and availability sections. Both documents
+render through their existing public/dashboard shells. Institution owners and
+admins retain the add/edit controls and dedicated form routes for offerings
+and subjects. Prices remain gated for anonymous users; capacity is derived;
+generic media is labelled illustrative. Verify both shells and the 360px view.
+
 ## 8. Forms
 
 **Every add/edit form is a dedicated page, never an inline panel and never a
@@ -655,7 +673,7 @@ Agents must:
 ## 12. Implementation status — current qoder-test build
 
 The approved V4 shell, palette and six theme presets are unchanged by the
-current development build; no visual rewrite was performed. The `?v=` query in
+earlier development build described in this section. The `?v=` query in
 `index.html` is bumped whenever `app.js` or `styles.css` change so a browser
 never serves a cached copy. New screens added by this build (the teacher and
 institution wizards, the organization academic setup and offering screens, and
@@ -670,3 +688,97 @@ unused `assets/images/school-logo-*.svg` placeholders were removed. The live
 detail pages use the shared shell and the entity media resolver described above;
 the remaining project images and generic reference images are still used by
 that resolver or by the public pages.
+
+## 13. Teacher and client account details
+
+The chosen second teacher prototype is implemented in the shared teacher profile
+renderer used by the public directory and admin dashboard. It has a compact
+dark-green identity header, a plain statistics strip, per-subject cards, and a
+contact card alongside the details. The contact action uses the teacher's real
+contact value and selected subject. Only uploaded photos belong to the teacher's
+gallery; a generic portrait is labeled as illustrative. Anonymous visitors see
+the same profile structure with prices withheld by the server.
+
+The admin client account detail follows the same visual rhythm and opens from
+a whole clickable account row. Add and edit use dedicated `#/students/new` and
+`#/students/edit/:id` routes in the shared form shell. The detail groups account
+and declared profile data, consent-based activity summaries, and feedback.
+It does not imply an academic student record. The client dashboard at
+`#/client` exposes profile preferences, a clear activity opt-in, and a feedback
+form. Empty activity views say that no data has been recorded.
+
+The landing page reads organization and teacher totals and cards from their
+public API directories, and governorate totals from the location catalog. Its
+search controls lead to those same directories, and an admin sees a direct link
+to the protected student/client account section. Published hero slides remain
+under the marketing dashboard's API control. No student count is published.
+
+The Users & Access screen retains one global sidebar item and follows the
+institution module's `.section-tabs.ac-tabs` pattern. Main tabs and user-detail
+tabs use hash routes so refresh and Back retain the selected view. All eight
+main tabs stay visible in a compact four-column grid, becoming two columns on
+narrow screens without horizontal scrolling. User rows are full keyboard-accessible click targets. Membership
+add/edit uses the shared dedicated `formPage()` rather than an inline editor.
+Only data-backed user tabs are shown; sessions explicitly identify the current
+in-memory limitation, and no fabricated documents or academic records are
+shown.
+
+The `#/access` overview uses six small linked metrics with one label, icon and
+number per item. They use restrained green accents and stay in two columns on
+mobile; all numbers use western digits `0–9` in both UI languages. The values
+come from PostgreSQL and link to the corresponding section. Recent activity and
+quick links sit below the metrics. Arabic mode translates visible role, status,
+permission and audit labels while preserving machine codes in API payloads. The owner
+staff directory reuses the same compact table/actions and dedicated `formPage()`
+layout, with separate controls for editing, suspending, archiving and restoring
+an institution assignment.
+
+### Reports & Analytics Center
+
+The Reports entry opens a single reporting environment, not a CRUD page.
+
+**Landing header.** The catalog opens with a static, image-led banner: the
+platform photograph (`assets/images/hero-yemen.jpg`) fills the header under a
+neutral dark scrim — no brand-colour gradient — and the live headline figures
+sit in translucent statistic cards on top (institutions, teachers, users, active
+advertisements). Two mini visuals share the banner: a small institutions-by-type
+donut and a 14-day activity sparkline. The numbers come from one light
+`/api/reports/headline` call and are real; the banner is read-only.
+
+**Executive overview cards.** KPI cards are a strict **three-per-row** grid on
+desktop (two below 820px, one below 520px), never a long row of identical tiles.
+Each card has an icon, the primary number, a label, an optional context line and
+a trend badge — but a trend is shown only when the previous equal-length period
+actually supports a percentage.
+
+**Analytics colour language.** Positive/active is green (`#2F7A59`),
+warning/pending amber (`#C98A1B`), negative/rejected terracotta (`#A64E3E`),
+information blue (`#2E6F9E`), neutral grey. Charts use this fixed palette so
+they read on both light and dark surfaces; every colour lives in
+`reports-center.css` tokens, never hardcoded in JavaScript.
+
+**Report view.** A cover block states the title, period and generated date; a
+period selector (today → custom range), per-report filters, a nav of report
+types, and Print / Export / Save actions follow. KPIs, then charts, then tables,
+then limitation notes. Charts are chosen by the question (donut for
+distribution, horizontal bars for ranking, area/line for time, grouped bars for
+capacity vs students), each with a title, tooltip, no-data state and RTL/dark
+support. Clicking a chart legend chip filters the table below — the drill-down
+is real, not decoration. Charts and tables never fabricate a trend: a metric
+with no stored history shows a professional empty state instead.
+
+**Tables** carry an entity cell with the real logo, badge cells for status,
+date/number formatting, a search box, column-visibility menu, sortable headers,
+server-side pagination and a per-table CSV export. The whole entity name links to
+the record; a details view (not a modal) opens for entities.
+
+**Exports** are part of the product: PDF (print template with branded header,
+KPI blocks, charts and branded table headers), Word (cover, KPI grid, chart
+images, styled tables, RTL Arabic), Excel (styled workbook, freeze panes,
+auto-filter, number/date formats) and CSV. The Export Center previews before
+downloading; the Import Center downloads a template, validates, and only then
+writes.
+
+All report screens respond from 320px up with no page-level horizontal
+scrolling, switch cleanly between Arabic RTL and English LTR (charts included),
+and keep their contrast in every theme preset and in dark mode.

@@ -216,6 +216,35 @@ Client can, where enabled:
 
 Detailed student/parent requirements are not to be invented beyond approved requirements.
 
+The `students` admin route is displayed as "العملاء" / "Clients" so existing
+deep links keep working. It lists only registered `client` accounts; the
+dashboard count uses the same role filter. Admins can create a client, edit the
+account and profile, suspend/reactivate it, and soft-delete it through the
+protected `/api/users` routes. The seven protected fixture accounts remain
+undeletable. Lists are filtered and paginated on the server.
+
+Migration 039 adds `client_profiles` for declared kind (`student`, `parent`,
+`both`, `other`, or `unspecified`), interests, preferred locations, contact
+preference, internal notes, and activity consent. Registered location remains
+on `user_profiles` and uses the locations catalog. Kind is a declared profile
+attribute, never proof of enrolment or guardianship. `client_feedback` holds
+suggestions, complaints and inquiries with an admin-managed status. The client
+can edit their own non-admin profile fields and submit feedback from `#/client`;
+only admins see internal notes and the feedback queue.
+
+`client_activity_events` records first-party visits to public sections and
+searches for authenticated clients only after their explicit opt-in. Admin
+insights aggregate the last 90 days into visited sections, active hours,
+searched locations and search terms. The same admin detail reads actual booking
+and admission counts plus last login from the existing operational tables.
+With no consent the API records no browsing events;
+revoking consent deletes that client's events. Anonymous visitors have no
+`users` row and are not presented as named clients. The protected client data
+is not published on the landing page. Actual parent-child authority and
+academic enrolment still need separate approved requirements and server-side
+authorization; classification alone grants no access to a student's records.
+Migration 040 indexes event time for cleanup of expired activity.
+
 ## 7. Academic Model
 
 Subject is the primary global academic catalog unit.
@@ -562,7 +591,7 @@ These documents define the approved business/architecture direction. They do not
 | 1 | `admin` | الرئيسية |
 | 2 | `schools` | إدارة المؤسسات الدراسية |
 | 3 | `teachersAdmin` | المعلمون |
-| 4 | `students` | الطلاب |
+| 4 | `students` | العملاء |
 | 5 | `bookings` | الحجوزات |
 | 6 | `verify` | التحقق والمراجعة |
 | 7 | `academic` | البيانات الأكاديمية |
@@ -863,3 +892,214 @@ Excel يُصدَّر بخمس أوراق والرسوم **أرقاماً** مع 
   مطبَّقين: `005` استخدم `EXECUTE PROCEDURE` بدل `EXECUTE FUNCTION`، و`023`
   استبدل العمود المُولَّد بـTrigger. الترحيلات المطبَّقة سابقاً لا تُعدَّل؛
   وترقية الخادم إلى PostgreSQL 12+ تعيد `remaining_seats` عموداً مُولَّداً.
+
+## Users & Access implementation checkpoint — 28 September 2026
+
+The owner dashboard now links to `#/owner/staff`, where each institution has
+its own staff directory and dedicated add/edit form. A staff assignment links an
+already registered account by exact email; it never changes that account's
+platform role. Institution roles such as receptionist, accountant, manager and
+controller are editable membership labels, with optional department and job
+title. They do not yet grant operational permissions in bookings, admissions or
+other domain modules. Those modules retain their existing server guards until
+each operation has an approved permission mapping.
+Creating a staff assignment currently requires an existing active account;
+a secure invitation and account-claim flow is still required for a person who
+has not registered. The directory is paginated and searchable on the server.
+
+Migration `046_staff_membership_archive.sql` adds staff metadata and archive
+fields to `organization_memberships`. Removing staff sets `archived_at` and
+`status='inactive'` while preserving the user, audit trail and assignment for
+later analysis. An archived assignment can be restored for an active account.
+The owner may manage only their own organization; a foreign organization returns
+`404`. The owner cannot assign an owner/admin membership, edit an owner or
+protected membership, or change the staff member's global account status. The
+normalized active owner membership is an ownership source alongside
+`organizations.owner_user_id`, which is unpopulated on imported organizations.
+
+The account directory shows platform role, client classification, teacher
+association, institution affiliation and account state. Client classifications
+are account labels, not verified student enrollment or guardian authority;
+anonymous visitors have no account row. The overview cards link to their live
+sections and display PostgreSQL counts. A deleted account retains its historical
+membership, which is archived in the same soft deletion operation.
+
+The single `#/access` sidebar entry now has route-backed tabs for overview,
+users, roles, permissions, organization memberships, registration requests,
+security, and audit. `#/access/users/:id/:tab` keeps user details in the same
+module. Counts, users, memberships, grants, active sessions, and audit entries
+come from PostgreSQL or the running API session store; the old decorative
+permission matrix is no longer the active renderer.
+
+Migration `043_identity_access_extensions.sql` adds `user_permission_overrides`
+for direct grants and denies, optionally scoped to an organization. The existing
+`roles`, `permissions`, `role_permissions`, `users.role_id`, and
+`organization_memberships` remain authoritative. Migration `044` adds the
+missing unique index on `(user_id, organization_id)` after checking for legacy
+duplicates. `requirePermission` resolves
+role grants and direct overrides on the server; a direct deny wins. Current use
+is limited to identity/Users & Access APIs. Other domain routers still use their
+existing `requireRole` and `requireOrgMember` guards; the new matrix must not be
+described as controlling every route yet. Admin mutation of a protected user's
+role/status and self role/status mutation are rejected. Admin-created membership
+changes and permission overrides are audited.
+
+Sessions remain in memory. User details can show and revoke sessions in the
+current API process, without claiming durable history or device identification.
+The `up-no-seed` migration command applies forward migrations without the
+normal fixed-account reseed; ordinary `up` retains its documented reseed.
+Registration requests read the existing `pending_registrations` table. That
+table has no review status or decision fields, so approval/rejection workflows
+are not implied by the tab. Academic student and guardian identities are still
+separate open work; a client classification is not an enrolment or guardian
+relationship.
+
+### IAM gap and security audit
+
+| Capability | Current state | Remaining work |
+|---|---|---|
+| Login identity, account status, protected fixtures | Existing; protected role/status mutations now refused | Fixed fixtures are still local-development only |
+| Roles and permissions | Four system roles, a PostgreSQL permission catalog, role grants, and an identity-route permission guard | Custom role assignment and enforcement across every domain router remain open |
+| Organization memberships | Existing multi-organization table; list/add/edit/remove APIs and unique user/institution index now available | Owner/staff capability checks still need per-operation review across all tenant modules |
+| Direct grants and denies | New `user_permission_overrides`, effective-permission read, audit, and deny-first resolution | Non-identity routers still enforce their earlier role guards |
+| User administration | Existing account list/edit/soft delete and new detail tabs | Restore, durable password-reset workflow, and richer account lifecycle are not exposed |
+| Registration requests | Existing `pending_registrations` read restored | No review status, documents, approval decision, or identity-link workflow exists yet |
+| Students and guardians | Admissions applications and client classifications exist | No normalized student enrolment or guardian relationship domain exists; the client CRM is not a student record |
+| Teachers | Existing `teacher_profiles` link to `users` | Role/membership permissions are not yet a unified teacher authorization model |
+| Sessions | Live in-memory sessions can be listed and revoked per user | No durable device/session history; changing the session architecture needs its own design review |
+| Audit | Existing `audit_logs`; new membership and direct-permission mutations are recorded | Complete coverage and filters across every admin operation remain open |
+
+The existing `app_sections` registry from migration `042` has not been made a
+global route authorization source. Its public-page CRUD rows are catalog rows,
+not evidence of real public-page create/delete capabilities. The previous
+`/api/profiles/:userId` read allowed any authenticated user to request another
+profile; it now allows only the subject or a platform admin with `access.view`.
+Cross-tenant membership reads and writes return `404` before exposing a foreign
+organization. These findings are implementation limits, not sample data to
+display as functional controls.
+
+## 15. Marketing: Advertisements vs Offers
+
+Two separate systems with different permissions, both served by
+`server/modules/marketing` and backed by PostgreSQL.
+
+**Offers (العروض)** are institution-owned promotions and are self-served: an
+institution owner creates, edits, activates/deactivates and deletes offers for
+their **own** institutions only. Cross-tenant access returns `404`, so owner A
+can never touch owner B's offers. Admin views/manages all. Offers appear on the
+institution card (`offersCount`) and in the public offer popup
+(`GET /api/offers?organizationId=…`), filtered to `active` within the schedule
+window.
+
+**Advertisements (الإعلانات)** are public advertising space controlled by the
+MADARASATI administration. An owner (or user) SUBMITS an advertisement, which
+always enters `pending`; only a Program Administrator approves it. The stored
+statuses are `pending / approved / paused / rejected / cancelled / archived`,
+and `scheduled / active / expired` are **derived** from `approved` + the
+start/end window (never stored). Public eligibility is exactly:
+
+    status = 'approved' AND (starts_at IS NULL OR starts_at <= now())
+    AND (ends_at IS NULL OR ends_at >= now())
+
+A pending, rejected, paused, cancelled, archived or out-of-window ad is never
+public. Approval is enforced in the backend: the owner submission route forces
+`pending` and strips `status`/review fields, so a `status:"approved"` sent by an
+owner is ignored. A material owner edit (image, message, target, placement,
+schedule) returns an approved ad to `pending`.
+
+Advertiser (المعلن) is a real reference, not free text: it is an institution
+owner (via `organization_id`) or a private teacher (via `teacher_id`), chosen
+from `GET /api/advertisements/advertisers`.
+
+Key routes:
+
+    # public
+    GET  /api/advertisements?placement=ticker      (approved + in window)
+    POST /api/advertisements/:id/click             (genuine CTA click)
+    POST /api/advertisements/:id/impression        (ad shown; distinct from click)
+    GET  /api/offers?organizationId=…              (active + in window)
+    GET  /api/hero-slides?placement=public_hero    (landing hero; local fallback)
+
+    # owner (requireAuth; tenant-scoped)
+    GET/POST /api/offers/mine, /api/offers, PUT/DELETE /api/offers/:id
+    GET  /api/advertisements/mine
+    POST /api/advertisements                        (submits -> pending)
+    PUT  /api/advertisements/:id                    (content edit -> pending on material change)
+    POST /api/advertisements/:id/cancel, /resubmit
+    POST /api/uploads/banner                        (owner banner upload)
+
+    # admin (requireAuth + requireRole('admin'))
+    GET/POST/PUT/DELETE /api/admin/advertisements
+    POST /api/admin/advertisements/:id/review       (approve | reject | request_changes)
+    POST /api/admin/advertisements/:id/status       (pause | resume | cancel | archive)
+    GET/POST/PUT/DELETE /api/admin/offers
+    GET/POST/PUT/DELETE /api/admin/hero-slides
+    POST /api/admin/uploads/banner
+
+Image upload (banner) is magic-byte sniffed (JPG/PNG/WEBP), capped at 8 MB,
+stored under `uploads/marketing` with a random name, served at
+`/uploads/marketing/...`; executable content is refused. Clicks and impressions
+are real counters (never incremented by page load or admin preview); CTR is
+derived, never fabricated.
+
+Android currently consumes none of these endpoints, so there is no Android
+contract to break. The only implemented advertisement placement is `ticker`;
+`banner`/`sidebar` were removed because no frontend rendered them.
+
+## Reports & Analytics Center
+
+`#/reports` is one sidebar entry (the frozen 13th admin item) that opens a full
+reporting environment rather than a statistics panel. It is served by a
+dedicated `server/modules/reports` module mounted at `/api/reports`, mounted
+after `admin` and before `marketing`, and every route carries
+`requireAuth` + `requireRole('admin')`. Reports aggregate across tenants, so
+authorization is enforced on the server — not by hiding a tab. Anonymous callers
+get `401`, non-admin callers get `403`.
+
+The module is a three-layer pipeline:
+
+    router → service (aggregation + normalization) → repository (SQL)
+
+Every report is delivered to the UI and to every exporter as ONE normalized
+model, so the screen and the exported file can never disagree:
+
+    { id, category, title{ar,en}, subtitle{ar,en}, period, generatedAt,
+      scope, kpis[], charts[], tables[], notes[] }
+
+`GET /api/reports/report?type=…&from&to&preset&…filters` is the single data
+endpoint. `type` selects the report; the remaining query parameters are its
+filters (`orgType`, `verified`, `governorateId`, `status`, `role`, `adType`,
+`actorUserId`, `action`, `entityType`, `id`, `limit`, `offset`). Report types:
+`overview`, `institutions`, `institution`, `teachers`, `teacher`, `users`,
+`admissions`, `offers`, `advertisements`, `ad-performance`, `academic`,
+`locations`, `activity`. `GET /api/reports/catalog` lists them with category and
+icon; `GET /api/reports/filter-options` returns the governorate/country/type/
+status dictionaries the screens filter with; `GET /api/reports/headline`
+returns the small live summary the landing banner shows.
+
+Two kinds of number are kept apart and never blended: current-state counts
+(what is true now) and period/event counts (rows whose `created_at`/`submitted_at`
+falls in the selected period). A metric that has no stored history is simply not
+produced — for example advertisement impressions and clicks are cumulative
+counters with no daily table, so the ad-performance report states that no
+historical trend exists instead of drawing a fabricated one.
+
+Exports are built from the same model client-side (no build step, no charting
+library): a styled `.xlsx` workbook (real cell values, styled headers, freeze
+panes, auto-filter, number/date formats, one sheet per table and a chart-data
+sheet), a branded `.docx` document (cover, KPI grid, chart images rasterised
+from the same SVG, tables, RTL for Arabic), CSV, and a print-ready HTML document
+whose "Save as PDF" produces a correctly shaped Arabic PDF. PDF uses the
+browser writer because embedded Arabic shaping needs a font the no-build SPA
+does not ship.
+
+Saved reports store the *configuration* only (`type`, period, filters), never a
+copy of business data; re-opening re-queries PostgreSQL. They live in
+`saved_reports` (migration `047`), owner-scoped to the admin user.
+
+The Import Center validates an institutions CSV and refuses malformed data: a
+`dryRun` returns the full error report with nothing written, and a real run is
+all-or-nothing and audited (`action = 'import'`). Names are resolved to real
+governorate/district rows, slugs are de-duplicated, and only
+`data_source = 'import'` rows are created with `verification_status = 'pending'`
+so an import can never self-verify.
