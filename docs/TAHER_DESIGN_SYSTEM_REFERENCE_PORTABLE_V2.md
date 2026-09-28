@@ -782,3 +782,50 @@ writes.
 All report screens respond from 320px up with no page-level horizontal
 scrolling, switch cleanly between Arabic RTL and English LTR (charts included),
 and keep their contrast in every theme preset and in dark mode.
+
+### Advertisement Management Center — statistic cards
+
+The lifecycle cards on the advertisements overview (`ads-center.css`) follow
+rules that exist because their opposites were tried and rejected.
+
+**A card keeps a card's proportions.** The grid is
+`repeat(auto-fit, minmax(190px, 300px))` with a start-aligned row, so a track is
+capped at 300px. An uncapped `1fr` ceiling let two surviving states stretch to
+659px on a 1330px row — a 659×123 slab where an 11.5px label floated alone on a
+625px line. Do not reintroduce a `1fr` ceiling, and do not add a breakpoint that
+forces fixed column counts: the capped `auto-fit` already lands on 2-up, 3-up or
+4-up, and a `≤1400px` rule forcing four stretched columns is what produced 227px
+cards on a 1000px screen.
+
+**Air is not a number to shrink under pressure.** Padding is `16px 18px` with a
+`min-height:126px` floor and `align-content:space-between` so the share meter
+pins to the bottom edge. Narrow layouts may shorten the *number* and the icon;
+they may not flatten the padding to `11px`.
+
+**Arabic type never goes below 12px.** The card label is `12.5px` (`12px` at
+≤400px) and the empty-state line `12px`. An earlier rule dropped the label to
+10.5px on mobile, which is exactly the small-Arabic-type this document forbids.
+Contrast for the 30px value is 6.65:1 light and 5.58:1 dark.
+
+**Only populated states become cards.** Each card is one clickable filter; the
+states with no rows collapse into a single line of small, still-linked chips so
+nothing becomes unreachable, and they stop competing with the rows that need a
+decision.
+
+**Two engineering rules this screen earned the hard way:**
+
+1. *Module tokens are declared on `:root`, not only on the page wrapper.* They
+   are `--ads-*` prefixed so they cannot collide. Scoping them to `.ads-page`
+   alone meant that any markup escaping the wrapper silently lost every
+   `var(--ads-card)` / `var(--ads-line)` and fell back to transparent surfaces
+   with no border.
+2. *A page wrapper must be closed by its own tag.* `statHero` opened `<section>`
+   and closed it with `</div></div>`. The second `</div>` had no div in scope, so
+   the parser popped the section **and** the enclosing `.ads-page`, and every
+   element after the hero became a sibling of the wrapper. The layout still
+   measured perfectly — equal widths, correct heights, no overflow — which is
+   exactly why the fault survived: geometry passed while the screen was blank.
+   When a container's tokens are declared on that container, assert in review
+   that `container.querySelectorAll(':scope > *')` still holds the whole body,
+   and that one card's computed `background-color` is not `rgba(0, 0, 0, 0)`.
+

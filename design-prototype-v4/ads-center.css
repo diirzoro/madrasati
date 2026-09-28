@@ -1,0 +1,670 @@
+/* =====================================================================
+   ads-center.css — MADARASATI Advertisement Management Center
+   مركز إدارة الإعلانات
+
+   The visual system for the Advertisements module only. It deliberately adds
+   NO new palette: every surface, border and text colour is a `--theme-*` token,
+   so all six shipped presets and dark mode keep working untouched.
+
+   The one thing this file extends is SEMANTIC STATUS COLOUR. The palette is
+   single-hue (education green), which is correct for chrome but cannot express
+   six lifecycle states on its own. So status meaning is carried by a small set
+   of derived tokens (ok / warn / info / mute / bad) that are tuned per mode.
+   Colour is never the only channel: every status also ships a text label and a
+   dot, so the meaning survives greyscale, low vision and a colour-blind reader.
+   ===================================================================== */
+
+.ads-page{display:grid;gap:14px;min-width:0}
+
+/* --- semantic status tokens ------------------------------------------- */
+/* The module tokens are also declared on :root. Scoping them to .ads-page alone
+   made the whole overview body unstyleable the moment any markup escaped the
+   wrapper: every var(--ads-*) then resolved to nothing and the cards fell back
+   to transparent backgrounds with no border, while the layout still measured
+   correctly and hid the fault. These names are module-local (--ads-*), so
+   declaring them at the root cannot collide with another module. */
+:root,
+.ads-page,
+.ads-drawer{
+  --ads-ok:#17694A;      --ads-ok-bg:rgba(23,105,74,.10);   --ads-ok-line:rgba(23,105,74,.30);
+  --ads-warn:#9A6410;    --ads-warn-bg:rgba(196,140,32,.14); --ads-warn-line:rgba(196,140,32,.34);
+  --ads-info:#1F5E93;    --ads-info-bg:rgba(31,94,147,.11);  --ads-info-line:rgba(31,94,147,.30);
+  --ads-mute:#5F6873;    --ads-mute-bg:rgba(95,104,115,.11); --ads-mute-line:rgba(95,104,115,.28);
+  --ads-bad:#A62A21;     --ads-bad-bg:rgba(179,38,30,.10);   --ads-bad-line:rgba(179,38,30,.30);
+  --ads-ink:var(--theme-text,#1F2937);
+  --ads-dim:var(--theme-muted,#6B7280);
+  --ads-line:var(--theme-border,#E7DED3);
+  --ads-card:var(--theme-surface,#fff);
+  --ads-wash:var(--theme-bg,#FAF7F2);
+  --ads-brand:var(--theme-primary,#1F5D46);
+}
+:root[data-theme="dark"],
+:root[data-theme="dark"] .ads-page,
+:root[data-theme="dark"] .ads-drawer{
+  --ads-ok:#5FCB9A;      --ads-ok-bg:rgba(95,203,154,.14);
+  --ads-warn:#E8B95C;    --ads-warn-bg:rgba(232,185,92,.15);
+  --ads-info:#7FB6E6;    --ads-info-bg:rgba(127,182,230,.15);
+  --ads-mute:#A9B2BD;    --ads-mute-bg:rgba(169,178,189,.13);
+  --ads-bad:#F08A80;     --ads-bad-bg:rgba(240,138,128,.15);
+}
+
+/* --- 1. section header ------------------------------------------------- */
+.ads-head{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin:0}
+.ads-head-text{min-width:0;flex:1 1 320px}
+.ads-head h1{margin:0;font-size:24px;line-height:1.3;font-weight:800;color:var(--ads-ink);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ads-head-tag{font-size:10.5px;font-weight:800;letter-spacing:.02em;padding:3px 9px;border-radius:999px;
+  background:var(--ads-ok-bg);color:var(--ads-ok);border:1px solid var(--ads-ok-line);white-space:nowrap}
+.ads-head p{margin:5px 0 0;font-size:12.5px;line-height:1.75;color:var(--ads-dim);max-width:72ch}
+.ads-head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ads-head-actions .btn{min-height:40px;padding:0 16px;border-radius:9px;font-size:12px;font-weight:800;
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit}
+
+/* --- 2. tabs ----------------------------------------------------------- */
+/* A tab strip, not a chip row: it scrolls horizontally on a narrow screen and
+   wraps instead of squeezing, so it can never widen the page. */
+.ads-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:5px;background:var(--ads-card);
+  border:1px solid var(--ads-line);border-radius:13px;min-width:0}
+.ads-tabs-scroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch;
+  min-width:0;max-width:100%;scroll-snap-type:x proximity}
+.ads-tabs button{flex:0 0 auto;scroll-snap-align:start;display:inline-flex;align-items:center;gap:6px;
+  min-height:38px;padding:0 13px;border:1px solid transparent;border-radius:9px;background:transparent;
+  color:var(--ads-dim);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:background .15s,color .15s,border-color .15s}
+.ads-tabs button:hover{background:var(--ads-wash);color:var(--ads-ink)}
+.ads-tabs button.active{background:var(--ads-brand);border-color:var(--ads-brand);color:#fff}
+.ads-tabs button:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+/* The counter is a real number from the database summary, and it is never the
+   only signal: the tab keeps its text label beside it. */
+.ads-tab-count{display:inline-grid;place-items:center;min-width:20px;height:19px;padding:0 6px;
+  border-radius:999px;background:var(--ads-mute-bg);color:var(--ads-dim);font-size:10.5px;font-weight:800;
+  font-variant-numeric:tabular-nums}
+.ads-tabs button.active .ads-tab-count{background:rgba(255,255,255,.22);color:#fff}
+.ads-tab-count[data-tone="ok"]{background:var(--ads-ok-bg);color:var(--ads-ok)}
+.ads-tab-count[data-tone="warn"]{background:var(--ads-warn-bg);color:var(--ads-warn)}
+.ads-tab-count[data-tone="info"]{background:var(--ads-info-bg);color:var(--ads-info)}
+.ads-tab-count[data-tone="bad"]{background:var(--ads-bad-bg);color:var(--ads-bad)}
+.ads-tabs button.active .ads-tab-count{background:rgba(255,255,255,.22);color:#fff}
+/* A tab that needs the operator to do something is marked in the SHAPE of the
+   strip as well as the colour, so the cue is not colour-only. */
+.ads-tab-alert{box-shadow:inset 0 -2px 0 var(--ads-warn)}
+
+/* --- 3. statistics board ------------------------------------------------ */
+/* The overview answers three questions in this order: HOW MUCH do we have, WHAT
+   STATE is it in, and HOW DID it perform. So the board is three layers, not one
+   flat row of boxes:
+     .ads-stat-hero   the headline figure + the three measured counters
+     .ads-stats       one card per lifecycle state, each a clickable filter
+     .ads-stat-bar    a single distribution bar that is also a legend
+   Every figure is a real aggregate from the summary endpoint and every card
+   carries its own share of the total, so nothing here has to be inferred. */
+
+.ads-stat-hero{position:relative;overflow:hidden;display:grid;gap:16px;align-items:center;
+  grid-template-columns:minmax(0,1fr) auto;padding:18px 20px;border-radius:17px;
+  background:var(--ads-card);border:1px solid var(--ads-line)}
+/* A single soft brand wash, not a gradient wallpaper: it gives the band depth
+   while every other surface in the module stays flat white. */
+.ads-stat-hero::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;
+  background:linear-gradient(180deg,var(--ads-brand),var(--ads-accent))}
+.ads-stat-hero-main{display:flex;align-items:center;gap:14px;min-width:0}
+.ads-stat-hero-ic{width:52px;height:52px;flex:0 0 52px;border-radius:15px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--ads-brand) 12%,transparent);color:var(--ads-brand)}
+.ads-stat-hero-label{display:block;font-size:12.5px;font-weight:800;letter-spacing:.02em;color:var(--ads-dim)}
+.ads-stat-hero-row{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-top:2px}
+.ads-stat-hero-num{font-size:38px;line-height:1.05;font-weight:800;letter-spacing:-.01em;
+  color:var(--ads-ink);font-variant-numeric:tabular-nums}
+.ads-stat-hero-share{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;
+  font-size:12.5px;font-weight:800;background:var(--ads-ok-bg);color:var(--ads-ok);
+  border:1px solid var(--ads-ok-line)}
+.ads-stat-hero-figs{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+/* A measured counter, not a trend: there is no daily series in the schema, so no
+   sparkline or "up/down" arrow is drawn here. */
+.ads-stat-mini{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;gap:0 7px;
+  align-items:center;min-width:0;padding:9px 12px;border-radius:12px;background:var(--ads-wash);
+  border:1px solid var(--ads-line);color:var(--ads-dim)}
+.ads-stat-mini svg{grid-row:1/2;align-self:center}
+.ads-stat-mini b{font-size:18px;font-weight:800;color:var(--ads-ink);font-variant-numeric:tabular-nums;line-height:1.2}
+.ads-stat-mini small{grid-column:2/3;font-size:12px;font-weight:700;color:var(--ads-dim);white-space:nowrap}
+/* The bar doubles as the legend: each segment is sized by its real count and
+   tinted by its state, and the whole strip is a jump into that state. */
+.ads-stat-bar{display:flex;gap:2px;height:9px;border-radius:999px;overflow:hidden;background:var(--ads-mute-bg)}
+.ads-stat-bar i{display:block;min-width:3px;background:var(--ads-mute);cursor:pointer}
+.ads-stat-bar i[data-tone="ok"]{background:var(--ads-ok)}
+.ads-stat-bar i[data-tone="warn"]{background:var(--ads-warn)}
+.ads-stat-bar i[data-tone="info"]{background:var(--ads-info)}
+.ads-stat-bar i[data-tone="bad"]{background:var(--ads-bad)}
+.ads-stat-bar i[data-tone="mute"]{background:var(--ads-mute)}
+
+/* The lifecycle strip. Tracks are CAPPED (minmax(190px,300px)) and the row is
+   start-aligned: auto-fit with a 1fr ceiling let two states stretch to 659px,
+   producing a wide 659x123 slab where the label floated alone on a 625px line.
+   A card has to keep a card's proportions, so the survivors keep their natural
+   width and the leftover space stays at the trailing edge. */
+.ads-stat-strip{margin-top:14px}
+.ads-stats{display:grid;gap:12px;justify-content:start;
+  grid-template-columns:repeat(auto-fit,minmax(190px,300px))}
+.ads-stat{position:relative;display:grid;gap:0;align-content:space-between;text-align:start;min-width:0;
+  min-height:126px;padding:16px 18px 16px;background:var(--ads-card);border:1px solid var(--ads-line);
+  border-radius:15px;color:inherit;font-family:inherit;cursor:pointer;overflow:hidden;
+  transition:border-color .15s,box-shadow .15s,transform .15s}
+.ads-stat:hover{border-color:var(--ads-brand);box-shadow:0 6px 18px rgba(31,55,45,.08);transform:translateY(-1px)}
+.ads-stat:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-stat-top{display:flex;align-items:center;gap:9px;min-width:0}
+.ads-stat-ic{width:36px;height:36px;flex:0 0 36px;border-radius:11px;display:grid;place-items:center;
+  background:var(--ads-mute-bg);color:var(--ads-mute)}
+.ads-stat[data-tone="ok"] .ads-stat-ic{background:var(--ads-ok-bg);color:var(--ads-ok)}
+.ads-stat[data-tone="warn"] .ads-stat-ic{background:var(--ads-warn-bg);color:var(--ads-warn)}
+.ads-stat[data-tone="info"] .ads-stat-ic{background:var(--ads-info-bg);color:var(--ads-info)}
+.ads-stat[data-tone="bad"] .ads-stat-ic{background:var(--ads-bad-bg);color:var(--ads-bad)}
+.ads-stat-label{font-size:12.5px;font-weight:700;color:var(--ads-dim);overflow-wrap:anywhere;line-height:1.45}
+.ads-stat-value{margin-top:10px;font-size:30px;line-height:1.05;font-weight:800;color:var(--ads-ink);
+  font-variant-numeric:tabular-nums}
+.ads-stat[data-tone="ok"] .ads-stat-value{color:var(--ads-ok)}
+.ads-stat[data-tone="warn"] .ads-stat-value{color:var(--ads-warn)}
+.ads-stat[data-tone="bad"] .ads-stat-value{color:var(--ads-bad)}
+/* The share is shown, not printed: a 4px meter carries the same fact the old
+   "50% من الإعلانات" line did, without a fourth line of text in the card. */
+.ads-stat-meter{display:block;height:4px;margin-top:11px;border-radius:999px;background:var(--ads-mute-bg);
+  overflow:hidden}
+.ads-stat-meter i{display:block;height:100%;border-radius:999px;background:var(--ads-mute);min-width:3px}
+.ads-stat[data-tone="ok"] .ads-stat-meter i{background:var(--ads-ok)}
+.ads-stat[data-tone="warn"] .ads-stat-meter i{background:var(--ads-warn)}
+.ads-stat[data-tone="info"] .ads-stat-meter i{background:var(--ads-info)}
+.ads-stat[data-tone="bad"] .ads-stat-meter i{background:var(--ads-bad)}
+
+/* The states with no rows: one quiet line, still linked. This is what replaced
+   five cards that all read «0». */
+.ads-stat-empty{margin:12px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+  font-size:12px;color:var(--ads-dim)}
+.ads-stat-empty button{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;
+  border-radius:999px;background:var(--ads-mute-bg);border:1px solid var(--ads-line);
+  color:var(--ads-dim);font-family:inherit;font-size:12px;cursor:pointer;
+  transition:border-color .15s,color .15s}
+.ads-stat-empty button:hover{border-color:var(--ads-brand);color:var(--ads-ink)}
+.ads-stat-empty button:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-stat-empty button[data-tone="warn"]{color:var(--ads-warn)}
+.ads-stat-empty button[data-tone="bad"]{color:var(--ads-bad)}
+.ads-stat-empty button[data-tone="info"]{color:var(--ads-info)}
+.ads-stat-empty button svg{flex:0 0 auto}
+
+/* --- 4. metric strip (impressions / clicks / CTR) --------------------- */
+.ads-metrics{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.ads-metric{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 10px;align-items:center;
+  padding:12px 14px;background:var(--ads-card);border:1px solid var(--ads-line);border-radius:12px;min-width:0}
+.ads-metric-ic{grid-row:1/3;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
+  background:var(--ads-mute-bg);color:var(--ads-mute);align-self:center}
+.ads-metric[data-tone="ok"] .ads-metric-ic{background:var(--ads-ok-bg);color:var(--ads-ok)}
+.ads-metric[data-tone="info"] .ads-metric-ic{background:var(--ads-info-bg);color:var(--ads-info)}
+.ads-metric b{font-size:22px;font-weight:800;color:var(--ads-ink);font-variant-numeric:tabular-nums;line-height:1.2}
+.ads-metric span{font-size:11.5px;font-weight:700;color:var(--ads-dim)}
+.ads-metric small{grid-column:2/3;font-size:10.5px;line-height:1.6;color:var(--ads-dim);margin-top:3px}
+
+/* --- 5. panels --------------------------------------------------------- */
+.ads-panel{background:var(--ads-card);border:1px solid var(--ads-line);border-radius:15px;
+  overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.ads-panel-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:13px 15px;border-bottom:1px solid var(--ads-line);min-width:0}
+.ads-panel-head h2{margin:0;font-size:14.5px;font-weight:800;color:var(--ads-ink);display:flex;
+  align-items:center;gap:8px;min-width:0}
+.ads-panel-head h2 svg{color:var(--ads-brand);flex:0 0 auto}
+.ads-panel-head p{margin:0;font-size:11px;color:var(--ads-dim)}
+.ads-panel-head .sp-actions{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+.ads-panel-body{padding:14px 15px;min-width:0;flex:1 1 auto}
+.ads-panel-body--flush{padding:0}
+.ads-panel-foot{padding:10px 15px;border-top:1px solid var(--ads-line);display:flex;gap:10px;
+  align-items:center;flex-wrap:wrap}
+.ads-link{background:transparent;border:0;color:var(--ads-brand);font-family:inherit;font-size:12px;
+  font-weight:800;cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:6px}
+.ads-link:hover{text-decoration:underline}
+.ads-link:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px;border-radius:4px}
+
+/* dashboard composition */
+.ads-split{display:grid;gap:14px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);margin:0}
+.ads-split--even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.ads-split--attention{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)}
+
+/* --- 6. status badge (text + dot, never colour alone) ------------------ */
+.ads-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  font-size:11px;font-weight:800;white-space:nowrap;line-height:1.6;
+  background:var(--ads-mute-bg);color:var(--ads-mute);border:1px solid var(--ads-mute-line)}
+.ads-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.ads-badge[data-tone="ok"]{background:var(--ads-ok-bg);color:var(--ads-ok);border-color:var(--ads-ok-line)}
+.ads-badge[data-tone="warn"]{background:var(--ads-warn-bg);color:var(--ads-warn);border-color:var(--ads-warn-line)}
+.ads-badge[data-tone="info"]{background:var(--ads-info-bg);color:var(--ads-info);border-color:var(--ads-info-line)}
+.ads-badge[data-tone="bad"]{background:var(--ads-bad-bg);color:var(--ads-bad);border-color:var(--ads-bad-line)}
+/* Scheduled is not "waiting" — it is a future fact, so it gets a ringed dot. */
+.ads-badge[data-tone="info"]::before{box-shadow:0 0 0 2px var(--ads-info-bg)}
+.ads-badge[data-tone="mute"]::before{background:transparent;box-shadow:inset 0 0 0 2px currentColor}
+.ads-badge[data-tone="bad"]::before{border-radius:2px;transform:rotate(45deg)}
+.ads-badge--lg{font-size:12px;padding:5px 12px}
+.ads-badge--plain{border-color:transparent}
+
+/* --- 7. advertisement card --------------------------------------------- */
+.ads-cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.ads-card{display:flex;flex-direction:column;min-width:0;background:var(--ads-card);
+  border:1px solid var(--ads-line);border-radius:15px;overflow:hidden;cursor:pointer;
+  transition:border-color .15s,box-shadow .15s}
+.ads-card:hover{border-color:var(--ads-brand);box-shadow:0 6px 18px rgba(31,55,45,.08)}
+.ads-card:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-card-media{position:relative;aspect-ratio:16/5;background:var(--ads-wash);overflow:hidden;
+  border-bottom:1px solid var(--ads-line)}
+.ads-card-media img{width:100%;height:100%;object-fit:cover;display:block}
+/* No image is a designed state, not a broken one: the type badge sits on the
+   placeholder so the card never looks like a failed load. */
+.ads-media--card.ads-media--empty{width:100%;height:100%;display:grid;place-items:center;gap:6px;
+  align-content:center;color:var(--ads-dim);font-size:11px;font-weight:700;text-align:center;padding:8px}
+.ads-card-media .ads-badge{position:absolute;inset-block-start:9px;inset-inline-end:9px;
+  background:var(--ads-card);backdrop-filter:blur(2px)}
+.ads-card-body{padding:12px 14px;display:grid;gap:9px;flex:1 1 auto;min-width:0}
+.ads-card-title{font-size:13.5px;font-weight:800;color:var(--ads-ink);line-height:1.5;margin:0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ads-card-sub{font-size:11.5px;color:var(--ads-dim);display:flex;align-items:center;gap:6px;
+  flex-wrap:wrap;overflow-wrap:anywhere}
+.ads-card-logo{width:20px;height:20px;border-radius:6px;object-fit:cover;flex:0 0 20px;
+  border:1px solid var(--ads-line);background:var(--ads-wash)}
+.ads-card-msg{font-size:11.5px;line-height:1.7;color:var(--ads-dim);margin:0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ads-card-window{font-size:11px;color:var(--ads-dim);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ads-card-stats{display:flex;gap:14px;flex-wrap:wrap;padding-top:9px;border-top:1px dashed var(--ads-line);
+  font-size:11.5px;color:var(--ads-dim);font-variant-numeric:tabular-nums}
+.ads-card-stats b{color:var(--ads-ink);font-weight:800}
+.ads-card-stats span{display:inline-flex;align-items:center;gap:4px}
+.ads-card-actions{display:flex;gap:7px;flex-wrap:wrap;padding:0 14px 13px;margin-top:auto}
+.ads-card-actions .btn{min-height:36px;padding:0 12px;border-radius:9px;font-size:11.5px;font-weight:800;
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ads-card-actions .sp-actions{margin-inline-start:auto}
+
+/* --- 8. table ---------------------------------------------------------- */
+.ads-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0}
+.ads-table{width:100%;border-collapse:collapse;font-size:12px;min-width:720px}
+.ads-table th{text-align:start;font-size:10.5px;font-weight:800;color:var(--ads-dim);
+  padding:9px 12px;border-bottom:1px solid var(--ads-line);white-space:nowrap;background:var(--ads-wash)}
+.ads-table td{padding:9px 12px;border-bottom:1px solid var(--ads-line);color:var(--ads-ink);
+  vertical-align:middle;overflow-wrap:anywhere}
+.ads-table tbody tr:last-child td{border-bottom:0}
+.ads-table tbody tr.row-click{cursor:pointer}
+.ads-table tbody tr.row-click:hover{background:var(--ads-wash)}
+.ads-table tbody tr.row-click:focus-visible{outline:2px solid var(--ads-brand);outline-offset:-2px}
+.ads-table .num{direction:ltr;text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ads-table .win{direction:ltr;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px;color:var(--ads-dim)}
+.ads-cell-ad{display:flex;align-items:center;gap:9px;min-width:0}
+.ads-media--thumb{width:52px;height:32px;flex:0 0 52px;border-radius:8px;object-fit:cover;
+  border:1px solid var(--ads-line);background:var(--ads-wash)}
+.ads-media--thumb.ads-media--empty{width:52px;height:32px;flex:0 0 52px;border-radius:8px;border:1px dashed var(--ads-line);
+  background:var(--ads-wash);display:grid;place-items:center;color:var(--ads-dim)}
+.ads-cell-ad b{display:block;font-size:12px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+.ads-cell-ad small{display:block;font-size:10.5px;color:var(--ads-dim);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34ch}
+.ads-crud{display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap}
+.ads-crud button{width:32px;height:32px;border-radius:8px;border:1px solid var(--ads-line);
+  background:var(--ads-card);color:var(--ads-dim);display:grid;place-items:center;cursor:pointer;
+  font-family:inherit;padding:0;flex:0 0 auto}
+.ads-crud button:hover{border-color:var(--ads-brand);color:var(--ads-brand)}
+.ads-crud button:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-crud button[data-tone="ok"]:hover{border-color:var(--ads-ok);color:var(--ads-ok)}
+.ads-crud button[data-tone="bad"]:hover{border-color:var(--ads-bad);color:var(--ads-bad)}
+.ads-crud button[disabled]{opacity:.4;cursor:not-allowed}
+
+/* --- 9. filter bar ----------------------------------------------------- */
+.ads-filters{display:grid;gap:10px;grid-template-columns:minmax(200px,2fr) repeat(auto-fit,minmax(140px,1fr));
+  align-items:end;padding:12px 15px;background:var(--ads-card);border:1px solid var(--ads-line);
+  border-radius:14px;min-width:0}
+.ads-field{display:grid;gap:4px;min-width:0}
+.ads-field label{font-size:10.5px;font-weight:800;color:var(--ads-dim)}
+.ads-field input,.ads-field select{width:100%;box-sizing:border-box;min-width:0;height:40px;
+  padding:0 11px;border:1px solid var(--ads-line);border-radius:9px;background:var(--ads-wash);
+  color:var(--ads-ink);font-family:inherit;font-size:12px}
+.ads-field input:focus,.ads-field select:focus{outline:none;border-color:var(--ads-brand);
+  box-shadow:0 0 0 3px var(--ads-ok-bg)}
+.ads-field--search{position:relative}
+.ads-field--search input{padding-inline-start:34px}
+.ads-field--search svg{position:absolute;inset-inline-start:11px;inset-block-start:50%;
+  transform:translateY(-50%);color:var(--ads-dim);pointer-events:none}
+.ads-filters-foot{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding-top:2px;min-width:0}
+.ads-filters-foot .ads-count{font-size:11.5px;color:var(--ads-dim);font-variant-numeric:tabular-nums;
+  margin-inline-end:auto;overflow-wrap:anywhere}
+.ads-filters-foot .btn{min-height:36px;padding:0 13px;border-radius:9px;font-size:11.5px;font-weight:800;
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+/* --- 10. review / attention queue -------------------------------------- */
+.ads-queue{display:grid;gap:10px}
+.ads-queue-item{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:12px;align-items:center;
+  padding:11px;border:1px solid var(--ads-line);border-radius:13px;background:var(--ads-card);
+  cursor:pointer;text-align:start;color:inherit;font-family:inherit;min-width:0;width:100%}
+.ads-queue-item:hover{border-color:var(--ads-brand);box-shadow:0 4px 14px rgba(31,55,45,.06)}
+.ads-queue-item:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-media--queue{width:76px;height:52px;flex:0 0 76px;border-radius:10px;object-fit:cover;
+  border:1px solid var(--ads-line);background:var(--ads-wash)}
+.ads-media--queue.ads-media--empty{width:76px;height:52px;flex:0 0 76px;border-radius:10px;
+  border:1px dashed var(--ads-line);background:var(--ads-wash);display:grid;place-items:center;color:var(--ads-dim)}
+.ads-queue-main{min-width:0;display:grid;gap:5px}
+.ads-queue-main b{font-size:12.5px;font-weight:800;color:var(--ads-ink);line-height:1.5;overflow-wrap:anywhere}
+.ads-queue-meta{font-size:11px;color:var(--ads-dim);display:flex;gap:9px;flex-wrap:wrap;overflow-wrap:anywhere}
+.ads-queue-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.ads-queue-actions .btn{min-height:36px;padding:0 13px;border-radius:9px;font-size:11.5px;font-weight:800;
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;white-space:nowrap}
+/* An item that is waiting on the operator carries a warning rail, so the panel
+   reads as a queue before any text is read. */
+.ads-queue-item--alert{border-inline-start:3px solid var(--ads-warn)}
+.ads-queue-item--info{border-inline-start:3px solid var(--ads-info)}
+
+/* --- 11. recent list ---------------------------------------------------- */
+.ads-recent{display:grid;gap:0}
+.ads-recent-item{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:11px;align-items:center;
+  padding:10px 15px;border-bottom:1px solid var(--ads-line);cursor:pointer;text-align:start;
+  background:transparent;border-inline:0;border-block-start:0;color:inherit;font-family:inherit;min-width:0}
+.ads-recent-item:last-child{border-bottom:0}
+.ads-recent-item:hover{background:var(--ads-wash)}
+.ads-recent-item:focus-visible{outline:2px solid var(--ads-brand);outline-offset:-2px}
+.ads-media--recent{width:44px;height:32px;border-radius:8px;object-fit:cover;border:1px solid var(--ads-line);
+  background:var(--ads-wash)}
+.ads-media--recent.ads-media--empty{width:44px;height:32px;border-radius:8px;border:1px dashed var(--ads-line);
+  background:var(--ads-wash);display:grid;place-items:center;color:var(--ads-dim)}
+.ads-recent-main{min-width:0}
+.ads-recent-main b{display:block;font-size:12px;font-weight:700;color:var(--ads-ink);line-height:1.5;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ads-recent-main small{display:block;font-size:10.5px;color:var(--ads-dim);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ads-recent-side{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ads-recent-clicks{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;
+  background:var(--ads-ok-bg);color:var(--ads-ok);font-size:11.5px;font-weight:800;
+  font-variant-numeric:tabular-nums}
+
+/* --- 12. distribution donut (real counts, clickable segments) ---------- */
+.ads-dist{display:grid;grid-template-columns:132px minmax(0,1fr);gap:16px;align-items:center}
+.ads-donut{width:132px;height:132px;max-width:100%;margin-inline:auto;display:block}
+.ads-donut circle{transition:opacity .15s}
+.ads-donut .ads-donut-hole{fill:var(--ads-card)}
+.ads-donut text{font-family:inherit}
+.ads-donut-big{font-size:22px;font-weight:800;fill:var(--ads-ink)}
+.ads-donut-sub{font-size:9px;font-weight:700;fill:var(--ads-dim)}
+.ads-donut-legend{display:grid;gap:7px;min-width:0}
+.ads-legend-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:8px;align-items:center;
+  padding:5px 7px;border:1px solid transparent;border-radius:9px;background:transparent;cursor:pointer;
+  text-align:start;color:inherit;font-family:inherit;font-size:12px;width:100%;min-width:0}
+.ads-legend-row:hover{background:var(--ads-wash);border-color:var(--ads-line)}
+.ads-legend-row:focus-visible{outline:2px solid var(--ads-brand);outline-offset:1px}
+.ads-legend-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.ads-legend-name{color:var(--ads-ink);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ads-legend-bar{width:52px;height:5px;border-radius:999px;background:var(--ads-mute-bg);overflow:hidden;
+  display:flex;justify-content:flex-end}
+.ads-legend-bar i{display:block;height:100%;border-radius:999px}
+.ads-legend-val{font-size:12px;font-weight:800;color:var(--ads-ink);font-variant-numeric:tabular-nums;
+  min-width:22px;text-align:end}
+
+/* --- 13. ranked performance (real clicks/impressions only) ------------- */
+.ads-rank{display:grid;gap:9px}
+.ads-rank-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;
+  padding:0;background:transparent;border:0;text-align:start;color:inherit;font-family:inherit;
+  cursor:pointer;min-width:0;width:100%}
+.ads-rank-row:hover .ads-rank-name{text-decoration:underline}
+.ads-rank-row:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px;border-radius:6px}
+.ads-rank-name{font-size:12px;font-weight:700;color:var(--ads-ink);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.ads-rank-val{font-size:12px;font-weight:800;color:var(--ads-ink);font-variant-numeric:tabular-nums;
+  direction:ltr}
+.ads-rank-track{grid-column:1/-1;height:6px;border-radius:999px;background:var(--ads-mute-bg);overflow:hidden}
+.ads-rank-track i{display:block;height:100%;border-radius:999px;background:var(--ads-brand)}
+
+/* --- 14. detail page --------------------------------------------------- */
+.ads-hero{position:relative;border:1px solid var(--ads-line);border-radius:16px;overflow:hidden;
+  background:var(--ads-card);min-width:0}
+.ads-hero-media{position:relative;aspect-ratio:16/6;background:var(--ads-wash);overflow:hidden;
+  border-bottom:1px solid var(--ads-line)}
+.ads-hero-media img{width:100%;height:100%;object-fit:cover;display:block}
+.ads-media--hero.ads-media--empty{width:100%;height:100%;display:grid;place-items:center;gap:8px;align-content:center;
+  color:var(--ads-dim);font-size:12px;font-weight:700}
+.ads-hero-badges{position:absolute;inset-block-start:12px;inset-inline-start:12px;display:flex;gap:7px;
+  flex-wrap:wrap}
+.ads-hero-main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;padding:15px}
+.ads-hero-logo{width:56px;height:56px;border-radius:13px;object-fit:cover;border:1px solid var(--ads-line);
+  background:var(--ads-wash);flex:0 0 56px}
+.ads-hero-logo-empty{width:56px;height:56px;border-radius:13px;border:1px dashed var(--ads-line);
+  background:var(--ads-wash);display:grid;place-items:center;color:var(--ads-dim);flex:0 0 56px}
+.ads-hero-title{font-size:19px;font-weight:800;color:var(--ads-ink);line-height:1.4;margin:0;
+  overflow-wrap:anywhere}
+.ads-hero-sub{font-size:12px;color:var(--ads-dim);margin:5px 0 0;display:flex;gap:10px;flex-wrap:wrap;
+  align-items:center;overflow-wrap:anywhere}
+.ads-hero-window{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;
+  padding:0 15px 15px}
+.ads-hero-actions{display:flex;gap:8px;flex-wrap:wrap;padding:13px 15px;border-top:1px solid var(--ads-line);
+  background:var(--ads-wash)}
+.ads-hero-actions .btn{min-height:40px;padding:0 16px;border-radius:9px;font-size:12px;font-weight:800;
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ads-hero-actions .btn--danger{border-color:var(--ads-bad-line);color:var(--ads-bad)}
+.ads-hero-actions .btn--danger:hover{background:var(--ads-bad-bg)}
+
+/* detail field grid */
+.ads-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.ads-field-cell{display:grid;gap:3px;min-width:0;padding:10px 12px;background:var(--ads-wash);
+  border:1px solid var(--ads-line);border-radius:11px}
+.ads-field-cell label{font-size:10.5px;font-weight:800;color:var(--ads-dim)}
+.ads-field-cell b{font-size:13px;font-weight:700;color:var(--ads-ink);line-height:1.55;overflow-wrap:anywhere}
+.ads-field-cell small{font-size:10.5px;color:var(--ads-dim);line-height:1.6;overflow-wrap:anywhere}
+.ads-copy{font-size:12.5px;line-height:1.85;color:var(--ads-ink);background:var(--ads-wash);
+  border:1px solid var(--ads-line);border-radius:11px;padding:12px;margin:0;white-space:pre-wrap;
+  overflow-wrap:anywhere}
+.ads-copy--empty{color:var(--ads-dim);font-style:italic}
+
+/* --- one media primitive, five sizes ----------------------------------- */
+/* Every surface asks for the same thing — "the picture, or a placeholder" — so
+   the markup is identical and only the variant class changes the geometry. A
+   stored path that no longer resolves falls back to the same placeholder, so a
+   broken upload can never leave a torn image in the list. */
+.ads-media{display:block;background:var(--ads-wash);color:var(--ads-dim);overflow:hidden;
+  border:1px solid var(--ads-line)}
+.ads-media--empty{display:grid;place-items:center;align-content:center;gap:6px;
+  background:var(--ads-wash);border-style:dashed}
+.ads-media--card{width:100%;height:100%;border:0;border-radius:0}
+.ads-media--card.ads-media--empty{border:0}
+.ads-media--hero{width:100%;height:100%;border:0;border-radius:0}
+.ads-media--hero.ads-media--empty{border:0}
+.ads-media--thumb{width:52px;height:32px;flex:0 0 52px;border-radius:8px;object-fit:cover}
+.ads-media--thumb.ads-media--empty{border-radius:8px}
+.ads-media--queue{width:76px;height:52px;flex:0 0 76px;border-radius:10px;object-fit:cover}
+.ads-media--queue.ads-media--empty{border-radius:10px}
+.ads-media--recent{width:44px;height:32px;flex:0 0 44px;border-radius:8px;object-fit:cover}
+.ads-media--recent.ads-media--empty{border-radius:8px}
+.ads-media{position:relative;border-radius:13px;overflow:hidden;border:1px solid var(--ads-line);
+  background:var(--ads-wash)}
+.ads-media img{width:100%;display:block;max-height:420px;object-fit:contain;background:var(--ads-wash)}
+
+/* approval panel */
+.ads-approval{border:1px solid var(--ads-line);border-radius:15px;background:var(--ads-card);overflow:hidden}
+.ads-approval[data-tone="ok"]{border-inline-start:3px solid var(--ads-ok)}
+.ads-approval[data-tone="warn"]{border-inline-start:3px solid var(--ads-warn)}
+.ads-approval[data-tone="bad"]{border-inline-start:3px solid var(--ads-bad)}
+.ads-approval[data-tone="mute"]{border-inline-start:3px solid var(--ads-mute-line)}
+.ads-approval-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 15px;
+  border-bottom:1px solid var(--ads-line)}
+.ads-approval-head h3{margin:0;font-size:13.5px;font-weight:800;color:var(--ads-ink);display:flex;
+  align-items:center;gap:8px}
+.ads-approval-body{padding:14px 15px;display:grid;gap:12px}
+.ads-note{border-radius:11px;padding:11px 13px;font-size:12px;line-height:1.75;
+  border:1px solid var(--ads-line);background:var(--ads-wash);color:var(--ads-ink);overflow-wrap:anywhere}
+.ads-note[data-tone="bad"]{background:var(--ads-bad-bg);border-color:var(--ads-bad-line);color:var(--ads-bad)}
+.ads-note[data-tone="warn"]{background:var(--ads-warn-bg);border-color:var(--ads-warn-line);color:var(--ads-warn)}
+.ads-note[data-tone="ok"]{background:var(--ads-ok-bg);border-color:var(--ads-ok-line);color:var(--ads-ok)}
+.ads-note b{display:block;margin-bottom:3px;font-weight:800}
+.ads-decision{display:grid;gap:11px;padding:14px 15px;border-top:1px solid var(--ads-line);
+  background:var(--ads-wash)}
+.ads-decision label{font-size:12px;font-weight:800;color:var(--ads-ink);display:block;margin-bottom:6px}
+.ads-decision textarea{width:100%;box-sizing:border-box;min-height:78px;padding:10px 12px;resize:vertical;
+  border:1px solid var(--ads-line);border-radius:10px;background:var(--ads-card);color:var(--ads-ink);
+  font-family:inherit;font-size:12.5px;line-height:1.7}
+.ads-decision textarea:focus{outline:none;border-color:var(--ads-brand);box-shadow:0 0 0 3px var(--ads-ok-bg)}
+.ads-decision-row{display:flex;gap:8px;flex-wrap:wrap}
+.ads-decision-row .btn{min-height:40px;padding:0 16px;border-radius:9px;font-size:12px;font-weight:800;
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ads-decision-row .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+/* timeline (real audit rows only) */
+.ads-timeline{display:grid;gap:0;padding:4px 0}
+.ads-tl-item{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px;padding:0 0 15px;position:relative}
+.ads-tl-item:last-child{padding-bottom:0}
+.ads-tl-item::before{content:"";position:absolute;inset-block-start:18px;inset-block-end:0;inset-inline-start:10px;
+  width:2px;background:var(--ads-line)}
+.ads-tl-item:last-child::before{display:none}
+.ads-tl-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;z-index:1;
+  background:var(--ads-mute-bg);color:var(--ads-mute);border:2px solid var(--ads-card)}
+.ads-tl-item[data-tone="ok"] .ads-tl-dot{background:var(--ads-ok-bg);color:var(--ads-ok)}
+.ads-tl-item[data-tone="warn"] .ads-tl-dot{background:var(--ads-warn-bg);color:var(--ads-warn)}
+.ads-tl-item[data-tone="bad"] .ads-tl-dot{background:var(--ads-bad-bg);color:var(--ads-bad)}
+.ads-tl-body{min-width:0;display:grid;gap:2px;padding-top:1px}
+.ads-tl-body b{font-size:12.5px;font-weight:800;color:var(--ads-ink);line-height:1.5}
+.ads-tl-body small{font-size:11px;color:var(--ads-dim);line-height:1.6;overflow-wrap:anywhere}
+
+/* --- 15. preview (never publishes anything) ---------------------------- */
+.ads-preview{border:1px dashed var(--ads-line);border-radius:15px;background:var(--ads-wash);
+  padding:14px;display:grid;gap:11px;min-width:0}
+.ads-preview-label{font-size:10.5px;font-weight:800;color:var(--ads-dim);letter-spacing:.02em;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ads-preview-frame{border-radius:12px;overflow:hidden;border:1px solid var(--ads-line);
+  background:var(--ads-card)}
+.ads-preview-banner{aspect-ratio:16/5;background:var(--ads-wash);display:grid;place-items:center;
+  overflow:hidden;border-bottom:1px solid var(--ads-line)}
+.ads-preview-banner img{width:100%;height:100%;object-fit:cover;display:block}
+.ads-preview-body{padding:11px 13px;display:grid;gap:6px}
+.ads-preview-title{font-size:12.5px;font-weight:800;color:var(--ads-ink);line-height:1.55;
+  overflow-wrap:anywhere}
+.ads-preview-text{font-size:11.5px;line-height:1.7;color:var(--ads-dim);margin:0;overflow-wrap:anywhere}
+.ads-preview-cta{display:inline-flex;align-items:center;gap:6px;justify-content:center;align-self:start;
+  margin-top:2px;padding:7px 15px;border-radius:9px;background:var(--ads-brand);color:#fff;font-size:11.5px;
+  font-weight:800;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.ads-preview-cta--none{background:var(--ads-mute-bg);color:var(--ads-dim)}
+
+/* --- 16. empty / loading / error states ------------------------------- */
+.ads-empty{display:grid;gap:9px;justify-items:center;text-align:center;padding:30px 18px;
+  color:var(--ads-dim);min-width:0}
+.ads-empty-icon{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;
+  background:var(--ads-mute-bg);color:var(--ads-mute)}
+.ads-empty b{font-size:14px;font-weight:800;color:var(--ads-ink);line-height:1.5}
+.ads-empty p{margin:0;font-size:12px;line-height:1.75;max-width:46ch}
+.ads-empty .btn{min-height:40px;padding:0 16px;border-radius:9px;font-size:12px;font-weight:800;
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-family:inherit;margin-top:3px}
+.ads-empty--inline{padding:20px 14px}
+.ads-empty--inline .ads-empty-icon{width:42px;height:42px;border-radius:12px}
+
+.ads-skel{display:grid;gap:8px;padding:14px 15px;min-width:0}
+.ads-skel-line{height:12px;border-radius:6px;background:linear-gradient(90deg,
+  var(--ads-mute-bg) 25%,var(--ads-wash) 37%,var(--ads-mute-bg) 63%);
+  background-size:400% 100%;animation:adsShimmer 1.3s ease-in-out infinite}
+@keyframes adsShimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+.ads-skel-line:nth-child(1){width:52%}
+.ads-skel-line:nth-child(2){width:88%}
+.ads-skel-line:nth-child(3){width:70%}
+.ads-skel-line:nth-child(4){width:80%}
+@media (prefers-reduced-motion:reduce){.ads-skel-line{animation:none}}
+
+.ads-error{display:grid;gap:9px;justify-items:center;text-align:center;padding:22px 16px;color:var(--ads-bad);
+  border:1px solid var(--ads-bad-line);background:var(--ads-bad-bg);border-radius:13px;min-width:0}
+.ads-error b{font-size:13px;font-weight:800}
+.ads-error p{margin:0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.ads-error .btn{min-height:38px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;
+  font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+
+/* --- 17. pagination ---------------------------------------------------- */
+.ads-pager{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 15px;
+  border-top:1px solid var(--ads-line);min-width:0}
+.ads-pager-info{font-size:11.5px;color:var(--ads-dim);font-variant-numeric:tabular-nums;
+  margin-inline-end:auto;overflow-wrap:anywhere}
+.ads-pager button{min-width:38px;height:38px;padding:0 12px;border-radius:9px;border:1px solid var(--ads-line);
+  background:var(--ads-card);color:var(--ads-ink);font-family:inherit;font-size:12px;font-weight:800;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.ads-pager button:hover:not([disabled]){border-color:var(--ads-brand);color:var(--ads-brand)}
+.ads-pager button:focus-visible{outline:2px solid var(--ads-brand);outline-offset:2px}
+.ads-pager button[disabled]{opacity:.4;cursor:not-allowed}
+.ads-pager-pages{display:flex;gap:6px;flex-wrap:wrap}
+
+/* --- 18. section note (the "why" line under a number) ----------------- */
+.ads-note-strip{display:flex;align-items:flex-start;gap:9px;padding:10px 13px;border-radius:12px;
+  background:var(--ads-info-bg);border:1px solid var(--ads-info-line);color:var(--ads-info);
+  font-size:11.5px;line-height:1.75;min-width:0}
+.ads-note-strip b{font-weight:800}
+.ads-note-strip[data-tone="mute"]{background:var(--ads-mute-bg);border-color:var(--ads-mute-line);color:var(--ads-dim)}
+
+/* --- 19. responsive ---------------------------------------------------- */
+/* Breakpoints follow the shell. The lifecycle grid is deliberately NOT
+   overridden at 1400px: the old rule forced four stretched 1fr columns, which
+   undid the capped track and produced 227px cards on a 1000px screen. The
+   capped auto-fit in the base rule already lands on 2-up, 3-up or 4-up. */
+@media (max-width:1080px){
+  .ads-split,.ads-split--even,.ads-split--attention{grid-template-columns:minmax(0,1fr)}
+  .ads-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ads-field--search{grid-column:1/-1}
+}
+@media (max-width:900px){
+  .ads-stat-hero{grid-template-columns:minmax(0,1fr)}
+  .ads-stat-hero-figs{justify-content:flex-start}
+  .ads-head h1{font-size:21px}
+  .ads-hero-main{grid-template-columns:auto minmax(0,1fr);gap:11px;padding:13px}
+  .ads-dist{grid-template-columns:minmax(0,1fr);gap:14px}
+  .ads-donut{width:116px;height:116px}
+}
+@media (max-width:760px){
+  .ads-cards{grid-template-columns:minmax(0,1fr)}
+  .ads-filters{grid-template-columns:minmax(0,1fr);padding:11px 12px}
+  .ads-hero-main{grid-template-columns:minmax(0,1fr)}
+  .ads-hero-logo,.ads-hero-logo-empty{width:46px;height:46px;flex:0 0 46px}
+  .ads-hero-title{font-size:17px}
+  .ads-head-actions{width:100%}
+  .ads-head-actions .btn{flex:1 1 auto;justify-content:center}
+}
+@media (max-width:560px){
+  /* One column, not two: at 360px a two-up card leaves ~150px for a label and
+     a share, which wraps into three lines. A full-width card keeps the icon,
+     the number and the explanation readable, and the touch target grows.
+     The LABEL STAYS AT 12.5px. The old rule dropped it to 10.5px, which is the
+     small-Arabic-type the design system forbids — the card simply gets more
+     padding and a shorter number instead. */
+  .ads-stats{grid-template-columns:minmax(0,1fr);gap:10px;justify-content:stretch}
+  .ads-stat{padding:14px 15px;min-height:112px}
+  .ads-stat-ic{width:30px;height:30px;border-radius:10px;flex:0 0 30px}
+  .ads-stat-ic svg{width:16px;height:16px}
+  .ads-stat-value{font-size:26px;margin-top:8px}
+  .ads-stat-label{font-size:12.5px}
+  .ads-stat-hero{padding:15px 16px}
+  .ads-stat-hero-num{font-size:31px}
+  .ads-stat-hero-ic{width:44px;height:44px;flex:0 0 44px;border-radius:13px}
+  .ads-stat-mini{padding:8px 10px}
+  .ads-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .ads-metric b{font-size:19px}
+  .ads-panel-head{padding:11px 12px}
+  .ads-panel-body{padding:12px}
+  .ads-recent-item{padding:9px 12px;grid-template-columns:40px minmax(0,1fr)}
+  .ads-recent-side{grid-column:1/-1;justify-content:flex-start;padding-inline-start:51px}
+  .ads-queue-item{grid-template-columns:60px minmax(0,1fr);gap:10px}
+  .ads-media--queue{width:60px;height:44px;flex:0 0 60px}
+  .ads-queue-actions{grid-column:1/-1;padding-inline-start:0}
+  .ads-queue-actions .btn{flex:1 1 auto;justify-content:center}
+  .ads-filters-foot .btn{flex:1 1 auto;justify-content:center}
+  .ads-tabs{padding:4px}
+  .ads-tabs button{min-height:36px;padding:0 11px;font-size:11.5px}
+  .ads-crud button{width:36px;height:36px}
+  .ads-fields{grid-template-columns:minmax(0,1fr)}
+  .ads-table{min-width:620px}
+}
+/* 320px: nothing may push the page wider than the viewport. The icon stays
+   visible — it is what tells the lifecycle states apart at a glance. */
+@media (max-width:400px){
+  .ads-stats{gap:9px}
+  .ads-stat{padding:13px 14px;min-height:104px}
+  .ads-stat-value{font-size:24px;margin-top:6px}
+  .ads-stat-label{font-size:12px}
+  .ads-stat-meter{margin-top:9px}
+  .ads-stat-hero-main{align-items:flex-start}
+  .ads-stat-mini{grid-template-columns:auto auto;padding:7px 9px}
+  .ads-stat-mini b{font-size:15px}
+  .ads-stat-mini small{font-size:11px}
+  .ads-head h1{font-size:19px}
+  .ads-head p{font-size:12px}
+  .ads-legend-bar{width:34px}
+  .ads-card-actions .btn{flex:1 1 auto;justify-content:center}
+}
+
+/* The shell collapses its sidebar below this width; the module must never
+   reintroduce a horizontal scrollbar of its own. */
+@media (prefers-reduced-motion:reduce){
+  .ads-stat,.ads-card,.ads-queue-item,.ads-tabs button{transition:none}
+}

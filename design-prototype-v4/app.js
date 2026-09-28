@@ -45,7 +45,20 @@ function icon(name,size=18){
    pdf:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M8 14h2a1 1 0 0 1 0 2H8v-2Zm0 0v4"/>',
    book:'<path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2Z"/><path d="M8 7h6M8 11h6"/>',
    heart:'<path d="M12 20s-7-4.5-9.3-9A5 5 0 0 1 12 6a5 5 0 0 1 9.3 5C19 15.5 12 20 12 20Z"/>',
-   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>'
+   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+   flask:'<path d="M9 3h6"/><path d="M10 3v6.2L5.2 17.6A2 2 0 0 0 7 20.5h10a2 2 0 0 0 1.8-2.9L14 9.2V3"/><path d="M7.6 15h8.8"/>',
+   trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v1a3 3 0 0 0 3 3"/><path d="M17 5h3v1a3 3 0 0 1-3 3"/><path d="M12 13v4"/><path d="M9 21h6"/><path d="M10 17h4"/>',
+   med:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',
+   snow:'<path d="M12 3v18"/><path d="m4.5 7.5 15 9"/><path d="m19.5 7.5-15 9"/><path d="m9 5 3 3 3-3"/><path d="m9 19 3-3 3 3"/>',
+   wifi:'<path d="M4.5 11.5a11 11 0 0 1 15 0"/><path d="M8 15a6 6 0 0 1 8 0"/><circle cx="12" cy="18.5" r="1"/>',
+   access:'<circle cx="12" cy="5" r="2"/><path d="M12 7v6M12 13l-3 6M12 13l3 6M6 10h12"/>',
+   utensils:'<path d="M5 3v7a2 2 0 0 0 4 0V3"/><path d="M7 10v11"/><path d="M17 3c-1.4 0-2.5 1.6-2.5 4.5S15.6 12 17 12v9"/>',
+   parking:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M10 16V8h2.6a2.5 2.5 0 0 1 0 5H10"/>',
+   bus:'<rect x="4" y="4" width="16" height="12" rx="2"/><path d="M4 10h16"/><path d="M7 16v2M17 16v2"/><circle cx="8" cy="18" r="1"/><circle cx="16" cy="18" r="1"/>',
+   shirt:'<path d="M16 3 20 5l-1.4 5-2 .5V21H7.4V10.5l-2-.5L4 5l4-2 4 2 4-2Z"/>',
+   ticket:'<path d="M4 9a2 2 0 0 1 0 4v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3a2 2 0 0 1 0-4V8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2Z"/><path d="M14 6v12"/>',
+   sparkle:'<path d="M12 3.5 13.7 9l5.3 1.7L13.7 12.5 12 18l-1.7-5.5L5 10.7 10.3 9Z"/>',
+   blocks:'<rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/><rect x="8.5" y="4" width="7" height="7" rx="1"/>'
    }[name]||'';
  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 }
@@ -104,7 +117,16 @@ const i18n={
  ar:{
   home:"الرئيسية", landingHome:"الصفحة الرئيسية", privateSchools:"المدارس الخاصة", governmentSchools:"المدارس الحكومية",
   colleges:"الكليات", institutes:"المعاهد", privateTeachers:"المدرسين الخصوصيين",
-  schools:"إدارة المؤسسات الدراسية", teachers:"المعلمون", students:"الطلاب", bookings:"الحجوزات", verify:"التحقق والمراجعة",
+  schools:"إدارة المؤسسات الدراسية", teachers:"المعلمون", students:"العملاء", bookings:"الحجوزات", verify:"التحقق والمراجعة",
+  clientDashboardTitle:"لوحة العميل", clientDetails:"بياناتي واهتماماتي", clientRegisteredLocation:"الموقع المسجل: ",
+  clientKind:"صفتي", clientContact:"طريقة التواصل المفضلة", clientInterests:"اهتماماتي", clientPlaces:"المناطق التي أهتم بها",
+  clientConsent:"أوافق على تسجيل الأقسام التي أزورها وعمليات بحثي لتحسين الخدمة. تعرض الإدارة نشاط آخر 90 يوماً، وإلغاء الموافقة يمحو سجل نشاطي.",
+  clientSave:"حفظ بياناتي", clientFeedbackTitle:"اقتراح أو شكوى أو استفسار", clientFeedbackType:"النوع", clientFeedbackMessage:"الرسالة",
+  clientFeedbackSend:"إرسال", clientPreviousFeedback:"طلباتي السابقة", clientNoFeedback:"لا توجد طلبات بعد.",
+  clientUnspecified:"غير محدد", clientVisitor:"زائر مسجل", clientStudent:"طالب", clientParent:"ولي أمر", clientBoth:"طالب وولي أمر", clientOther:"أخرى",
+  clientNoPreference:"لا تفضيل", clientPhone:"هاتف", clientEmail:"بريد إلكتروني", clientWhatsapp:"واتساب",
+  clientSuggestion:"اقتراح", clientComplaint:"شكوى", clientInquiry:"استفسار", clientOpen:"مفتوح", clientInProgress:"قيد المعالجة", clientClosed:"مغلق",
+  clientSaved:"حُفظت البيانات.", clientReceived:"وصل طلبك.", clientFeedbackMin:"اكتب 10 أحرف على الأقل.", clientLoadError:"تعذر تحميل البيانات.",
   academic:"البيانات الأكاديمية", stages:"المراحل", grades:"الصفوف", subjects:"المواد", curricula:"المناهج",
   teachingLanguages:"لغات التدريس", teachingMethods:"طرق التدريس",
   locations:"المناطق", countries:"الدول", governorates:"المحافظات", districts:"المديريات", neighborhoods:"الأحياء",
@@ -179,7 +201,7 @@ const i18n={
    submitOwnerRequest:"إنشاء الحساب وإرسال الطلب", accountCreated:"تم إنشاء الحساب بنجاح",
    requestSubmitted:"تم إرسال طلب إدارة المؤسسة — بانتظار مراجعة الإدارة",
    requestSubmitFailed:"تم إنشاء الحساب لكن تعذر إرسال الطلب — أعد المحاولة من لوحة المالك",
-   myDashboard:"لوحتي", myInstitutions:"مؤسساتي", myRequests:"طلباتي", myDocuments:"المستندات",
+   myDashboard:"لوحتي", myInstitutions:"مؤسساتي", myRequests:"طلباتي", myDocuments:"المستندات", myAdvertisements:"إعلاناتي",
    reqStatus:"الحالة", statusPending:"بانتظار المراجعة", statusUnderReview:"قيد المراجعة",
    statusApproved:"معتمد", statusRejected:"مرفوض", statusChangesRequested:"يتطلب تعديلات",
    noInstitutions:"لا توجد مؤسسات مرتبطة بعد", noRequests:"لا توجد طلبات بعد",
@@ -239,7 +261,16 @@ const i18n={
  en:{
   home:"Home", landingHome:"Home", privateSchools:"Private Schools", governmentSchools:"Government Schools",
   colleges:"Colleges", institutes:"Institutes", privateTeachers:"Private Teachers",
-  schools:"Institutions Management", teachers:"Teachers", students:"Students", bookings:"Bookings", verify:"Verification & Review",
+  schools:"Institutions Management", teachers:"Teachers", students:"Clients", bookings:"Bookings", verify:"Verification & Review",
+  clientDashboardTitle:"Client dashboard", clientDetails:"My details and interests", clientRegisteredLocation:"Registered location: ",
+  clientKind:"My classification", clientContact:"Preferred contact", clientInterests:"Interests", clientPlaces:"Locations of interest",
+  clientConsent:"I agree to record visited sections and searches to improve the service. Admins see the last 90 days; revoking consent erases my activity history.",
+  clientSave:"Save my details", clientFeedbackTitle:"Suggestion, complaint or inquiry", clientFeedbackType:"Type", clientFeedbackMessage:"Message",
+  clientFeedbackSend:"Send", clientPreviousFeedback:"Previous submissions", clientNoFeedback:"No submissions yet.",
+  clientUnspecified:"Unspecified", clientVisitor:"Registered visitor", clientStudent:"Student", clientParent:"Parent", clientBoth:"Student and parent", clientOther:"Other",
+  clientNoPreference:"No preference", clientPhone:"Phone", clientEmail:"Email", clientWhatsapp:"WhatsApp",
+  clientSuggestion:"Suggestion", clientComplaint:"Complaint", clientInquiry:"Inquiry", clientOpen:"Open", clientInProgress:"In progress", clientClosed:"Closed",
+  clientSaved:"Saved.", clientReceived:"Your submission was received.", clientFeedbackMin:"Write at least 10 characters.", clientLoadError:"Unable to load data.",
   academic:"Academic Data", stages:"Stages", grades:"Grades", subjects:"Subjects", curricula:"Curricula",
   teachingLanguages:"Teaching Languages", teachingMethods:"Teaching Methods",
   locations:"Locations", countries:"Countries", governorates:"Governorates", districts:"Districts", neighborhoods:"Neighborhoods",
@@ -314,7 +345,7 @@ checking:"Checking...", createAccountBtn:"Create account", alreadyHaveAccount:"H
    submitOwnerRequest:"Create account & submit request", accountCreated:"Account created successfully",
    requestSubmitted:"Institution request submitted — pending admin review",
    requestSubmitFailed:"Account created but request failed — retry from owner dashboard",
-   myDashboard:"My dashboard", myInstitutions:"My institutions", myRequests:"My requests", myDocuments:"Documents",
+   myDashboard:"My dashboard", myInstitutions:"My institutions", myRequests:"My requests", myDocuments:"Documents", myAdvertisements:"My advertisements",
    reqStatus:"Status", statusPending:"Pending review", statusUnderReview:"Under review",
    statusApproved:"Approved", statusRejected:"Rejected", statusChangesRequested:"Changes requested",
    noInstitutions:"No institutions linked yet", noRequests:"No requests yet",
@@ -387,7 +418,8 @@ var orgSearchTimeout=null;
 var locData={governorates:null,districts:{},neighborhoods:{}};
 var locPending={governorates:false,districts:{},neighborhoods:{}};
 var orgData={items:[],total:0,loading:false,error:null,loaded:false,cacheKey:null,loadedType:null,_loadingSince:0};
-var teacherData={items:[],loading:false,error:null,loaded:false,cacheKey:"",pricingGated:false};
+var teacherData={items:[],total:0,loading:false,error:null,loaded:false,cacheKey:"",pricingGated:false};
+var homeSearchMode="schools",homeSearchPending=null;
 var currentOrg=null;
 var currentTeacher=null;
 var orgPage={offset:0,limit:20};
@@ -502,6 +534,7 @@ async function loadTeachers(q){
   // pricingGated}); treating it as a bare array left the public directory
   // permanently empty.
   teacherData.items=Array.isArray(res)?res:(res&&Array.isArray(res.items)?res.items:[]);
+  teacherData.total=Number(res&&res.total!=null?res.total:teacherData.items.length);
   teacherData.pricingGated=Boolean(res&&res.pricingGated);
  }catch(e){
   teacherData.error=e.message;teacherData.items=[];
@@ -626,7 +659,8 @@ function hashStr(s){
  var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return Math.abs(h);
 }
 
-function orgCard(p){
+function orgCard(p,opts){
+ opts=opts||{};
  var ver=p.verified?'<span class="verify-chip">'+icon("shield",12)+' '+tr("verified")+'</span>':'';
  var rating=(p.r>0)?'<div class="rating"><span><b>'+p.r+'</b> <span class="star">★</span>'+(p.rv>0?' ('+p.rv+')':'')+'</span></div>':'';
  var chips=[];
@@ -635,11 +669,19 @@ function orgCard(p){
  var chipsHtml=chips.length?'<div class="c-chips">'+chips.join("")+'</div>':'';
  var servicesHtml=(p.services&&p.services.length)?'<div class="c-services">'+p.services.slice(0,3).map(function(s){return '<span class="c-svc">'+esc(s)+'</span>'}).join("")+'</div>':'';
  var offersBtn=(p.offers>0)?'<button type="button" class="card-offers" onclick="event.stopPropagation();openOfferPopup(\''+p.id+'\')">'+icon("tag",12)+' '+tr("offers")+' <b>'+p.offers+'</b></button>':'';
+ // The dashboard adds management buttons to the SAME card the public grid uses,
+ // so a school looks identical in both places and only the controls differ. Each
+ // button stops the click from bubbling, or a verify would also open the record.
+ var adminActions=opts.admin?(
+  '<button type="button" class="card-admin" title="'+esc(lang==="ar"?"تعديل":"Edit")+'" onclick="event.stopPropagation();acOrgEdit(\''+p.id+'\')">'+icon("edit",13)+'</button>'+
+  '<button type="button" class="card-admin" title="'+esc(lang==="ar"?(p.verified?"إلغاء التوثيق":"توثيق"):(p.verified?"Unverify":"Verify"))+'" onclick="event.stopPropagation();acOrgVerify(\''+p.id+'\','+(p.verified?"true":"false")+')">'+icon(p.verified?"x":"shield",13)+'</button>'+
+  '<button type="button" class="card-admin danger" title="'+esc(lang==="ar"?"أرشفة":"Archive")+'" onclick="event.stopPropagation();acOrgArchive(\''+p.id+'\')">'+icon("trash",13)+'</button>'
+ ):"";
  return '<article class="school-card" onclick="go(\'detail?id='+p.id+'\')">'+
   '<div class="school-img"><img src="'+esc(p.img)+'" loading="lazy" onerror="this.onerror=null;this.src=\''+esc(p.logo)+'\'"><span class="school-tag'+(p.t.indexOf("حكومية")>-1?' gov':'')+'">'+p.t+'</span>'+ver+'</div>'+
   '<div class="school-body"><h3>'+esc(p.n)+'</h3><p>'+icon("pin",11)+' '+esc(p.loc)+'</p>'+
   rating+chipsHtml+servicesHtml+
-  '<div class="card-cta">'+offersBtn+'<button class="card-details" onclick="event.stopPropagation();go(\'detail?id='+p.id+'\')">'+tr("viewDetails")+'</button><a class="card-map" href="'+p.mapUrl+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+icon("pin",11)+' '+tr("viewOnMap")+'</a></div>'+
+  '<div class="card-cta">'+offersBtn+'<button class="card-details" onclick="event.stopPropagation();go(\'detail?id='+p.id+'\')">'+tr("viewDetails")+'</button><a class="card-map" href="'+p.mapUrl+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+icon("pin",11)+' '+tr("viewOnMap")+'</a>'+adminActions+'</div>'+
   '</div></article>'
 }
 
@@ -756,6 +798,9 @@ function toggleSidebar(){
  var overlay=document.querySelector('.sidebar-overlay');
  if(sidebar)sidebar.classList.toggle('open',sidebarOpen);
  if(overlay)overlay.classList.toggle('active',sidebarOpen);
+ // Lock the page behind the drawer so a touch scroll moves the menu, not the
+ // dashboard underneath it (matters on Android where the URL bar reclaims space).
+ document.body.classList.toggle('sidebar-open',sidebarOpen);
 }
 function closeSidebar(){
  sidebarOpen=false;
@@ -763,6 +808,7 @@ function closeSidebar(){
  var overlay=document.querySelector('.sidebar-overlay');
  if(sidebar)sidebar.classList.remove('open');
  if(overlay)overlay.classList.remove('active');
+ document.body.classList.remove('sidebar-open');
 }
 
 function publicRail(){
@@ -1082,7 +1128,17 @@ function adTickerText(a){
  return a.messageEn||a.messageAr||a.name||"";
 }
 function adTrack(id){
- try{apiPost('/api/advertisements/'+encodeURIComponent(id)+'/click',{}).catch(function(){})}catch(e){}
+  try{apiPost('/api/advertisements/'+encodeURIComponent(id)+'/click',{}).catch(function(){})}catch(e){}
+}
+// An impression is counted only when the strip actually renders that ad, and
+// only once per page view: a re-render from hash navigation is not a second
+// view, so the counter reflects people, not render passes. The server refuses
+// an ineligible advertisement anyway, so a stale list cannot inflate a number.
+var adImpressions={counted:{}};
+function adImpression(id){
+  if(!id||adImpressions.counted[id])return;
+  adImpressions.counted[id]=true;
+  try{apiPost('/api/advertisements/'+encodeURIComponent(id)+'/impression',{}).catch(function(){})}catch(e){}
 }
 function adGo(route_,id){adTrack(id);go(route_)}
 function loadAds(){
@@ -1105,10 +1161,11 @@ function publicAnnouncement(){
  const items=(adsData.items||[]).slice(0,5);
  let any=false;
  const sep='<span class="ticker-sep" aria-hidden="true">•</span>';
- const rendered=items.map(function(a){
-  const label=adTickerText(a);
-  if(!label)return "";
-  any=true;
+  const rendered=items.map(function(a){
+   const label=adTickerText(a);
+   if(!label)return "";
+   any=true;
+   adImpression(a.id);
   const body='<span class="ticker-msg">'+esc(label)+'</span>'+
    (a.advertiser?'<span class="ticker-src">'+esc(a.advertiser)+'</span>':'');
   let item;
@@ -1199,9 +1256,18 @@ function publicTop(){
  };
  const pills=nav.map(function(x){return '<button class="top-tab'+(route()===x[0]?" active":"")+'" onclick="go(\''+x[0]+'\')">'+icon(tabIcon(x[0]),13)+' <span>'+tr(x[1])+'</span></button>'}).join("");
  const drawerLinks=nav.map(function(x){return '<button class="drawer-link'+(route()===x[0]?" active":"")+'" onclick="go(\''+x[0]+'\');closePublicNav()">'+tr(x[1])+'</button>'}).join("");
- const brandName=ar?"مدرستي":"Madarasati";
- const brandLatin=ar?"MADARASATI":"مدرستي";
- return publicAnnouncement()+
+  const brandName=ar?"مدرستي":"Madarasati";
+  const brandLatin=ar?"MADARASATI":"مدرستي";
+  // One account entry, always. A visitor gets a single "Sign in" button — the
+  // sign-up link now lives inside the login page, so the header never offers two
+  // doors to the same place. A signed-in person gets a Dashboard button instead,
+  // pointing at the console that matches their role.
+  const accountBtn=(function(){
+   var u=getCurrentUser();
+   if(u)return '<button class="login dash-btn" type="button" onclick="go(\''+getLoginRedirect(u)+'\')">'+icon("grid",14)+' <span>'+(ar?"لوحة التحكم":"Dashboard")+'</span></button>';
+   return '<button class="login" type="button" onclick="go(\'login\')">'+tr("login")+'</button>';
+  })();
+  return publicAnnouncement()+
   '<div class="public-top">'+
   '<button class="top-burger" onclick="togglePublicNav()" aria-label="'+tr("menu")+'">'+icon("menu",20)+'</button>'+
   '<div class="brand" onclick="go(\'home\')"><div class="logo-mark">م</div><div class="brand-txt"><b>'+brandName+'</b><small>'+brandLatin+'</small></div></div>'+
@@ -1211,14 +1277,15 @@ function publicTop(){
    '<button class="hdr-icon hdr-theme" type="button" onclick="toggleTheme()" aria-label="'+tr("theme")+'" title="'+tr("theme")+'">☀</button>'+
    publicThemeSwitch()+
    publicLangSwitch()+
-    '<button class="login" onclick="go(\'login\')">'+tr("login")+'</button>'+
-    '<button class="create" onclick="go(\'register\')">'+tr("createAccount")+'</button>'+
+    accountBtn+
   '</div>'+
   '</div>'+
   '<div class="public-drawer" id="publicDrawer" aria-label="'+tr("menu")+'">'+
    '<div class="drawer-head"><div class="logo-mark">م</div><div class="brand-txt"><b>'+brandName+'</b><small>'+brandLatin+'</small></div><button class="drawer-close" onclick="togglePublicNav()" aria-label="'+tr("close")+'">'+icon("x",18)+'</button></div>'+
    '<nav class="drawer-nav">'+drawerLinks+'</nav>'+
-    '<div class="drawer-actions"><button class="login" onclick="go(\'login\');closePublicNav()">'+tr("login")+'</button><button class="create" onclick="go(\'register\');closePublicNav()">'+tr("createAccount")+'</button></div>'+
+    '<div class="drawer-actions">'+(getCurrentUser()
+      ?'<button class="login drawer-account" onclick="go(\''+getLoginRedirect(getCurrentUser())+'\');closePublicNav()">'+(ar?"لوحة التحكم":"Dashboard")+'</button>'
+      :'<button class="login" onclick="go(\'login\');closePublicNav()">'+tr("login")+'</button>')+'</div>'+
   '</div>'+
   '<div class="public-overlay" onclick="closePublicNav()"></div>';
 }
@@ -1267,7 +1334,11 @@ function card(p,i=0){
 function landing(){
  var ar=lang==="ar";
  var featured=orgData.items.slice(0,4).map(function(o){return orgCard(orgCardFromApi(o))});
- var featuredHtml=featured.length?featured.join(""):'<div class="empty-state">'+(ar?"لا توجد مدارس مميزة بعد":"No featured schools yet")+'</div>';
+ var featuredHtml=featured.length?featured.join(""):'<div class="empty-state">'+(ar?"لا توجد مؤسسات معروضة بعد":"No institutions to show yet")+'</div>';
+ var featuredTeachers=teacherData.items.slice(0,4).map(function(x){return teacherCard(x)}).join("");
+ var orgCount=orgData.loaded&&!orgData.error?orgData.total:"—";
+ var teacherCount=teacherData.loaded&&!teacherData.error?teacherData.total:"—";
+ var governorateCount=Array.isArray(locData.governorates)?locData.governorates.length:"—";
   var body=
    '<section class="landing-hero" id="landingHero">'+
     '<div class="hero-photo" data-hero-slider id="heroSlidePhoto"><img src="assets/hero-slides/hero3.png" alt=""><div class="photo-note">'+(ar?"من هنا<br>نبني أجمل اليمن":"From here<br>we build Yemen's future")+'</div><div class="quote">'+(ar?"بالتعليم<br>نصنع مستقبلاً أكثر إشراقاً لليمن":"Through education<br>we build a brighter future")+'</div><div class="place">⌖ '+(ar?"صنعاء القديمة":"Old Sana'a")+'</div>'+
@@ -1276,17 +1347,28 @@ function landing(){
     '<div class="hero-copy"><div id="heroSlideContent" aria-live="polite"><span class="eyebrow">'+(ar?"منصة تربط الطلبة بأفضل المدارس والمعلمين في جميع المحافظات":"A platform connecting learners with schools and teachers across Yemen")+'</span>'+
      '<h1>'+(ar?'مدارس أفضل<br><span class="g">لمستقبل أكثر</span> <span class="b">إشراقاً</span>':'Better schools<br>for a <span class="g">brighter</span> <span class="b">future</span>')+'</h1>'+
      '<p>'+(ar?"اكتشف أفضل المدارس في اليمن، وقارن وتواصل بسهولة، وابنِ مستقبلاً أفضل لأبنائك.":"Discover schools across Yemen, compare options, connect easily, and build a better future for your family.")+'</p>'+
-     '<div class="hero-buttons"><button class="btn green" onclick="go(\'private\')">'+tr("searchNow")+' 🔍</button><button class="btn">'+tr("createAccount")+' 👤</button></div></div>'+
-     '<div class="hero-numbers"><div>+500<span>'+(ar?"معلم ومعلمة":"Teachers")+'</span></div><div>+200<span>'+(ar?"مدرسة ومعهد":"Schools & institutes")+'</span></div><div>22<span>'+(ar?"محافظة مغطاة":"Governorates")+'</span></div></div>'+
+     '<div class="hero-buttons"><button class="btn green" onclick="document.getElementById(\'home-search\').focus()">'+tr("searchNow")+' 🔍</button><button class="btn" onclick="go(\'register\')">'+tr("createAccount")+' 👤</button></div></div>'+
+     '<div class="hero-numbers"><div>'+esc(teacherCount)+'<span>'+(ar?"معلم ومعلمة":"Teachers")+'</span></div><div>'+esc(orgCount)+'<span>'+(ar?"مؤسسة تعليمية":"Institutions")+'</span></div><div>'+esc(governorateCount)+'<span>'+(ar?"محافظة متاحة":"Governorates")+'</span></div></div>'+
      '<div class="hero-dots" id="heroDots" role="tablist" aria-label="'+(ar?"شرائح العرض":"Slides")+'"></div>'+
      '<span class="sr-only" id="heroSlideLive" aria-live="polite"></span>'+
     '</div>'+
    '</section>'+
-   '<div class="search-tabs"><div class="search-tab active">🏫 '+(ar?"البحث عن مدارس":"Search schools")+'</div><div class="search-tab">♙ '+(ar?"البحث عن معلمين":"Search teachers")+'</div></div>'+
-   '<div class="search-row"><input placeholder="'+(ar?"ابحث عن مدرسة بالاسم أو المدينة ...":"Search by school name or city ...")+'"><select><option>'+tr("allStages")+'</option></select><select><option>'+tr("allSchoolTypes")+'</option></select><button class="btn green">'+tr("searchBtn")+' 🔍</button></div>'+
-   '<section class="featured"><div class="section-title"><div><h2>'+tr("featuredSchools")+'</h2><p>'+(ar?"مجموعة من أفضل المدارس الموثوقة في مختلف محافظات اليمن":"A selection of trusted schools across Yemen")+'</p></div><button class="view-all" onclick="go(\'private\')">'+(ar?"عرض جميع المدارس":"View all schools")+' ←</button></div><div class="school-grid">'+featuredHtml+'</div></section>'+
-   '<div class="bottom-stats"><div class="lead">'+(ar?"معاً لتعليم أفضل":"Together for better education")+'<span>'+(ar?"فرص متكافئة • مستقبل مشرق":"Equal opportunity • brighter future")+'</span></div><div class="bs"><b>22</b><span>'+(ar?"محافظة":"Governorates")+'</span></div><div class="bs"><b>+200</b><span>'+(ar?"مدرسة ومعهد":"Schools & institutes")+'</span></div><div class="bs"><b>+500</b><span>'+(ar?"معلم ومعلمة":"Teachers")+'</span></div><div class="bs"><b>+50,000</b><span>'+(ar?"طالب وطالبة":"Students")+'</span></div></div>';
+   '<div class="search-tabs"><button type="button" class="search-tab'+(homeSearchMode==="schools"?' active':'')+'" onclick="homeSearchTab(\'schools\')">🏫 '+(ar?"البحث عن مؤسسات":"Search institutions")+'</button><button type="button" class="search-tab'+(homeSearchMode==="teachers"?' active':'')+'" onclick="homeSearchTab(\'teachers\')">♙ '+(ar?"البحث عن معلمين":"Search teachers")+'</button></div>'+
+   '<form class="search-row" onsubmit="homeSearch(event)"><input id="home-search" aria-label="'+(ar?"كلمة البحث":"Search term")+'" placeholder="'+(homeSearchMode==="teachers"?tr("searchTeacher"):(ar?"ابحث عن مؤسسة بالاسم...":"Search institutions by name..."))+'"><button class="btn green" type="submit">'+tr("searchBtn")+' 🔍</button></form>'+
+   '<section class="featured"><div class="section-title"><div><h2>'+(ar?"المؤسسات التعليمية":"Educational institutions")+'</h2><p>'+(ar?"مؤسسات من دليل المنصة الموحّد":"Institutions from the platform directory")+'</p></div><button class="view-all" onclick="go(\'private\')">'+(ar?"عرض جميع المؤسسات":"View all institutions")+' ←</button></div><div class="school-grid">'+featuredHtml+'</div></section>'+
+   '<section class="featured"><div class="section-title"><div><h2>'+(ar?"المعلمون":"Teachers")+'</h2><p>'+(ar?"ملفات المعلمين المتاحة من قاعدة بيانات المنصة":"Teacher profiles available from the platform")+'</p></div><button class="view-all" onclick="go(\'teachers\')">'+(ar?"عرض جميع المعلمين":"View all teachers")+' ←</button></div><div class="school-grid">'+(featuredTeachers||'<div class="empty-state">'+esc(tr("noTeachers"))+'</div>')+'</div></section>'+
+   (getCurrentUser()&&getCurrentUser().role==="admin"?'<div class="featured"><button class="btn green" onclick="go(\'students\')">'+icon("users",16)+' '+(ar?"إدارة العملاء":"Manage clients")+'</button></div>':"")+
+   '<div class="bottom-stats"><div class="lead">'+(ar?"معاً لتعليم أفضل":"Together for better education")+'<span>'+(ar?"فرص متكافئة • مستقبل مشرق":"Equal opportunity • brighter future")+'</span></div><div class="bs"><b>'+esc(governorateCount)+'</b><span>'+(ar?"محافظة":"Governorates")+'</span></div><div class="bs"><b>'+esc(orgCount)+'</b><span>'+(ar?"مؤسسة تعليمية":"Institutions")+'</span></div><div class="bs"><b>'+esc(teacherCount)+'</b><span>'+(ar?"معلم ومعلمة":"Teachers")+'</span></div></div>';
  return publicShell(body);
+}
+function homeSearchTab(mode){homeSearchMode=mode;render();var input=document.getElementById("home-search");if(input)input.focus()}
+function homeSearch(e){e.preventDefault();var input=document.getElementById("home-search");homeSearchPending={mode:homeSearchMode,q:input?input.value.trim():""};go(homeSearchMode==="teachers"?"teachers":"private")}
+function teacherContactSelected(button){
+ var phone=button&&button.getAttribute("data-phone"),url=waLink(phone);
+ if(!url)return;
+ var subject=document.getElementById("tv-subject-choice"),name=subject?subject.value:"";
+ var message=(lang==="ar"?"مرحباً، أود الاستفسار عن درس ":"Hello, I would like to ask about a lesson in ")+name;
+ window.open(url+"?text="+encodeURIComponent(message),"_blank","noopener,noreferrer");
 }
 
 function sectionConfig(r){
@@ -1375,16 +1457,32 @@ function directory(r){
  return publicShell(body+'</div>');
 }
 
-function teacherCard(t){
+function teacherCard(t,opts){
+ opts=opts||{};
  var exp=t.experienceYears||0;
  var sub=t.headline||(t.subjects&&t.subjects.length?t.subjects.slice(0,3).map(function(s){return s.name}).join(" · "):"");
  var quals=sub?'<p class="tq">'+esc(sub)+'</p>':'';
  var trav=(t.travelRadiusKm!=null&&t.travelRadiusKm!=="")?'<div><b>'+esc(t.travelRadiusKm)+'</b>'+(lang==="ar"?" كم نطاق":" km range")+'</div>':'';
- var av=(t.userName||t.userEmail||"").trim();av=av?esc(av.charAt(0)):"م";
- return '<article class="school-card" onclick="go(\'teacher?id='+encodeURIComponent(t.id)+'\')">'+
-  '<div class="teacher-head"><div class="teacher-avatar">'+av+'</div><div class="school-body"><h3>'+esc(t.userName||t.userEmail||"—")+'</h3></div></div>'+
+ var name=t.userName||t.userEmail||"—";
+ // The one avatar resolver the directory, the dashboard and the profile share, so
+ // a teacher's real photo (or the deterministic illustrative portrait) appears on
+ // every card instead of an initial.
+ var m=(typeof MadrasatiMedia!=="undefined")?MadrasatiMedia.teacherMedia(t):null;
+ var initial=esc((String(name).trim().charAt(0))||"م");
+ var avatar=(m&&m.avatar)
+  ?'<span class="teacher-avatar teacher-avatar-img"><img src="'+esc(m.avatar)+'" alt="'+esc(name)+'" loading="lazy" onerror="this.style.display=\'none\'"></span>'
+  :'<span class="teacher-avatar">'+initial+'</span>';
+ var adminActions=opts.admin?(
+  '<div class="card-cta">'+
+   '<button type="button" class="card-admin" title="'+esc(lang==="ar"?"تعديل":"Edit")+'" onclick="event.stopPropagation();acTeacherEdit(\''+t.id+'\')">'+icon("edit",13)+'</button>'+
+   '<button type="button" class="card-admin" title="'+esc(lang==="ar"?"التفاصيل":"Details")+'" onclick="event.stopPropagation();acTeacherDetailOpen(\''+t.id+'\')">'+icon("eye",13)+'</button>'+
+  '</div>'
+ ):"";
+ return '<article class="school-card teacher-card" role="link" tabindex="0" onclick="go(\'teacher?id='+encodeURIComponent(t.id)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}">'+
+  '<div class="teacher-head">'+avatar+'<div class="school-body"><h3>'+esc(name)+'</h3></div></div>'+
   '<div class="school-body">'+quals+(t.bio?'<p>'+esc(t.bio)+'</p>':'')+
   '<div class="metrics"><div><b>'+exp+'</b>'+tr("yrsExp")+'</div>'+trav+'</div>'+
+  adminActions+
   '</div></article>';
 }
 function teacherPage(){
@@ -1411,7 +1509,7 @@ function clearSearch(){
  for(var i=0;i<btns.length;i++){btns[i].style.display="none"}
  orgPage.offset=0;mapView=false;loadOrgsFor(route());
 }
-function applyFiltersNow(){orgPage.offset=0;mapView=false;loadOrgsFor(route())}
+function applyFiltersNow(){orgPage.offset=0;mapView=false;if(window.clientTrackSearch){var sel=document.getElementById("f-gov"),place=sel&&sel.value?sel.options[sel.selectedIndex].text:"";clientTrackSearch(route(),filters.q,place)}loadOrgsFor(route())}
 function searchOnMap(){mapView=true;orgPage.offset=0;loadOrgsFor(route());render()}
 function onOrgTypeChange(){
  var v=document.getElementById("f-type").value;
@@ -1459,7 +1557,7 @@ function setMapView(v){mapView=v;render()}
 function onTeacherSearch(v){
  teacherQuery=v;
  clearTimeout(teacherSearchTimeout);
- teacherSearchTimeout=setTimeout(function(){teacherData.cacheKey="q="+teacherQuery;loadTeachers(teacherQuery).then(function(){render()})},350);
+ teacherSearchTimeout=setTimeout(function(){if(window.clientTrackSearch&&teacherQuery.trim())clientTrackSearch("teachers",teacherQuery,"");teacherData.cacheKey="q="+teacherQuery;loadTeachers(teacherQuery).then(function(){render()})},350);
 }
 function clearTeacherSearch(){onTeacherSearch("")}
 function syncFilterControls(){
@@ -1559,19 +1657,133 @@ function sideMenu(){
  if(role==="admin"){
   items=ADMIN_SIDEBAR;
  }else if(role==="owner"){
-  items=[["owner","home","myDashboard"]].concat(ADMIN_SIDEBAR.filter(function(x){return ["access","verify","offers","ads","slides"].indexOf(x[0])<0}));
+  items=[["owner","home","myDashboard"]].concat(ADMIN_SIDEBAR.filter(function(x){return ["access","verify","offers","ads","slides","students"].indexOf(x[0])<0}));
  }else if(role==="teacher"){
-  items=[["admin","home","home"],["students","users","students"],["bookings","calendar","bookings"]];
+  items=[["admin","home","home"],["bookings","calendar","bookings"]];
  }else if(role==="client"){
-  items=[["admin","home","home"],["owner","home","myDashboard"]];
+  items=[["client","home","myDashboard"]];
  }else{
   items=[["admin","home","home"]];
  }
  // Belt and braces: every role's list is filtered against the frozen routes, so
  // an institutions alias can never reintroduce a duplicate menu entry.
- items=items.filter(function(x){return x[0]==="owner"||ADMIN_SIDEBAR_ROUTES.indexOf(x[0])>-1});
+ items=items.filter(function(x){return x[0]==="owner"||x[0]==="client"||ADMIN_SIDEBAR_ROUTES.indexOf(x[0])>-1});
  return items.map(function(x){return '<button class="'+(route()===x[0]?"active":"")+'" onclick="go(\''+x[0]+'\');closeSidebar()"><span class="side-ico">'+icon(x[1],18)+'</span>'+tr(x[2])+'</button>'}).join("")
 }
+/* ---------- Unified section hero ----------
+   Every admin section opens with the same branded banner: a themed photograph
+   under a neutral scrim, the section title, an optional primary action, and a
+   row of statistic cards. The figures are always supplied by the caller from
+   real API data — this component only presents them, it never invents one. */
+var SECTION_HERO={
+ admin:{image:"assets/sections/dashboard.jpg",pos:"center 55%"},
+ schools:{image:"assets/sections/schools.jpg",pos:"center 55%"},
+ institutions:{image:"assets/sections/schools.jpg",pos:"center 55%"},
+ institutesAdmin:{image:"assets/sections/schools.jpg",pos:"center 55%"},
+ collegesAdmin:{image:"assets/sections/schools.jpg",pos:"center 55%"},
+ teachersAdmin:{image:"assets/sections/teachers.jpg",pos:"center 38%"},
+ teachers:{image:"assets/sections/teachers.jpg",pos:"center 38%"},
+ students:{image:"assets/sections/clients.jpg",pos:"center 45%"},
+ bookings:{image:"assets/sections/bookings.jpg",pos:"center 55%"},
+ verify:{image:"assets/sections/verify.jpg",pos:"center 40%"},
+ academic:{image:"assets/sections/academic.jpg",pos:"center 50%"},
+ locations:{image:"assets/sections/locations.jpg",pos:"center 60%"},
+ access:{image:"assets/sections/access.jpg",pos:"center 45%"},
+ settings:{image:"assets/sections/settings.jpg",pos:"center 50%"},
+ offers:{image:"assets/sections/offers.jpg",pos:"center 55%"},
+ ads:{image:"assets/sections/ads.jpg",pos:"72% center"},
+ slides:{image:"assets/sections/slides.jpg",pos:"center 55%"},
+ reports:{image:"assets/sections/reports.jpg",pos:"center 55%"}
+};
+function sectionHeroConfig(r){return SECTION_HERO[r]||null}
+
+// One cached platform headline for every section header (admin sections are
+// admin-only, so /api/reports/headline is available). It powers the activity
+// sparkline consistently across every page instead of a second calculation.
+var __heroHeadline=null,__heroHeadlineLoading=false;
+function heroHeadline(){
+ if(!__heroHeadline&&!__heroHeadlineLoading){
+  __heroHeadlineLoading=true;
+  apiGet("/api/reports/headline").then(function(d){__heroHeadline=d;__heroHeadlineLoading=false;if(typeof render==="function")render()})
+   .catch(function(){__heroHeadlineLoading=false});
+ }
+ return __heroHeadline;
+}
+function heroNum(v){var n=Number(v);return isFinite(n)?n.toLocaleString("en-US"):String(v==null?"0":v)}
+function heroL(l){return l?(lang==="ar"?(l.ar||l.en):(l.en||l.ar)):""}
+
+function heroDonutSvg(donut){
+ donut=donut||{};var cats=(donut.categories||[]).filter(function(c){return Number(c.value)>0});
+ var total=donut.total!=null?donut.total:cats.reduce(function(n,c){return n+Number(c.value)},0);
+ if(!cats.length)return '<div class="rp-hviz-empty">'+esc(lang==="ar"?"لا توجد بيانات.":"No data.")+'</div>';
+ var r=34,cx=44,cy=44,C=2*Math.PI*r,acc=0;
+ var palette=["#7FD1AE","#E8A87C","#8FC3E0","#F2C879","#C7A8E0","#E39A8F"];
+ var arcs=cats.map(function(c,i){
+  var f=Number(c.value)/(total||1);
+  var dash=(f*C).toFixed(2),gap=(C-f*C).toFixed(2),off=(-acc*C).toFixed(2);acc+=f;
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+palette[i%palette.length]+
+   '" stroke-width="13" stroke-dasharray="'+dash+' '+gap+'" stroke-dashoffset="'+off+
+   '" transform="rotate(-90 '+cx+' '+cy+')"><title>'+esc(heroL(c.label))+': '+heroNum(c.value)+'</title></circle>';
+ }).join("");
+ var legend=cats.slice(0,4).map(function(c,i){
+  return '<span class="rp-hviz-leg"><i style="background:'+palette[i%palette.length]+'"></i>'+esc(heroL(c.label))+' '+heroNum(c.value)+'</span>';
+ }).join("");
+ return '<div class="rp-hviz-donut"><svg viewBox="0 0 88 88" role="img">'+arcs+
+  '<text x="44" y="42" text-anchor="middle" font-size="18" font-weight="800" fill="#fff">'+heroNum(total)+'</text>'+
+  '<text x="44" y="57" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.82)">'+esc(heroL(donut.center)||"")+'</text>'+
+  '</svg><div class="rp-hviz-legend">'+legend+'</div></div>';
+}
+function heroSparkSvg(points){
+ var vals=(points||[]).map(function(p){return Number(p.value)||0});
+ if(!vals.length)vals=[0,0];
+ var max=Math.max.apply(null,vals.concat([1]));
+ var w=220,h=56,pad=4,step=(w-pad*2)/Math.max(1,vals.length-1);
+ var pts=vals.map(function(v,i){return [pad+i*step,h-pad-(v/max)*(h-pad*2)]});
+ var line=pts.map(function(p,i){return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)}).join(" ");
+ var area=line+" L"+pts[pts.length-1][0].toFixed(1)+" "+(h-pad)+" L"+pad+" "+(h-pad)+" Z";
+ return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img">'+
+  '<path d="'+area+'" fill="rgba(255,255,255,.2)"/>'+
+  '<path d="'+line+'" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/></svg>';
+}
+function heroStatCard(s){
+ var shown=(s.value==null||s.value==="")?"0":s.value;
+ var n=Number(s.value);
+ if(s.value!=null&&s.value!==""&&isFinite(n))shown=n.toLocaleString("en-US");
+ return '<div class="rp-hstat tone-'+(s.tone||"primary")+'"><span class="rp-hstat-ico">'+icon(s.icon||"chart",18)+'</span>'+
+  '<b>'+esc(shown)+'</b><span class="rp-hstat-label">'+esc(lang==="ar"?s.labelAr:s.labelEn)+'</span>'+
+  (s.sub?'<small>'+esc(s.sub)+'</small>':'')+'</div>';
+}
+// The unified section header. It deliberately emits the same markup and class
+// names as the Reports Center hero (`#/reports`) so every section — dashboard,
+// institutions, teachers, clients, bookings, offers, advertisements, academic,
+// locations, access, settings — is one identical header: themed photograph,
+// title, live statistic cards and the two small visuals.
+function sectionHero(o){
+ o=o||{};
+ var cfg=o.image?{image:o.image,pos:o.pos}:(SECTION_HERO[o.route||route()]);
+ var hl=heroHeadline();
+ var stats=(o.stats||[]).map(heroStatCard).join("");
+ var donut=o.donut||null;
+ var spark=o.spark||(hl?{title:{ar:"النشاط — آخر 14 يوماً",en:"Activity — last 14 days"},
+   points:hl.activityDaily,foot:(lang==="ar"?"إجمالي الأحداث: ":"Total events: ")+heroNum(hl.activity)}:null);
+ var visuals=(donut||spark)?'<div class="rp-hvisuals">'+
+   (donut?'<div class="rp-hviz"><div class="rp-hviz-title">'+esc(heroL(donut.title))+'</div>'+heroDonutSvg(donut)+'</div>':'')+
+   (spark?'<div class="rp-hviz"><div class="rp-hviz-title">'+esc(heroL(spark.title))+'</div>'+heroSparkSvg(spark.points)+(spark.foot?'<div class="rp-hviz-foot">'+esc(spark.foot)+'</div>':'')+'</div>':'')+
+  '</div>':'';
+ return '<header class="rp-hero rp-hero-rich">'+
+  (cfg&&cfg.image?'<div class="rp-hero-photo" style="background-image:url(\''+cfg.image+'\');background-position:'+(cfg.pos||"center")+'"></div>':'')+
+  '<div class="rp-hero-inner">'+
+   '<div class="rp-hero-head"><div class="rp-hero-brand"><span class="rp-mark">'+(o.mark||"م")+'</span><div>'+
+    '<div class="rp-hero-eyebrow">'+(o.eyebrow||"MADARASATI")+'</div>'+
+    '<h1>'+esc(o.title||"")+'</h1>'+(o.subtitle?'<p>'+esc(o.subtitle)+'</p>':'')+'</div></div>'+
+    '<div class="rp-hero-side">'+(o.actions||o.actionHtml||"")+
+     (hl?'<div class="rp-hero-refresh"><span class="rp-live-dot"></span>'+(lang==="ar"?"آخر تحديث":"Last refresh")+' · '+esc(new Date(hl.generatedAt).toLocaleString(lang==="ar"?"ar-YE":"en-GB",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))+'</div>':'')+
+    '</div>'+
+   '</div>'+
+   '<div class="rp-hero-lower"><div class="rp-hstats">'+stats+'</div>'+visuals+'</div>'+
+  '</div></header>';
+}
+
 function adminShell(body){
  var user=getCurrentUser();
  var userName=user?(lang==="ar"?user.name:user.name):tr("superAdmin");
@@ -2162,149 +2374,271 @@ function detailBlock(isPublic){
    (editable?'<button class="mini-plus" title="'+esc(tr("addOwnSubject"))+'" onclick="orgSubjectFormOpen()">'+icon("plus",14)+'</button>':"")+'</div>'+
   subjectsTable+'</section>';
 
- // ===================== Option 3 profile layout =====================
- // Entity media comes from the resolver (media.js): the entity's own DB media
- // first, then mapped project media, then a clearly-generic reference fallback.
+ // ===================== Editorial profile layout =====================
+ // One shared document, rendered inside both the public shell and the admin
+ // dashboard shell. Entity media comes from the resolver (media.js): the entity's
+ // own DB media first, then mapped project media, then a clearly-generic fallback
+ // that is always labelled as illustrative, never passed off as a real photo.
  var media=(typeof MadrasatiMedia!=="undefined")?MadrasatiMedia.orgMedia(o):{logo:orgLogo(o),cover:"",gallery:[],generic:""};
  var galleryImgs=media.gallery||[];
- var coverImg=media.cover||"";
+ var coverImg=media.cover||"assets/images/school-detail-cover.jpg";
  var mediaLogo=media.logo||orgLogo(o);
- var mapEmbed="https://maps.google.com/maps?q="+encodeURIComponent(mapQuery||o.name||"")+"&z=14&output=embed";
+ var teacherCount=(o.teachers==null?null:o.teachers);
+ var hasLoc=!!(loc||o.address||o.latitude||o.mapUrl);
 
- function pc(ic,label,value,href){
-  if(!value)return "";
-  var inner=icon(ic,15)+'<span class="pcc-value">'+esc(String(value).replace(/^https?:\/\//,""))+'</span>';
-  return href?'<a class="pcc-item" title="'+esc(label)+'" href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+inner+'</a>':'<span class="pcc-item" title="'+esc(label)+'">'+inner+'</span>';
- }
- function pFact(ic,label,value,href){
+ // Local builders for the editorial layout only: a fact cell, a contact row and
+ // one number in the floating stat strip.
+ function edFact(ic,label,value,href){
   var v=(value==null||value==="")?"—":value;
   var val=href&&value?'<a href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+esc(v)+'</a>':esc(v);
-  return '<div class="pfact"><span class="pfact-ic">'+icon(ic,16)+'</span><span class="pfact-label">'+esc(label)+'</span><span class="pfact-value">'+val+'</span></div>';
+  return '<div class="ed-fact"><span>'+esc(label)+'</span><b>'+val+'</b></div>';
  }
- function pStat(ic,val,label){
-  return '<div class="profile-stat"><span class="profile-stat-ic">'+icon(ic,20)+'</span><b>'+esc(val==null?"—":String(val))+'</b><span>'+esc(label)+'</span></div>';
+ function edContact(ic,label,value,href){
+  if(!value)return "";
+  var v=String(value).replace(/^https?:\/\//,"");
+  return href?'<a class="ed-contact-link" title="'+esc(label)+'" href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'><span class="ed-ci">'+icon(ic,16)+'</span><span>'+esc(v)+'</span></a>'
+   :'<span class="ed-contact-link"><span class="ed-ci">'+icon(ic,16)+'</span><span>'+esc(v)+'</span></span>';
  }
- // Grade ranges are not fabricated: the stage name/code from the catalog is
- // shown as-is; a range would need the grade table which this view does not load.
+ function edStat(val,label){
+  return '<div class="ed-stat"><b>'+esc(val==null?"—":String(val))+'</b><span>'+esc(label)+'</span></div>';
+ }
 
- var pTopbar='<div class="ptopbar">'+
-  '<div class="pcrumbs">'+icon("home",14)+' <a href="#/home">'+esc(tr("home"))+'</a> <span class="psep">›</span> <a href="#/schools">'+esc(tr("schools"))+'</a> <span class="psep">›</span> <span>'+esc(orgTypeLabel(o.type))+'</span> <span class="psep">›</span> <b>'+esc(o.name)+'</b></div>'+
-  '<div class="ptopbar-actions">'+
-   '<button class="picon-btn" title="'+esc(ar?"أضف للمفضلة":"Add to favorites")+'" onclick="this.classList.toggle(\'on\')">'+icon("heart",17)+'</button>'+
-   (editable?'<button class="btn green" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+' '+esc(tr("editLabel"))+'</button>':'')+
-  '</div></div>';
+ var edCrumb='<div class="ptopbar"><div class="pcrumbs">'+icon("home",14)+
+  ' <a href="#/home">'+esc(tr("home"))+'</a> <span class="psep">›</span>'+
+  ' <a href="#/schools">'+esc(tr("schools"))+'</a> <span class="psep">›</span>'+
+  ' <span>'+esc(orgTypeLabel(o.type))+'</span> <span class="psep">›</span> <b>'+esc(o.name)+'</b></div></div>';
 
- var pHero='<section class="phero">'+
-  (coverImg?'<div class="phero-cover"><img src="'+esc(coverImg)+'" alt="" onerror="this.parentNode.style.display=\'none\'"></div>':'')+
-  '<div class="phero-scrim"></div>'+
-  '<div class="phero-inner">'+
-   '<div class="phero-logo"><img src="'+esc(mediaLogo)+'" alt="'+esc(o.name)+'"></div>'+
-   '<div class="phero-copy">'+
-    '<span class="phero-badge">'+esc(orgTypeLabel(o.type))+'</span>'+
-    '<h2>'+esc(o.name)+'</h2>'+
-    (o.nameEn?'<div class="phero-en" dir="ltr">'+esc(o.nameEn)+'</div>':"")+
-    (o.description||o.bio?'<p class="phero-tag">'+esc(o.description||o.bio)+'</p>':'')+
-    (loc?'<div class="phero-loc">'+icon("pin",14)+' <span>'+esc(loc)+'</span></div>':'')+
-    '<div class="phero-contacts">'+
-     pc("globe",tr("websiteLabel"),o.website,o.website)+
-     pc("mail",tr("email"),o.email,o.email?"mailto:"+o.email:"")+
-     pc("phone",tr("phoneLabel"),o.phone,telLink(o.phone))+
-    '</div>'+
+ var edCoverActions='<div class="ed-cover-actions">'+
+  '<button class="picon-btn" title="'+esc(ar?"أضف للمفضلة":"Add to favorites")+'" onclick="this.classList.toggle(\'on\')">'+icon("heart",17)+'</button>'+
+  '<button class="picon-btn" title="'+esc(tr("share"))+'" onclick="shareInstitution()">'+icon("share",16)+'</button>'+
+  (editable?'<button class="btn green" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+' '+esc(tr("editLabel"))+'</button>':"")+
+  '</div>';
+
+ var edCover='<div class="ed-cover">'+
+  '<img class="ed-cover-img" src="'+esc(coverImg)+'" alt="'+esc(o.name)+'" onerror="this.style.display=\'none\'">'+
+  '<div class="ed-cover-top">'+
+   '<span class="badge ok">'+esc(orgTypeLabel(o.type))+'</span>'+
+   edCoverActions+
+  '</div>'+
+  '<div class="ed-identity">'+
+   '<div class="ed-logo"><img src="'+esc(mediaLogo)+'" alt="'+esc(o.name)+'" onerror="this.style.display=\'none\'"></div>'+
+   '<div class="ed-id-copy">'+
+    '<div class="ed-badges">'+coreBadge(o.verified?"verified":o.verificationStatus||"pending")+coreBadge(o.registrationOpen?"active":"inactive")+'</div>'+
+    '<h1>'+esc(o.name)+'</h1>'+
+    (o.nameEn?'<div class="ed-en" dir="ltr">'+esc(o.nameEn)+'</div>':"")+
+    (o.description||o.bio?'<p class="ed-tagline">'+esc(o.description||o.bio)+'</p>':"")+
+    (loc?'<div class="ed-chips"><span>'+icon("pin",13)+' '+esc(loc)+'</span></div>':"")+
    '</div>'+
-  '</div></section>';
+  '</div>'+
+ '</div>';
 
- var pTabs='<nav class="ptabs">'+
-  '<button class="on" onclick="scrollToProfile(\'pgGeneral\')">'+icon("home",15)+'<span>'+esc(tr("generalInfo"))+'</span></button>'+
-  '<button onclick="scrollToProfile(\'pgAcademic\')">'+icon("school",15)+'<span>'+esc(tr("academicPrograms"))+'</span></button>'+
-  '<button onclick="scrollToProfile(\'pgTeachers\')">'+icon("teacher",15)+'<span>'+esc(tr("teachers"))+'</span></button>'+
-  '<button onclick="scrollToProfile(\'pgFacilities\')">'+icon("building",15)+'<span>'+esc(tr("facilitiesServices"))+'</span></button>'+
-  '<button onclick="scrollToProfile(\'pgDocs\')">'+icon("doc",15)+'<span>'+esc(tr("documentsTab"))+'</span></button>'+
+ var edStrip='<div class="ed-strip">'+
+  edStat((o.stages||[]).length,tr("stagesCountLabel"))+
+  edStat((o.subjects||[]).length,tr("subjects"))+
+  edStat(fac.length,tr("facilitiesLabel"))+
+  edStat(o.seatsAvailable,tr("seatsLabel"))+
+ '</div>';
+
+ var edTabs='<nav class="ed-tabs">'+
+  '<button class="on" onclick="scrollToProfile(\'edGeneral\')">'+icon("home",15)+'<span>'+esc(tr("generalInfo"))+'</span></button>'+
+  '<button onclick="scrollToProfile(\'edAcademic\')">'+icon("school",15)+'<span>'+esc(tr("academicPrograms"))+'</span></button>'+
+  '<button onclick="scrollToProfile(\'edTeachers\')">'+icon("teacher",15)+'<span>'+esc(tr("teachers"))+'</span></button>'+
+  '<button onclick="scrollToProfile(\'edFacilities\')">'+icon("building",15)+'<span>'+esc(tr("facilitiesServices"))+'</span></button>'+
+  '<button onclick="scrollToProfile(\'edDocs\')">'+icon("doc",15)+'<span>'+esc(tr("documentsTab"))+'</span></button>'+
  '</nav>';
 
- var pAbout='<section class="panel ppanel" id="pgGeneral"><div class="panel-title"><h2>'+icon("book",18)+' '+esc(tr("aboutInstitution"))+'</h2></div>'+
-  '<div class="pabout">'+
-   '<p>'+esc(o.description||o.bio||tr("noDescription"))+'</p>'+
-   (coverImg?'<div class="pabout-photo"><img src="'+esc(coverImg)+'" alt=""></div>':'')+
-   (galleryImgs.length?'<div class="pgallery-strip">'+galleryImgs.slice(0,5).map(function(g){return '<img src="'+esc(g)+'" alt="">'}).join("")+'</div>':'')+
-  '</div></section>';
-
- var pDetails='<section class="panel ppanel"><div class="panel-title"><h2>'+icon("info",18)+' '+esc(tr("institutionDetail"))+'</h2></div>'+
-  '<div class="pfacts">'+
-   pFact("school",tr("institutionName"),o.name)+
-   pFact("tag",tr("typeLabel"),orgTypeLabel(o.type))+
-   pFact("doc",tr("curriculumLabel"),detailCurriculumLabel(o.curriculum))+
-   pFact("globe",tr("languageLabel"),(o.languages||[]).map(detailLangLabel).join(" - "))+
-   pFact("pin",tr("exactLocation"),loc)+
-   pFact("phone",tr("phoneLabel"),o.phone,telLink(o.phone))+
-   pFact("whatsapp",tr("whatsapp"),o.whatsapp||o.phone,waLink(o.whatsapp||o.phone))+
-   pFact("mail",tr("email"),o.email,o.email?"mailto:"+o.email:"")+
-   pFact("globe",tr("websiteLabel"),o.website,o.website)+
-   pFact("shield",tr("accreditation"),o.verified?tr("docVerified"):tr("statusPending"))+
-   (o.workingHours?'<div class="pfact"><span class="pfact-ic">'+icon("calendar",16)+'</span><span class="pfact-label">'+esc(ar?"ساعات العمل":"Working hours")+'</span><span class="pfact-value">'+esc(typeof o.workingHours==="object"?JSON.stringify(o.workingHours):o.workingHours)+'</span></div>':'')+
-  '</div></section>';
-
- var pPrograms=(offering&&offStages&&offStages.length)?
-   '<div class="pprograms">'+offStages.map(function(s){
-     var cap=(s.capacity==null?null:s.capacity);
-     var rem=(s.remainingSeats==null?null:s.remainingSeats);
-     var detail=editable?'<button class="pprogram-link" onclick="orgStageFormOpen(\''+esc(s.stageId)+'\')">'+esc(tr("programDetails"))+' '+icon("back",13)+'</button>':"";
-     var meta=[];
-     if(cap!=null)meta.push(icon("users",13)+' '+esc(String(cap))+' '+esc(tr("seatsOf")));
-     if(rem!=null)meta.push(icon("check",13)+' '+esc(String(rem))+' '+esc(tr("seatsRemainingShort")));
-     return '<div class="pprogram-card">'+
-       '<span class="pprogram-ic">'+programGlyph(s.stageCode)+'</span>'+
-       '<b>'+esc(s.stageName||s.stageCode||"—")+'</b>'+
-       (s.stageCode?'<span class="pprogram-range" dir="ltr">'+esc(s.stageCode)+'</span>':'')+
-       (meta.length?'<span class="pprogram-count">'+meta.join(" · ")+'</span>':'')+
-       detail+'</div>';
-   }).join("")+'</div>'
-  :'<div class="empty-state">'+esc(tr("noOfferingStages"))+'</div>';
- var pAcademic='<section class="panel ppanel" id="pgAcademic"><div class="panel-title"><div><h2>'+icon("school",18)+' '+esc(tr("academicPrograms"))+'</h2></div>'+
-  (editable?'<button class="btn brown" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button>':"")+'</div>'+
-  gatedNote+pPrograms+
-  '<div class="psubhead"><h3 class="core-h3">'+esc(tr("orgSubjectsLabel"))+'</h3>'+(editable?'<button class="mini-plus" title="'+esc(tr("addOwnSubject"))+'" onclick="orgSubjectFormOpen()">'+icon("plus",14)+'</button>':"")+'</div>'+
-  subjectsTable+'</section>';
-
- var teacherCount=(o.teachers==null?null:o.teachers);
- var pTeachers='<section class="panel ppanel" id="pgTeachers"><div class="panel-title"><h2>'+icon("teacher",18)+' '+esc(tr("teachers"))+'</h2></div>'+
-  '<div class="pstats3">'+
-   pStat("teacher",teacherCount,ar?"إجمالي المعلمين":"Total teachers")+
-   pStat("doc",(o.subjects||[]).length,ar?"المواد":"Subjects")+
-   pStat("school",(o.stages||[]).length,ar?"المراحل":"Stages")+
+ // ---- about + facts + gallery ----
+ var edAbout='<section class="ed-sec" id="edGeneral">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("book","#2F7A59")+' '+esc(tr("aboutInstitution"))+'</h3></div>'+
+  (media.generic?'<div class="gated-note">'+icon("info",14)+'<span>'+esc(ar?"الصورة المعروضة توضيحية، ولم ترفع المؤسسة صوراً حقيقية بعد.":"The image shown is illustrative; this institution has not uploaded real photos yet.")+'</span></div>':"")+
+  '<p class="ed-lead"><span class="ed-drop">'+esc((String(o.name||"").trim().charAt(0))||"م")+'</span>'+esc(o.description||o.bio||tr("noDescription"))+'</p>'+
+  '<div class="ed-facts" style="margin-top:16px">'+
+   edFact("tag",tr("typeLabel"),orgTypeLabel(o.type))+
+   edFact("doc",tr("curriculumLabel"),detailCurriculumLabel(o.curriculum))+
+   edFact("globe",tr("languageLabel"),(o.languages||[]).map(detailLangLabel).join(" · "))+
+   edFact("users",ar?"الجنس":"Gender",detailGenderLabel(o.gender))+
+   edFact("pin",tr("exactLocation"),loc)+
+   edFact("map",ar?"العنوان":"Address",o.address)+
+   edFact("phone",tr("phoneLabel"),o.phone,telLink(o.phone))+
+   edFact("mail",tr("email"),o.email,o.email?"mailto:"+o.email:"")+
+   edFact("globe",tr("websiteLabel"),o.website,o.website)+
+   edFact("shield",tr("accreditation"),o.verified?tr("docVerified"):tr("statusPending"))+
   '</div>'+
-  (teacherCount==null?'<div class="gated-note">'+icon("shield",14)+' '+esc(isPublic?tr("pricingGated"):tr("noDescription"))+'</div>':"")+
-  '</section>';
+  (galleryImgs.length?
+   '<div class="ed-sec-head" style="margin-top:22px"><h3>'+sectionIcon("grid","#7C5CFF")+' '+esc(tr("galleryLabel"))+'</h3></div>'+
+   '<div class="ed-gallery">'+galleryImgs.slice(0,5).map(function(g,i){return '<img class="'+(i===0?"big":"")+'" src="'+esc(g)+'" alt="">'}).join("")+
+   (galleryImgs.length>5?'<div class="more"><img src="'+esc(galleryImgs[5])+'" alt=""><span>+'+(galleryImgs.length-5)+'</span></div>':'')+'</div>'
+   :(coverImg?'<div class="ed-sec-head" style="margin-top:22px"><h3>'+esc(tr("galleryLabel"))+'</h3></div>'+
+     '<div class="ed-gallery"><img class="big" src="'+esc(coverImg)+'" alt=""></div>':""))+
+ '</section>';
 
- var pFacilities='<section class="panel ppanel" id="pgFacilities"><div class="panel-title"><h2>'+icon("building",18)+' '+esc(tr("facilitiesServices"))+'</h2></div>'+
+ // ---- academic programs + this institution's own subjects ----
+ var edPrograms=(offering&&offStages&&offStages.length)?
+  '<div class="ed-programs">'+offStages.map(function(s){
+   var cap=(s.capacity==null?null:s.capacity);
+   var rem=(s.remainingSeats==null?null:s.remainingSeats);
+   var fee=(gated||!s.fee)?"—":moneyText(s.fee.amount,s.fee.currency);
+   var meta=[];
+   if(cap!=null)meta.push(esc(String(cap))+' '+esc(tr("seatsOf")));
+   if(rem!=null)meta.push(esc(String(rem))+' '+esc(tr("seatsRemainingShort")));
+   if(s.deliveryMode)meta.push(esc(detailDeliveryLabel(s.deliveryMode)));
+   var detail=editable?'<button class="pprogram-link" onclick="orgStageFormOpen(\''+esc(s.stageId)+'\')">'+esc(tr("programDetails"))+' '+icon("back",13)+'</button>':"";
+   return '<div class="ed-prog rd-prog rd-prog-'+esc(String(s.stageCode||"other").toLowerCase().replace(/[^a-z0-9_-]/g,""))+'"><span class="ed-prog-ic">'+icon(programGlyph(s.stageCode).i,30)+'</span>'+
+    '<b>'+esc(s.stageName||s.stageCode||"—")+'</b>'+
+    (s.stageCode?'<div class="ed-prog-meta" dir="ltr">'+esc(s.stageCode)+'</div>':"")+
+    (meta.length?'<div class="ed-prog-meta">'+meta.join(" · ")+'</div>':"")+
+    '<div class="ed-prog-fee">'+fee+'</div>'+detail+'</div>';
+  }).join("")+'</div>'
+  :'<div class="empty-state">'+esc(tr("noOfferingStages"))+'</div>';
+ var edAcademic='<section class="ed-sec" id="edAcademic">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("school","#2563EB")+' '+esc(tr("academicPrograms"))+'</h3>'+
+   (editable?'<button class="ed-link" onclick="orgStageFormOpen(null)">'+icon("plus",14)+' '+esc(tr("addStageLabel"))+'</button>':"")+'</div>'+
+  gatedNote+edPrograms+
+  '<div class="core-h3-row"><h3 class="core-h3">'+esc(tr("orgSubjectsLabel"))+'</h3>'+
+   (editable?'<button class="mini-plus" title="'+esc(tr("addOwnSubject"))+'" onclick="orgSubjectFormOpen()">'+icon("plus",14)+'</button>':"")+'</div>'+
+  subjectsTable+
+ '</section>';
+
+ // ---- teachers strip ----
+ var edTeachers='<section class="ed-sec" id="edTeachers">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("teacher","#0E9488")+' '+esc(tr("teachers"))+'</h3></div>'+
+  '<div class="ed-facts">'+
+   edFact("teacher",ar?"إجمالي المعلمين":"Total teachers",teacherCount==null?"—":String(teacherCount))+
+   edFact("school",ar?"المراحل":"Stages",(o.stages||[]).length)+
+   edFact("doc",ar?"المواد":"Subjects",(o.subjects||[]).length)+
+   edFact("building",ar?"المرافق":"Facilities",fac.length)+
+  '</div>'+
+  (teacherCount==null?'<div class="gated-note" style="margin-top:12px">'+icon("info",14)+'<span>'+esc(ar?"عدد المعلمين غير معلن لهذه المؤسسة.":"The teacher count is not declared for this institution.")+'</span></div>':"")+
+ '</section>';
+
+ // ---- facilities and services ----
+ var edFacilities='<section class="ed-sec" id="edFacilities">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("building","#D98A2B")+' '+esc(tr("facilitiesServices"))+'</h3></div>'+
+  (langs?'<h3 class="core-h3">'+esc(tr("teachingLanguages"))+'</h3><div class="core-chips">'+langs+'</div>':"")+
   '<h3 class="core-h3">'+esc(tr("facilitiesLabel"))+'</h3>'+
-   (fac.length?'<div class="ptiles">'+fac.map(function(x){return profileTile(facilityIcon(x.facilityType||x.facility_type),x.name,(x.quantity>1?"×"+x.quantity:""),x.available===false)}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noFacilities"))+'</div>')+
+   (fac.length?'<div class="profile-tiles">'+fac.map(function(x){return profileTile(facilityIcon(x.facilityType),x.name,(x.quantity>1?"×"+x.quantity:""),x.available===false)}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noFacilities"))+'</div>')+
   '<h3 class="core-h3">'+esc(tr("servicesLabel"))+'</h3>'+
-   (svc.length?'<div class="ptiles">'+svc.map(function(x){return profileTile(serviceIcon(x.serviceType||x.service_type),x.name,(x.price!=null&&Number(x.price)>0&&!gated0?moneyText(x.price,x.currency):""),x.available===false)}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noServices"))+'</div>')+
+   (svc.length?'<div class="profile-tiles">'+svc.map(function(x){return profileTile(serviceIcon(x.serviceType),x.name,(x.price!=null&&Number(x.price)>0&&!gated0?moneyText(x.price,x.currency):""),x.available===false)}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noServices"))+'</div>')+
+ '</section>';
+
+ // ---- documents ----
+ var edDocs='<section class="ed-sec" id="edDocs">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("doc","#4B6B8A")+' '+esc(tr("documentsTab"))+'</h3></div>'+docsHtml+'</section>';
+
+ // ---- side column ----
+ var edSide=
+  '<div class="ed-card"><h4>'+icon("phone",16)+' '+esc(tr("contactInfo"))+'</h4>'+
+   (edContact("phone",tr("phoneLabel"),o.phone,telLink(o.phone))+
+    edContact("whatsapp",tr("whatsapp"),o.whatsapp||o.phone,waLink(o.whatsapp||o.phone))+
+    edContact("mail",tr("email"),o.email,o.email?"mailto:"+o.email:"")+
+    edContact("globe",tr("websiteLabel"),o.website,o.website)||'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
+   ((o.whatsapp||o.phone)?'<div style="margin-top:12px">'+waButton(o.whatsapp||o.phone,{label:tr("whatsapp")})+'</div>':"")+
+  '</div>'+
+  '<div class="ed-card"><h4>'+icon("pin",16)+' '+esc(tr("exactLocation"))+'</h4>'+
+   (hasLoc?
+    '<div class="ed-map"><span class="pin">📍</span>'+(loc?'<span class="lbl">'+esc(loc)+'</span>':'')+'</div>'+
+    (mapHref?'<button class="btn green" style="width:100%;justify-content:center;margin-top:12px" onclick="window.open(\''+esc(mapHref)+'\',\'_blank\')">'+icon("map",15)+' '+esc(tr("openMap"))+'</button>':'')
+    :'<div class="empty-state">'+esc(tr("locationUnavailable"))+'</div>')+
+  '</div>'+
+  '<div class="ed-card"><h4>'+icon("building",16)+' '+esc(tr("facilitiesLabel"))+'</h4>'+
+   (fac.length?'<div class="ed-fac-chips">'+fac.slice(0,12).map(function(x){return '<span>'+esc(x.name)+'</span>'}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noFacilities"))+'</div>')+
+  '</div>'+
+  '<div class="ed-card"><h4>'+icon("settings",16)+' '+esc(tr("profileActions"))+'</h4><div class="ed-actions">'+
+   (editable?'<button class="btn" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",15)+' '+esc(tr("editLabel"))+'</button>':"")+
+   '<button class="btn" onclick="printInstitution()">'+icon("printer",15)+' '+esc(tr("printReport"))+'</button>'+
+   '<button class="btn" onclick="exportInstitution(\'pdf\')">'+icon("pdf",15)+' '+esc(tr("exportPdf"))+'</button>'+
+   '<button class="btn" onclick="exportInstitution(\'docx\')">'+icon("doc",15)+' '+esc(tr("exportDocx"))+'</button>'+
+   '<button class="btn" onclick="exportInstitution(\'xlsx\')">'+icon("sheet",15)+' '+esc(tr("exportXlsx"))+'</button>'+
+   '<button class="btn" onclick="shareInstitution()">'+icon("share",15)+' '+esc(tr("share"))+'</button>'+
+   (editable?'<button class="btn brown" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button>':"")+
+  '</div></div>';
+
+ // The supplied school-detail reference places identity over a light cover,
+ // then presents facts and description side by side. This document is still
+ // shared by the public route and the editable dashboard route.
+ function rdFact(ic,label,value,href){
+  var shown=value==null||value===""?"—":String(value);
+  var content=href&&value?'<a href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+esc(shown.replace(/^https?:\/\//,""))+'</a>':esc(shown);
+  return '<div class="rd-fact"><span class="rd-fact-icon">'+icon(ic,17)+'</span><span class="rd-fact-label">'+esc(label)+'</span><b>'+content+'</b></div>';
+ }
+ var rdTop='<div class="rd-top"><div class="rd-breadcrumb"><a href="#/home">'+esc(tr("home"))+'</a><span>›</span><a href="#/schools">'+esc(tr("schools"))+'</a><span>›</span><span>'+esc(orgTypeLabel(o.type))+'</span><span>›</span><b>'+esc(o.name)+'</b></div>'+
+  '<div class="rd-top-actions">'+(editable?'<button class="rd-primary" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",16)+' '+esc(tr("editLabel"))+'</button>':"")+
+   '<button class="rd-icon-button" title="'+esc(ar?"أضف للمفضلة":"Add to favorites")+'" onclick="this.classList.toggle(\'on\')">'+icon("heart",18)+'</button>'+
+   '<button class="rd-icon-button" title="'+esc(tr("share"))+'" onclick="shareInstitution()">'+icon("share",17)+'</button></div></div>';
+ var rdHero='<header class="rd-hero">'+
+  '<img class="rd-hero-image" src="'+esc(coverImg)+'" alt="" onerror="this.style.display=\'none\'">'+
+  '<div class="rd-hero-copy"><div class="rd-hero-logo"><img src="'+esc(mediaLogo)+'" alt="'+esc(o.name)+'" onerror="this.style.display=\'none\'"></div>'+
+   '<div class="rd-hero-text"><span class="rd-type">'+icon(o.type==="college"||o.type==="university"?"college":o.type==="institute"?"institute":"school",14)+' '+esc(orgTypeLabel(o.type))+'</span><h1>'+esc(o.name)+'</h1>'+
+    '<div class="ed-badges">'+coreBadge(o.verified?"verified":o.verificationStatus||"pending")+coreBadge(o.registrationOpen?"active":"inactive")+'</div>'+
+    (o.nameEn?'<span class="rd-name-en" dir="ltr">'+esc(o.nameEn)+'</span>':"")+
+    '<p>'+esc(o.description||o.bio||tr("noDescription"))+'</p>'+
+    (loc?'<div class="rd-location">'+icon("pin",16)+' '+esc(loc)+'</div>':"")+
+    '<div class="rd-hero-contact">'+
+     (o.phone?'<a href="'+esc(telLink(o.phone))+'">'+icon("phone",15)+' '+esc(o.phone)+'</a>':"")+
+     (o.email?'<a href="mailto:'+esc(o.email)+'">'+icon("mail",15)+' '+esc(o.email)+'</a>':"")+
+     (o.website?'<a href="'+esc(o.website)+'" target="_blank" rel="noopener noreferrer">'+icon("globe",15)+' '+esc(String(o.website).replace(/^https?:\/\//,""))+'</a>':"")+
+    '</div></div></div>'+
+   (media.generic?'<span class="rd-illustration">'+esc(ar?"صورة توضيحية":"Illustrative photo")+'</span>':"")+
+  '</header>';
+ var rdTabs='<nav class="rd-tabs" aria-label="'+esc(tr("institutionDetail"))+'">'+
+  '<button onclick="scrollToProfile(\'rdOverview\')">'+icon("home",17)+' '+esc(tr("generalInfo"))+'</button>'+
+  '<button onclick="scrollToProfile(\'rdPrograms\')">'+icon("school",17)+' '+esc(tr("academicPrograms"))+'</button>'+
+  '<button onclick="scrollToProfile(\'rdTeachers\')">'+icon("teacher",17)+' '+esc(tr("teachers"))+'</button>'+
+  '<button onclick="scrollToProfile(\'rdFacilities\')">'+icon("building",17)+' '+esc(tr("facilitiesServices"))+'</button>'+
+  '<button onclick="scrollToProfile(\'rdDocuments\')">'+icon("doc",17)+' '+esc(tr("documentsTab"))+'</button>'+
+  '</nav>';
+ var rdFacts='<section class="rd-card" id="rdOverview"><h2>'+icon("info",19)+' '+esc(tr("institutionDetail"))+'</h2><div class="rd-facts">'+
+  rdFact("school",ar?"اسم المؤسسة":"Institution name",o.name)+
+  rdFact(o.type==="college"||o.type==="university"?"college":o.type==="institute"?"institute":"school",tr("typeLabel"),orgTypeLabel(o.type))+
+  rdFact("doc",tr("curriculumLabel"),detailCurriculumLabel(o.curriculum))+
+  rdFact("users",ar?"الجنس":"Gender",detailGenderLabel(o.gender))+
+  rdFact("globe",tr("languageLabel"),(o.languages||[]).map(detailLangLabel).join(" · "))+
+  rdFact("pin",tr("exactLocation"),loc)+
+  rdFact("map",ar?"العنوان":"Address",o.address)+
+  rdFact("phone",tr("phoneLabel"),o.phone,telLink(o.phone))+
+  rdFact("phone",tr("whatsapp"),o.whatsapp,waLink(o.whatsapp))+
+  rdFact("mail",tr("email"),o.email,o.email?"mailto:"+o.email:"")+
+  rdFact("globe",tr("websiteLabel"),o.website,o.website)+
+  rdFact("shield",tr("accreditation"),o.verified?tr("docVerified"):tr("statusPending"))+
+  rdFact("users",tr("seatsLabel"),o.seatsAvailable)+
+  rdFact("building",tr("facilitiesLabel"),fac.length)+
+  '</div></section>';
+ var rdAbout='<section class="rd-card rd-about"><h2>'+icon("book",19)+' '+esc(tr("aboutInstitution"))+'</h2>'+
+  '<p>'+esc(o.description||o.bio||tr("noDescription"))+'</p>'+
+  (coverImg?'<div class="rd-about-photo"><img src="'+esc(coverImg)+'" alt="" onerror="this.style.display=\'none\'"></div>':"")+
+  (media.generic?'<p class="rd-media-note">'+esc(ar?"الصورة توضيحية؛ لم ترفع المؤسسة صورة خاصة بها بعد.":"Illustrative photo; this institution has not uploaded its own image yet.")+'</p>':"")+
   '</section>';
-
- var hasLoc=!!(loc||o.address||o.latitude||o.mapUrl);
- var pMap='<section class="panel ppanel"><div class="panel-title"><h2>'+icon("pin",18)+' '+esc(tr("exactLocation"))+'</h2></div>'+
-  (hasLoc?
-    '<div class="pmap"><div class="pmap-pin">📍</div>'+(loc?'<div class="pmap-label">'+esc(loc)+'</div>':'')+'</div>'+
-    (mapHref?'<div class="pmap-actions"><a class="btn green" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("map",15)+' '+esc(tr("openMap"))+'</a></div>':'')
-   :'<div class="empty-state">'+esc(tr("locationUnavailable"))+'</div>')+
+ var rdPrograms='<section class="rd-card rd-full" id="rdPrograms"><h2>'+icon("school",20)+' '+esc(tr("academicPrograms"))+'</h2>'+
+  (editable?'<div class="rd-program-actions"><button class="rd-primary" onclick="orgStageFormOpen(null)">'+icon("plus",15)+' '+esc(tr("addStageLabel"))+'</button><button class="rd-primary" onclick="orgSubjectFormOpen()">'+icon("plus",15)+' '+esc(tr("addOwnSubject"))+'</button></div>':"")+
+  gatedNote+edPrograms+'<div class="rd-subjects"><h3>'+esc(tr("orgSubjectsLabel"))+'</h3>'+subjectsTable+'</div></section>';
+ var rdTeachers='<section class="rd-card" id="rdTeachers"><h2>'+icon("teacher",20)+' '+esc(tr("teachers"))+'</h2>'+
+  '<div class="rd-teacher-stats"><div><b>'+esc(teacherCount==null?"—":String(teacherCount))+'</b><span>'+esc(tr("teachers"))+'</span></div>'+
+  '<div><b>'+esc(String((o.stages||[]).length))+'</b><span>'+esc(tr("stages"))+'</span></div>'+
+  '<div><b>'+esc(String((o.subjects||[]).length))+'</b><span>'+esc(tr("subjects"))+'</span></div></div></section>';
+ var rdFacilities='<section class="rd-card" id="rdFacilities"><h2>'+icon("building",20)+' '+esc(tr("facilitiesServices"))+'</h2>'+
+  (langs?'<h3>'+esc(tr("teachingLanguages"))+'</h3><div class="core-chips">'+langs+'</div>':"")+
+  '<h3>'+esc(tr("facilitiesLabel"))+'</h3>'+
+  (fac.length?'<div class="rd-facilities">'+fac.map(function(x){return '<span class="rd-facility rd-facility-'+esc(String(x.facilityType||x.facility_type||"other").toLowerCase().replace(/[^a-z0-9_-]/g,""))+'"><i>'+icon(facilityIcon(x.facilityType||x.facility_type).i,25)+'</i><b>'+esc(x.name)+'</b>'+(x.quantity>1?'<small>×'+esc(String(x.quantity))+'</small>':"")+(x.available===false?'<small>'+esc(ar?"غير متاح":"Unavailable")+'</small>':"")+'</span>'}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noFacilities"))+'</div>')+
+  '<h3>'+esc(tr("servicesLabel"))+'</h3>'+
+  (svc.length?'<div class="rd-facilities">'+svc.map(function(x){return '<span class="rd-facility rd-facility-'+esc(String(x.serviceType||x.service_type||"other").toLowerCase().replace(/[^a-z0-9_-]/g,""))+'"><i>'+icon(serviceIcon(x.serviceType||x.service_type).i,25)+'</i><b>'+esc(x.name)+'</b>'+(x.price!=null&&Number(x.price)>0&&!gated0?'<small>'+esc(moneyText(x.price,x.currency))+'</small>':"")+(x.available===false?'<small>'+esc(ar?"غير متاح":"Unavailable")+'</small>':"")+'</span>'}).join("")+'</div>':'<div class="empty-state">'+esc(isPublic?tr("pricingGated"):tr("noServices"))+'</div>')+
   '</section>';
-
- var pGallery='<section class="panel ppanel"><div class="panel-title"><h2>'+icon("grid",18)+' '+esc(tr("galleryLabel"))+(media.generic?' <span class="pgen-note">'+esc(ar?"صور توضيحية":"Illustrative")+'</span>':'')+'</h2></div>'+
-  (galleryImgs.length?'<div class="pgallery">'+galleryImgs.slice(0,5).map(function(g,i){return '<img class="'+(i===0?"big":"")+'" src="'+esc(g)+'" alt="">'}).join("")+(galleryImgs.length>5?'<div class="more"><img src="'+esc(galleryImgs[5])+'" alt=""><span>+'+(galleryImgs.length-5)+'</span></div>':'')+'</div>':'<div class="empty-state">'+esc(ar?"لا توجد صور بعد":"No images yet")+'</div>')+
-  '</section>';
-
- var pDocs='<section class="panel ppanel" id="pgDocs"><div class="panel-title"><h2>'+icon("doc",18)+' '+esc(tr("documentsTab"))+'</h2></div>'+docsHtml+'</section>';
-
- detailExtras.lastHeader=pHero;detailExtras.lastShared=pFacilities;detailExtras.lastOffering=pAcademic;
- return pTopbar+pHero+
-  '<div class="detail-body">'+pTabs+
-   '<div class="pcols pcols-2">'+pDetails+pAbout+'</div>'+
-   pAcademic+
-   '<div class="pcols pcols-fac">'+pFacilities+pTeachers+'</div>'+
-   '<div class="pcols pcols-map">'+pMap+pGallery+'</div>'+
-   pDocs+actions+
-  '</div>';
+ var rdMap='<section class="rd-card" id="rdMap"><h2>'+icon("pin",20)+' '+esc(tr("exactLocation"))+'</h2>'+
+  '<div class="rd-map"><span>'+icon("pin",30)+'</span><b>'+esc(loc||tr("locationUnavailable"))+'</b></div>'+
+  (mapHref?'<a class="rd-map-link" href="'+esc(mapHref)+'" target="_blank" rel="noopener noreferrer">'+icon("map",16)+' '+esc(tr("openMap"))+'</a>':"")+'</section>';
+ var rdPhotos=galleryImgs.length?galleryImgs:[coverImg];
+ var rdGallery='<section class="rd-card" id="rdGallery"><h2>'+icon("grid",20)+' '+esc(tr("galleryLabel"))+'</h2>'+
+  '<div class="rd-gallery">'+rdPhotos.slice(0,5).map(function(src,i){return '<img class="'+(i===0?"rd-gallery-main":"")+'" src="'+esc(src)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'}).join("")+'</div>'+
+  (media.generic?'<p class="rd-media-note">'+esc(ar?"صور توضيحية حتى تضيف المؤسسة صورها.":"Illustrative image until the institution adds its photos.")+'</p>':"")+'</section>';
+ var rdDocuments='<section class="rd-card rd-full" id="rdDocuments"><h2>'+icon("doc",20)+' '+esc(tr("documentsTab"))+'</h2>'+docsHtml+'</section>';
+ var rdActions='<section class="rd-actions"><h2>'+icon("settings",20)+' '+esc(tr("profileActions"))+'</h2><div>'+
+  (editable?'<button class="rd-primary" onclick="acOrgEdit(\''+o.id+'\')">'+icon("edit",16)+' '+esc(tr("editLabel"))+'</button>':"")+
+  '<button onclick="printInstitution()">'+icon("printer",16)+' '+esc(tr("printReport"))+'</button>'+
+  '<button onclick="exportInstitution(\'pdf\')">'+icon("pdf",16)+' '+esc(tr("exportPdf"))+'</button>'+
+  '<button onclick="exportInstitution(\'docx\')">'+icon("doc",16)+' '+esc(tr("exportDocx"))+'</button>'+
+  '<button onclick="exportInstitution(\'xlsx\')">'+icon("sheet",16)+' '+esc(tr("exportXlsx"))+'</button>'+
+  '<button onclick="shareInstitution()">'+icon("share",16)+' '+esc(tr("share"))+'</button>'+
+  '</div></section>';
+ return '<div class="rd-page">'+rdTop+rdHero+rdTabs+'<div class="rd-grid">'+rdFacts+rdAbout+rdPrograms+rdTeachers+rdFacilities+rdMap+rdGallery+rdDocuments+'</div>'+rdActions+'</div>';
 }
 
 // A priced offering belongs to exactly one institution. The platform admin may
@@ -2322,36 +2656,39 @@ function canEditOrg(org){
 }
 
 // ---- Teacher profile (public directory) ----
-// Mirrors the institution detail document: the same `p*` layout, bound to the
-// existing `/api/teachers/:id` contract. Pricing is gated server-side, so an
-// anonymous visitor sees the subjects/stages/availability with every amount
-// withheld and `pricingGated` set — exactly like the institution offering.
-function teacherDetailBlock(){
+// One teacher profile document, rendered inside the public shell here and, with
+// admin extras (a back button, management panels and their tabs), inside the
+// dashboard. `opts` carries `back`, `extraTabs`, `extraMain` and `extraSide` so
+// the admin tools live on the SAME editorial layout the visitor sees.
+function teacherProfileHtml(t,opts){
+ opts=opts||{};
  var ar=lang==="ar";
- var t=currentTeacher;
  if(!t){
-  return '<div class="detail-card"><div class="empty-state">'+(ar?"جارٍ التحميل...":"Loading...")+'</div></div>';
+  return '<div class="td-wrap"><div class="td-empty">'+(ar?"جارٍ التحميل...":"Loading...")+'</div></div>';
  }
  var name=t.userName||t.nameEn||t.userEmail||"-";
  var headline=t.headline||"";
  var loc=[t.governorateName,t.districtName,t.neighborhoodName].filter(Boolean).join(" · ");
  var gated=!!t.pricingGated;
+ var subjects=t.subjects||[];
+ var stages=t.stages||[];
+ var skills=t.skills||[];
+ var quals=t.qualifications||[];
+ var availability=t.availability||[];
 
- function pc(ic,label,value,href){
-  if(!value)return "";
-  var inner=icon(ic,15)+'<span class="pcc-value">'+esc(String(value).replace(/^https?:\/\//,""))+'</span>';
-  return href?'<a class="pcc-item" title="'+esc(label)+'" href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+inner+'</a>':'<span class="pcc-item" title="'+esc(label)+'">'+inner+'</span>';
- }
- function pFact(ic,label,value,href){
+ // Media: a teacher's real uploaded avatar wins; otherwise a deterministic real
+ // reference portrait (by id, never random) — the same resolver the directory
+ // uses. The gallery reuses the repo's real teacher photos the same way.
+ var media=(typeof MadrasatiMedia!=="undefined")?MadrasatiMedia.teacherMedia(t):null;
+ var avatarSrc=media?media.avatar:"";
+ var gallery=media&&Array.isArray(media.gallery)?media.gallery:[];
+
+ function chip(s,cls){return '<span class="td-chip'+(cls?" "+cls:"")+'">'+esc(s)+'</span>'}
+ function statTile(ic,val,label){return '<div class="td-stat"><span class="td-stat-ic">'+icon(ic,20)+'</span><b>'+esc(val==null?"-":String(val))+'</b><span>'+esc(label)+'</span></div>'}
+ function fact(ic,label,value,href){
   var v=(value==null||value==="")?"-":value;
   var val=href&&value?'<a href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+esc(v)+'</a>':esc(v);
-  return '<div class="pfact"><span class="pfact-ic">'+icon(ic,16)+'</span><span class="pfact-label">'+esc(label)+'</span><span class="pfact-value">'+val+'</span></div>';
- }
- function pStat(ic,val,label){
-  return '<div class="profile-stat"><span class="profile-stat-ic">'+icon(ic,20)+'</span><b>'+esc(val==null?"-":String(val))+'</b><span>'+esc(label)+'</span></div>';
- }
- function row(label,value){
-  return '<div class="core-row"><span>'+esc(label)+'</span><b>'+esc(value==null||value===""?"-":String(value))+'</b></div>';
+  return '<div class="td-fact"><span class="td-fact-ic">'+icon(ic,16)+'</span><span class="td-fact-label">'+esc(label)+'</span><span class="td-fact-value">'+val+'</span></div>';
  }
  function dayLabel(d){
   var days=ar?["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"]:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -2365,117 +2702,162 @@ function teacherDetailBlock(){
  }
  function billingLabel(p){return p==="monthly"?(ar?"شهرياً":"per month"):(ar?"بالساعة":"per hour");}
 
- var avatar=t.avatarUrl
-  ?'<img class="avatar" src="'+esc(t.avatarUrl)+'" alt="'+esc(name)+'" onerror="this.parentNode.className=\'phero-logo t-logo-initial\';this.parentNode.innerHTML=\'<span class=&quot;t-initial&quot;>'+esc((name.trim().charAt(0)||"؟"))+'</span>\'">'
-  :'<span class="t-initial">'+esc((name.trim().charAt(0)||"؟"))+'</span>';
-
  var modes=[];
  if(t.offersOnline)modes.push(ar?"عن بُعد":"Online");
  if(t.travelsToStudentHome)modes.push(ar?"منزل الطالب":"Student's home");
  if(t.acceptsStudentHome)modes.push(ar?"مكان المعلم":"Teacher's location");
- var modeChips=modes.map(function(m){return '<span class="core-chip">'+esc(m)+'</span>'}).join("");
 
- var pTopbar='<div class="ptopbar">'+
-  '<div class="pcrumbs">'+icon("home",14)+' <a href="#/home">'+esc(tr("home"))+'</a> <span class="psep">></span> <a href="#/teachers">'+esc(tr("teachers"))+'</a> <span class="psep">></span> <b>'+esc(name)+'</b></div>'+
-  '<div class="ptopbar-actions">'+
-   '<button class="picon-btn" title="'+esc(ar?"إضافة للمفضلة":"Add to favorites")+'" onclick="this.classList.toggle(\'on\')">'+icon("heart",17)+'</button>'+
-  '</div></div>';
+ // The editorial layout mirrors the institution detail: the same `ed-*` shell,
+ // bound to this teacher's record. For an anonymous visitor the server has
+ // already stripped every amount and set `pricingGated`.
+ var edFact=function(ic,label,value,href){
+  var v=(value==null||value==="")?"—":value;
+  var val=href&&value?'<a href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'>'+esc(v)+'</a>':esc(v);
+  return '<div class="ed-fact"><span>'+esc(label)+'</span><b>'+val+'</b></div>';
+ };
+ var edContact=function(ic,label,value,href){
+  if(!value)return "";
+  var v=String(value).replace(/^https?:\/\//,"");
+  return href?'<a class="ed-contact-link" title="'+esc(label)+'" href="'+esc(href)+'"'+(href.indexOf("http")===0?' target="_blank" rel="noopener noreferrer"':'')+'><span class="ed-ci">'+icon(ic,16)+'</span><span>'+esc(v)+'</span></a>'
+   :'<span class="ed-contact-link"><span class="ed-ci">'+icon(ic,16)+'</span><span>'+esc(v)+'</span></span>';
+ };
+ var edStat=function(val,label){return '<div class="ed-stat"><b>'+esc(val==null?"—":String(val))+'</b><span>'+esc(label)+'</span></div>'};
 
- var pHero='<section class="phero">'+
-  '<div class="phero-inner">'+
-   '<div class="phero-logo'+(t.avatarUrl?"":" t-logo-initial")+'">'+avatar+'</div>'+
-   '<div class="phero-copy">'+
-    '<span class="phero-badge">'+esc(ar?"معلم خصوصي":"Private teacher")+'</span>'+
-    (t.verified?' '+coreBadge("verified"):'')+
-    '<h2>'+esc(name)+'</h2>'+
-    (headline?'<p class="phero-tag">'+esc(headline)+'</p>':'')+
-    (loc?'<div class="phero-loc">'+icon("pin",14)+' <span>'+esc(loc)+'</span></div>':'')+
-    (modeChips?'<div class="core-chips" style="margin-top:8px">'+modeChips+'</div>':'')+
-    '<div class="phero-contacts">'+
-     pc("phone",tr("phoneLabel"),t.phone,telLink(t.phone))+
-     pc("whatsapp",tr("whatsapp"),t.whatsapp||t.phone,waLink(t.whatsapp||t.phone))+
-     pc("mail",tr("email"),t.userEmail,t.userEmail?"mailto:"+t.userEmail:"")+
-    '</div>'+
+ var edCrumb='<div class="ptopbar"><div class="pcrumbs">'+icon("home",14)+
+  ' <a href="#/home">'+esc(tr("home"))+'</a> <span class="psep">›</span>'+
+  ' <a href="#/teachers">'+esc(tr("teachers"))+'</a> <span class="psep">›</span> <b>'+esc(name)+'</b></div></div>';
+
+ var initial=esc((String(name).trim().charAt(0))||"؟");
+ var logoInner=avatarSrc
+  ?'<img class="ed-avatar" style="object-fit:cover" src="'+esc(avatarSrc)+'" alt="'+esc(name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'">'+
+    '<span style="display:none;width:100%;height:100%;place-items:center;background:var(--theme-primary,#1F5D46);color:#fff;font-size:44px;font-weight:900;border-radius:14px">'+initial+'</span>'
+  :'<span style="width:100%;height:100%;display:grid;place-items:center;background:var(--theme-primary,#1F5D46);color:#fff;font-size:44px;font-weight:900;border-radius:14px">'+initial+'</span>';
+
+ var edCover='<div class="ed-cover tv-cover">'+
+  '<div class="ed-cover-top">'+
+   '<span class="badge ok">'+esc(ar?"معلم خصوصي":"Private teacher")+'</span>'+
+   '<div class="ed-cover-actions">'+
+    (opts.back||"")+
+    '<button class="picon-btn" title="'+esc(tr("share"))+'" onclick="shareAnon(this.getAttribute(\'data-name\'))" data-name="'+esc(name)+'">'+icon("share",16)+'</button>'+
    '</div>'+
-  '</div></section>';
-
- var pTabs='<nav class="ptabs">'+
-  '<button class="on" onclick="scrollToProfile(\'tgGeneral\')">'+icon("home",15)+'<span>'+esc(tr("generalInfo"))+'</span></button>'+
-  '<button onclick="scrollToProfile(\'tgAcademic\')">'+icon("school",15)+'<span>'+esc(ar?"المواد والمراحل":"Subjects & stages")+'</span></button>'+
-  '<button onclick="scrollToProfile(\'tgPricing\')">'+icon("tag",15)+'<span>'+esc(ar?"الأسعار":"Pricing")+'</span></button>'+
-  '<button onclick="scrollToProfile(\'tgAvailability\')">'+icon("calendar",15)+'<span>'+esc(ar?"المواعيد":"Availability")+'</span></button>'+
- '</nav>';
-
- var skills=t.skills||[];
- var quals=t.qualifications||[];
-
- var pAbout='<section class="panel ppanel" id="tgGeneral"><div class="panel-title"><h2>'+icon("book",18)+' '+esc(ar?"نبذة عن المعلم":"About the teacher")+'</h2></div>'+
-  '<div class="pabout"><p>'+esc(t.bio||tr("noDescription"))+'</p>'+
-  (skills.length?'<div class="core-chips profile-chiprow" style="margin-top:10px">'+skills.map(function(s){return '<span class="core-chip">'+esc(s)+'</span>'}).join("")+'</div>':'')+
   '</div>'+
-  '<div class="pstats3">'+
-   pStat("teacher",t.experienceYears,ar?"سنوات خبرة":"Years experience")+
-   pStat("doc",(t.subjects||[]).length,tr("subjects"))+
-   pStat("school",(t.stages||[]).length,tr("stages"))+
-  '</div></section>';
+  '<div class="ed-identity">'+
+   '<div class="ed-logo">'+logoInner+'</div>'+
+   '<div class="ed-id-copy">'+
+    '<div class="ed-badges">'+coreBadge(t.verified?"verified":(t.verificationStatus||t.status||"pending"))+'</div>'+
+    '<h1>'+esc(name)+'</h1>'+
+    (headline?'<p class="ed-tagline">'+esc(headline)+'</p>':"")+
+    (loc?'<div class="ed-chips"><span>'+icon("pin",13)+' '+esc(loc)+'</span></div>':"")+
+    (modes.length?'<div class="ed-chips">'+modes.map(function(m){return '<span>'+esc(m)+'</span>'}).join("")+'</div>':"")+
+   '</div>'+
+  '</div>'+
+ '</div>';
 
- var pDetails='<section class="panel ppanel"><div class="panel-title"><h2>'+icon("info",18)+' '+esc(ar?"تفاصيل المعلم":"Teacher details")+'</h2></div>'+
-  '<div class="pfacts">'+
-   pFact("user",ar?"الاسم الكامل":"Full name",name)+
-   pFact("tag",ar?"التخصص":"Specialty",headline||"-")+
-   pFact("teacher",ar?"سنوات الخبرة":"Experience",t.experienceYears!=null?(t.experienceYears+" "+(ar?"سنة":"yrs")):"-")+
-   pFact("globe",ar?"طريقة التدريس":"Teaching mode",modes.join(" · ")||"-")+
-   pFact("users",ar?"الجنس":"Gender",detailGenderLabel(t.gender))+
-   pFact("shield",ar?"الحالة":"Status",statusLabel(t.verificationStatus||t.status))+
-   (t.travelRadiusKm!=null?pFact("pin",ar?"نطاق التنقل":"Travel radius",t.travelRadiusKm+" km"):"")+
-  '</div></section>';
+ var edStrip='<div class="ed-strip">'+
+  edStat(t.experienceYears,ar?"سنوات خبرة":"Years experience")+
+  edStat(subjects.length,tr("subjects"))+
+  edStat(stages.length,tr("stages"))+
+  edStat(t.verified?"✓":"—",ar?"حالة التوثيق":"Verification")+
+ '</div>';
 
- var subjectChips=(t.subjects||[]).map(function(s){
-  return '<span class="core-chip">'+esc(s.name||"-")+(s.languageCode?' <b dir="ltr">'+esc(s.languageCode)+'</b>':'')+'</span>';
+ var edAbout='<section class="ed-sec" id="tgGeneral">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("book","#2F7A59")+' '+esc(ar?"نبذة عن المعلم":"About the teacher")+'</h3></div>'+
+  (media&&media.generic?'<div class="gated-note">'+icon("info",14)+' '+esc(ar?"الصورة توضيحية إلى أن يرفع المعلم صورته.":"The portrait is illustrative until the teacher uploads a photo.")+'</div>':"")+
+  '<p class="ed-lead"><span class="ed-drop">'+esc((String(name).trim().charAt(0))||"م")+'</span>'+esc(t.bio||tr("noDescription"))+'</p>'+
+  (skills.length?'<div class="core-chips" style="margin-top:12px">'+skills.map(function(s){return '<span class="core-chip">'+esc(s)+'</span>'}).join("")+'</div>':"")+
+  '<div class="ed-facts" style="margin-top:16px">'+
+   edFact("user",ar?"الاسم الكامل":"Full name",name)+
+   edFact("tag",ar?"التخصص":"Specialty",headline||"—")+
+   edFact("teacher",ar?"سنوات الخبرة":"Experience",t.experienceYears!=null?(t.experienceYears+" "+(ar?"سنة":"yrs")):"—")+
+   edFact("globe",ar?"طريقة التدريس":"Teaching mode",modes.join(" · ")||"—")+
+   edFact("users",ar?"الجنس":"Gender",detailGenderLabel(t.gender))+
+   edFact("shield",ar?"الحالة":"Status",statusLabel(t.verificationStatus||t.status))+
+   (t.travelRadiusKm!=null?edFact("pin",ar?"نطاق التنقل":"Travel radius",t.travelRadiusKm+" km"):"")+
+  '</div>'+
+ '</section>';
+
+ var subjectChips=subjects.map(function(s){
+  var price=gated?esc(tr("pricingGated")):(s.amount!=null?esc(moneyText(s.amount,s.currency))+" · "+esc(billingLabel(s.billingPeriod)):"—");
+  return '<article class="tv-subject"><span class="tv-subject-icon">'+icon("book",18)+'</span><div><b>'+esc(s.name||"—")+'</b><small>'+esc([s.languageCode,modeLabel(s.locationMode)].filter(Boolean).join(" · "))+'</small></div><strong>'+price+'</strong></article>';
  }).join("");
- var stageChips=(t.stages||[]).map(function(s){return '<span class="core-chip">'+esc(s.name||"-")+'</span>'}).join("");
- var pAcademic='<section class="panel ppanel" id="tgAcademic"><div class="panel-title"><h2>'+icon("school",18)+' '+esc(ar?"المواد والمراحل":"Subjects & stages")+'</h2></div>'+
+ var stageChips=stages.map(function(s){return '<span class="core-chip">'+esc(s.name||"—")+'</span>'}).join("");
+ var edAcademic='<section class="ed-sec" id="tgAcademic">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("school","#2563EB")+' '+esc(ar?"المواد والمراحل":"Subjects & stages")+'</h3></div>'+
   '<h3 class="core-h3">'+esc(tr("subjects"))+'</h3>'+
-  (subjectChips?'<div class="core-chips profile-chiprow">'+subjectChips+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
+  (subjectChips?'<div class="tv-subjects">'+subjectChips+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
   '<h3 class="core-h3">'+esc(tr("stages"))+'</h3>'+
-  (stageChips?'<div class="core-chips profile-chiprow">'+stageChips+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
-  (quals.length?'<h3 class="core-h3">'+esc(ar?"المؤهلات":"Qualifications")+'</h3><div class="core-rows">'+quals.map(function(q){
-    return row(q.title,[q.institutionName,q.degree,q.year].filter(Boolean).join(" · "));
-  }).join("")+'</div>':'')+
+  (stageChips?'<div class="core-chips">'+stageChips+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
+  (quals.length?'<h3 class="core-h3">'+esc(ar?"المؤهلات":"Qualifications")+'</h3><div class="ed-facts">'+quals.map(function(q){
+    return '<div class="ed-fact"><span>'+esc(q.title||"—")+'</span><b>'+esc([q.institutionName,q.degree,q.year].filter(Boolean).join(" · ")||"—")+'</b></div>';
+   }).join("")+'</div>':"")+
  '</section>';
 
- var pricingRows=(t.subjects||[]).map(function(s){
-  var price=gated?('<span class="gated-value">'+esc(tr("pricingGated"))+'</span>'):(s.amount!=null?moneyText(s.amount,s.currency)+' <span class="gated-value">'+esc(billingLabel(s.billingPeriod))+'</span>':"-");
+ var pricingRows=subjects.map(function(s){
+  var price=gated?('<span class="gated-value">'+esc(tr("pricingGated"))+'</span>'):(s.amount!=null?moneyText(s.amount,s.currency):"—");
+  var period=(!gated&&s.amount!=null)?'<div class="ed-prog-meta">'+esc(billingLabel(s.billingPeriod))+'</div>':"";
   var promo=(!gated&&s.discountPercent!=null&&s.promoLabel)?' <span class="promo-tag">'+esc(s.promoLabel)+' (-'+esc(s.discountPercent)+'%)</span>':"";
-  return '<div class="core-row"><span>'+esc(s.name||"-")+'</span><b>'+price+promo+'</b></div>';
+  return '<div class="ed-fact"><span>'+esc(s.name||"—")+'</span><b>'+price+promo+period+'</b></div>';
  }).join("");
- var pPricing='<section class="panel ppanel" id="tgPricing"><div class="panel-title"><h2>'+icon("tag",18)+' '+esc(ar?"الأسعار":"Pricing")+'</h2></div>'+
-  (gated?'<div class="gated-note">'+icon("shield",14)+'<span>'+esc(tr("pricingGated"))+'</span></div>':'')+
-  (pricingRows?'<div class="core-rows">'+pricingRows+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
+ var edPricing='<section class="ed-sec" id="tgPricing">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("tag","#D98A2B")+' '+esc(ar?"الأسعار":"Pricing")+'</h3></div>'+
+  (gated?'<div class="gated-note">'+icon("shield",14)+'<span>'+esc(tr("pricingGated"))+'</span></div>':"")+
+  (pricingRows?'<div class="ed-facts">'+pricingRows+'</div>':'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
  '</section>';
 
- var availRows=(t.availability||[]).map(function(s){
-  return row(dayLabel(s.dayOfWeek),(s.startTime||"")+" - "+(s.endTime||"")+" · "+modeLabel(s.locationMode));
+ var availRows=availability.map(function(s){
+  return '<div class="ed-fact"><span>'+esc(dayLabel(s.dayOfWeek))+'</span><b>'+esc((s.startTime||"")+" – "+(s.endTime||""))+
+   (s.locationMode?'<div class="ed-prog-meta">'+esc(modeLabel(s.locationMode))+'</div>':'')+'</b></div>';
  }).join("");
- var pAvailability='<section class="panel ppanel" id="tgAvailability"><div class="panel-title"><h2>'+icon("calendar",18)+' '+esc(ar?"المواعيد المتاحة":"Availability")+'</h2></div>'+
-  (availRows?'<div class="core-rows">'+availRows+'</div>':'<div class="empty-state">'+esc(ar?"لا توجد مواعيد معلنة":"No availability posted")+'</div>')+
+ var edAvailability='<section class="ed-sec" id="tgAvailability">'+
+  '<div class="ed-sec-head"><h3>'+sectionIcon("calendar","#0E9488")+' '+esc(ar?"المواعيد المتاحة":"Availability")+'</h3></div>'+
+  (availRows?'<div class="ed-facts">'+availRows+'</div>':'<div class="empty-state">'+esc(ar?"لا توجد مواعيد معلنة":"No availability posted")+'</div>')+
  '</section>';
 
- var actions='<section class="panel profile-panel"><div class="panel-title"><h2>'+esc(tr("profileActions"))+'</h2></div>'+
-  '<div class="profile-actions">'+
-   (t.whatsapp||t.phone?waButton(t.whatsapp||t.phone,{label:tr("whatsapp")}):"")+
-   '<button class="btn" onclick="shareTeacher()">'+icon("share",15)+' '+esc(tr("share"))+'</button>'+
+ var edSide='<div class="ed-card tv-booking"><h4>'+icon("calendar",16)+' '+esc(ar?"ابدأ طلب الدرس":"Start a lesson request")+'</h4><p>'+esc(subjects.length?(ar?"اختر مادة من الملف، ثم تواصل مع المعلم لترتيب الموعد.":"Choose a subject, then contact the teacher to arrange a time."):(ar?"لم تُعلن مواد بعد. يمكنك التواصل مع المعلم للاستفسار عن الدروس المتاحة.":"No subjects are listed yet. Contact the teacher to ask about available lessons."))+'</p>'+
+  (subjects.length?'<label>'+esc(tr("subjects"))+'<select id="tv-subject-choice">'+subjects.map(function(s){return '<option value="'+esc(s.name||"")+'">'+esc(s.name||"—")+'</option>'}).join("")+'</select></label>':"")+
+  (availability.length?'<div class="tv-availability-note">'+icon("calendar",15)+' '+esc(availability.length+" "+(ar?"مواعيد معلنة":"listed time slots"))+'</div>':"")+
+  ((t.whatsapp||t.phone)?'<button class="btn green tv-contact-btn" data-phone="'+esc(t.whatsapp||t.phone)+'" onclick="teacherContactSelected(this)">'+icon("whatsapp",16)+' '+esc(ar?"تواصل لترتيب الدرس":"Contact to arrange a lesson")+'</button>':'<div class="gated-note">'+esc(ar?"لا توجد وسيلة تواصل معلنة":"No contact method listed")+'</div>')+
+  (gated?'<div class="gated-note">'+icon("shield",14)+' '+esc(tr("pricingGated"))+'</div>':"")+'</div>'+
+  '<div class="ed-card"><h4>'+icon("phone",16)+' '+esc(tr("contactInfo"))+'</h4>'+
+  (edContact("phone",tr("phoneLabel"),t.phone,telLink(t.phone))+
+   edContact("whatsapp",tr("whatsapp"),t.whatsapp||t.phone,waLink(t.whatsapp||t.phone))+
+   edContact("mail",tr("email"),t.userEmail,t.userEmail?"mailto:"+t.userEmail:"")||'<div class="empty-state">'+esc(tr("noDescription"))+'</div>')+
+  ((t.whatsapp||t.phone)?'<div style="margin-top:12px">'+waButton(t.whatsapp||t.phone,{label:tr("whatsapp")})+'</div>':"")+
+ '</div>'+
+ (gallery.length?'<div class="ed-card"><h4>'+icon("grid",16)+' '+esc(ar?"معرض الصور":"Photo gallery")+'</h4><div class="ed-gallery">'+gallery.slice(0,2).map(function(g,i){return '<img class="'+(i===0?"big":"")+'" src="'+esc(g)+'" alt="'+esc(name)+'" loading="lazy">'}).join("")+'</div></div>':"")+
+  '<div class="ed-card"><h4>'+icon("settings",16)+' '+esc(tr("profileActions"))+'</h4><div class="ed-actions">'+
+   '<button class="btn" onclick="shareAnon(this.getAttribute(\'data-name\'))" data-name="'+esc(name)+'">'+icon("share",15)+' '+esc(tr("share"))+'</button>'+
    '<button class="btn" onclick="window.print()">'+icon("printer",15)+' '+esc(tr("printReport"))+'</button>'+
-  '</div></section>';
+  '</div></div>'+(opts.extraSide||"");
 
- return pTopbar+pHero+
-  '<div class="detail-body">'+pTabs+
-   '<div class="pcols pcols-2">'+pDetails+pAbout+'</div>'+
-   pAcademic+
-   '<div class="pcols pcols-2">'+pPricing+pAvailability+'</div>'+
-   actions+
-  '</div>';
+ return edCrumb+'<div class="ed tv-detail">'+edCover+edStrip+
+  '<nav class="ed-tabs">'+
+   '<button class="on" onclick="scrollToProfile(\'tgGeneral\')">'+icon("home",15)+'<span>'+esc(tr("generalInfo"))+'</span></button>'+
+   '<button onclick="scrollToProfile(\'tgAcademic\')">'+icon("school",15)+'<span>'+esc(ar?"المواد والمراحل":"Subjects & stages")+'</span></button>'+
+   '<button onclick="scrollToProfile(\'tgAvailability\')">'+icon("calendar",15)+'<span>'+esc(ar?"المواعيد":"Availability")+'</span></button>'+
+   (opts.extraTabs||"")+
+  '</nav>'+
+  '<div class="ed-body">'+
+   '<div class="ed-main">'+edAbout+edAcademic+edAvailability+(opts.extraMain||"")+'</div>'+
+   '<aside class="ed-side">'+edSide+'</aside>'+
+  '</div></div>';
 }
+
+/* One profile resolver: the public directory and the dashboard both call this,
+   so a teacher's profile is literally the same document in both places. */
+function teacherDetailBlock(){
+ return teacherProfileHtml(currentTeacher,{});
+}
+
+// Sharing for any entity profile, driven by the name on the button. Kept apart
+// from shareTeacher() so the dashboard (which has no currentTeacher) reuses it.
+function shareAnon(name){
+ var url=location.href;
+ if(navigator.share){navigator.share({title:name||"",text:name||"",url:url}).catch(function(){});return}
+ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert(lang==="ar"?"تم نسخ الرابط":"Link copied")}).catch(function(){});return}
+ window.prompt(lang==="ar"?"انسخ الرابط":"Copy the link",url);
+}
+
 function teacherDetailPage(){
  return publicShell(teacherDetailBlock());
 }
@@ -2799,16 +3181,36 @@ function shareInstitution(){
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(function(){alert(lang==="ar"?"تم نسخ الرابط":"Link copied")}).catch(function(){});return}
  window.prompt(lang==="ar"?"انسخ الرابط":"Copy the link",url);
 }
-// Large colorful icons (template scale). Kept in the project's own icon
-// vocabulary for actions; big glyphs are used for programs, facilities and
-// services so the detail page reads as visually rich, not tiny.
-var FACILITY_GLYPHS={laboratory:"🧪",library:"📚",sports:"⚽",security:"🛡️",medical:"🩺",air_conditioning:"❄️",internet:"⌁",accessibility:"♿",cafeteria:"🍽️",parking:"🅿️",playground:"🏫",other:"▦"};
-function facilityIcon(type){return FACILITY_GLYPHS[type]||"▦"}
-var SERVICE_GLYPHS={transportation:"🚌",after_school:"🎨",tutoring:"📖",exam_prep:"📝",field_trip:"🚌",uniform:"👕",meal:"🍽️",entertainment:"🎟️",other:"✦"};
-function serviceIcon(type){return SERVICE_GLYPHS[type]||"✦"}
-function programGlyph(code){return ({KG:"🧸",PRIMARY:"📚",PREP:"🧪",SECONDARY:"🎓",DIPLOMA:"📜",HIGHER_DIPLOMA:"📜",BACHELOR:"🎓",MASTER:"🎓",DOCTORATE:"🎓"})[code]||"📘"}
+// Large colorful icons (template scale). Every facility, service and programme
+// maps to one icon in the single SVG set AND to a colour that suits it, so the
+// detail sections read as designed: a flask for the lab, a wifi icon for the
+// internet, a bus for transport, and so on. `tileIco` paints the icon in its
+// colour on a soft tint of the same colour.
+var FACILITY_GLYPHS={
+ laboratory:{i:"flask",c:"#7C5CFF"},library:{i:"book",c:"#2F7A59"},sports:{i:"trophy",c:"#D98A2B"},
+ security:{i:"shield",c:"#2563EB"},medical:{i:"med",c:"#E0455A"},air_conditioning:{i:"snow",c:"#3AA0C9"},
+ internet:{i:"wifi",c:"#1F9D6B"},accessibility:{i:"access",c:"#7A4FBF"},cafeteria:{i:"utensils",c:"#C9743A"},
+ parking:{i:"parking",c:"#4B6B8A"},playground:{i:"school",c:"#1F5D46"},other:{i:"grid",c:"#6B7280"}};
+function facilityIcon(type){return FACILITY_GLYPHS[type]||FACILITY_GLYPHS.other}
+var SERVICE_GLYPHS={
+ transportation:{i:"bus",c:"#D98A2B"},after_school:{i:"palette",c:"#C2569B"},tutoring:{i:"book",c:"#2F7A59"},
+ exam_prep:{i:"edit",c:"#2563EB"},field_trip:{i:"map",c:"#0E9488"},uniform:{i:"shirt",c:"#7C5CFF"},
+ meal:{i:"utensils",c:"#C9743A"},entertainment:{i:"ticket",c:"#E0455A"},other:{i:"sparkle",c:"#6B7280"}};
+function serviceIcon(type){return SERVICE_GLYPHS[type]||SERVICE_GLYPHS.other}
+var PROGRAM_GLYPHS={KG:{i:"blocks",c:"#C2569B"},PRIMARY:{i:"book",c:"#2F7A59"},PREP:{i:"flask",c:"#7C5CFF"},
+ SECONDARY:{i:"college",c:"#2563EB"},DIPLOMA:{i:"doc",c:"#D98A2B"},HIGHER_DIPLOMA:{i:"doc",c:"#D98A2B"},
+ BACHELOR:{i:"college",c:"#0E9488"},MASTER:{i:"college",c:"#7A4FBF"},DOCTORATE:{i:"college",c:"#1F5D46"}};
+function programGlyph(code){return PROGRAM_GLYPHS[code]||{i:"book",c:"#2F7A59"}}
+// One tinted badge primitive, used by the facility/service/programme tiles.
+function tileIco(spec,size){
+ if(typeof spec==="string")spec={i:spec,c:"#1F5D46"};
+ if(!spec||!spec.i)spec={i:"info",c:"#6B7280"};
+ return '<span class="tile-ico" style="color:'+spec.c+';background:'+spec.c+'1f">'+icon(spec.i,size||22)+'</span>';
+}
+// A matching color chip for a detail section heading.
+function sectionIcon(name,color){return '<span class="ed-sec-ic" style="color:'+color+';background:'+color+'1f">'+icon(name,16)+'</span>'}
 function profileTile(glyph,label,extra,off){
- return '<div class="profile-tile'+(off?" off":"")+'"><span class="profile-tile-ic">'+glyph+'</span><b>'+esc(label)+'</b>'+(extra?'<span class="profile-tile-extra">'+esc(extra)+'</span>':"")+'</div>';
+ return '<div class="profile-tile'+(off?" off":"")+'">'+tileIco(glyph,22)+'<b>'+esc(label)+'</b>'+(extra?'<span class="profile-tile-extra">'+esc(extra)+'</span>':"")+'</div>';
 }
 
 function tabBar(tabs,active){
@@ -3157,9 +3559,17 @@ function locationsPage(){
  var titleKey={countries:"countries",governorates:"governorates",districts:"districts",
   neighborhoods:"neighborhoods",requests:"locationRequests"};
  var canAdd=admin&&locAdmin.tab!=="requests";
- var body='<div class="welcome"><div><h1>'+esc(tr("locations"))+'</h1>'+
-  '<p>'+esc(locT("الكتالوج الجغرافي: البلد ثم المحافظة ثم المديرية ثم الحي. كل إضافة أو تعديل تُفتح في صفحة مستقلة.",
-    "The geographic catalog: country, then governorate, then district, then neighborhood. Every add or edit opens on its own page."))+'</p></div></div>'+
+ var locHero=(typeof sectionHero==="function")?sectionHero({route:"locations",title:tr("locations"),
+  subtitle:locT("الكتالوج الجغرافي: البلد ثم المحافظة ثم المديرية ثم الحي. كل إضافة أو تعديل تُفتح في صفحة مستقلة.",
+    "The geographic catalog: country, then governorate, then district, then neighborhood. Every add or edit opens on its own page."),
+  stats:[{icon:"globe",value:(locAdmin.countries||[]).length,labelAr:"الدول",labelEn:"Countries",tone:"primary"},
+    {icon:"map",value:(locAdmin.govs||[]).length,labelAr:"المحافظات",labelEn:"Governorates",tone:"info"},
+    {icon:"pin",value:(locAdmin.rows||[]).length,labelAr:tr(titleKey[locAdmin.tab]),labelEn:tr(titleKey[locAdmin.tab]),tone:"pos"}],
+  donut:{title:{ar:"مستويات الكتالوج",en:"Catalog levels"},center:{ar:"عنصر",en:"items"},categories:[
+    {label:{ar:"الدول",en:"Countries"},value:(locAdmin.countries||[]).length},
+    {label:{ar:"المحافظات",en:"Governorates"},value:(locAdmin.govs||[]).length},
+    {label:{ar:tr(titleKey[locAdmin.tab]),en:tr(titleKey[locAdmin.tab])},value:(locAdmin.rows||[]).length}]}}):'';
+ var body=locHero+
   '<div class="section-tabs">'+LOC_TABS.map(function(x){return '<button class="'+(locAdmin.tab===x[0]?"active":"")+
   '" onclick="locAdminSetTab(\''+x[0]+'\')">'+esc(tr(x[1]))+'</button>'}).join("")+'</div>';
  body+='<section class="panel"><div class="panel-title"><div><h2>'+esc(tr(titleKey[locAdmin.tab]))+
@@ -3425,11 +3835,18 @@ function ownerDashboard(){
  var user=getCurrentUser();
  if(!user)return loginPage();
  if(!ownData.loaded&&!ownData.loading)ownLoad();
- var tabs=[["orgs","myInstitutions"],["reqs","myRequests"]];
+  if(routeSub()==='staff'&&window.ownerStaffPage)return ownerStaffPage();
+  // The Advertisement Management Center owns the owner's advertisement sub-routes
+  // (#/owner/ads, /new, /edit/:id, /view/:id). It returns null for anything else,
+  // so every other owner tab keeps rendering exactly as it did before.
+  if(window.adsOwnerPage){var adsOwned=adsOwnerPage();if(adsOwned)return adsOwned}
+  var tabs=[["orgs","myInstitutions"],["reqs","myRequests"],["offers","offers"],["ads","myAdvertisements"]];
  var body='<div class="directory-body">'+sectionHead({title:tr("myDashboard"),icon:"home",sub:user.name},null);
  body+='<div class="view-row"><div class="view-switch">'+tabs.map(function(t){
   return '<button class="'+(ownData.tab===t[0]?"active":"")+'" onclick="ownSetTab(\''+t[0]+'\')">'+esc(tr(t[1]))+'</button>';
  }).join("")+'</div></div>';
+  body+='<div class="sp-actions"><a class="btn green" href="#/owner/staff">'+
+   (lang==='ar'?'إدارة فريق العمل':'Manage staff')+'</a></div>';
  if(ownData.loading)body+='<div class="loading-inline"><div class="loader"></div></div>';
  else if(ownData.error)body+='<div class="empty-state">'+esc(ownData.error)+'</div>';
  else if(ownData.tab==="orgs"){
@@ -3453,6 +3870,10 @@ function ownerDashboard(){
     '<div class="doc-upload"><select id="doc-type-'+o.id+'" class="f-select">'+typeOpts+'</select><input type="file" id="doc-file-'+o.id+'" accept=".pdf,.jpg,.jpeg,.png,.webp"><button id="doc-up-'+o.id+'" class="btn green" onclick="ownUploadDoc(\''+o.id+'\')">'+esc(tr("uploadDoc"))+'</button></div>'+
    '</section>';
   }).join("");
+ }else if(ownData.tab==="offers"){
+  body+=(window.mkOwnerOffersSection?mkOwnerOffersSection():"");
+ }else if(ownData.tab==="ads"){
+  body+=(window.mkOwnerAdsSection?mkOwnerAdsSection():"");
  }else{
   var reqHtml=ownData.requests.length?'<div class="table-wrap"><table class="tbl"><thead><tr><th>'+esc(tr("institutionName"))+'</th><th>'+esc(tr("orgType"))+'</th><th>'+esc(tr("reqStatus"))+'</th><th>'+esc(tr("reviewNotesLabel"))+'</th></tr></thead><tbody>'+
    ownData.requests.map(function(r){
@@ -3523,7 +3944,17 @@ function verifyPage(){
  if(!user||user.role!=="admin")return adminShell('<div class="welcome"><div><h1>'+(lang==="ar"?"غير مصرح":"Access Denied")+'</h1></div></div>');
  verLoad();
  var tabs=[["owners","ownerRequests"],["locations","locationRequestsTab"],["documents","documentsTab"]];
- var body='<div class="directory-body">'+sectionHead({title:tr("verifyQueue"),icon:"shield",sub:""},verData.tab==="owners"?(verData.counts.pending||0):null);
+ var vStats=[{icon:"shield",value:verData.counts.pending||0,labelAr:"طلبات الملكية",labelEn:"Ownership requests",tone:"warn"},
+  {icon:"pin",value:(verData.locReqs||[]).length,labelAr:"طلبات المواقع",labelEn:"Location requests",tone:"info"},
+  {icon:"doc",value:(verData.docs||[]).length,labelAr:"الوثائق",labelEn:"Documents",tone:"warn"}];
+ var vDonut={title:{ar:"المعلّق حسب النوع",en:"Pending by kind"},center:{ar:"طلب",en:"items"},categories:[
+  {label:{ar:"الملكية",en:"Ownership"},value:verData.counts.pending||0},
+  {label:{ar:"المواقع",en:"Locations"},value:(verData.locReqs||[]).length},
+  {label:{ar:"الوثائق",en:"Documents"},value:(verData.docs||[]).length}]};
+ var vHero=(typeof sectionHero==="function")?sectionHero({route:"verify",title:tr("verifyQueue"),
+  subtitle:(lang==="ar"?"راجع طلبات الملكية والمواقع والوثائق. كل قرار يُسجَّل في سجل التدقيق.":"Review ownership, location and document requests. Every decision is written to the audit log."),
+  stats:vStats,donut:vDonut}):'';
+ var body='<div class="directory-body">'+vHero;
  body+='<div class="view-row"><div class="view-switch">'+tabs.map(function(t){
   return '<button class="'+(verData.tab===t[0]?"active":"")+'" onclick="verSetTab(\''+t[0]+'\')">'+esc(tr(t[1]))+'</button>';
  }).join("")+'</div></div>';
@@ -3567,7 +3998,11 @@ function verifyPage(){
  return adminShell(body+'</div>');
 }
 
-var publicRoutes=["home","private","government","colleges","institutes","teachers","register","detail","teacher"];
+// Browsing the directory is public, but opening a full entity record is not:
+// `detail` (institution) and `teacher` (profile) are deliberately absent, so an
+// anonymous visitor is sent to the login page with the record remembered, and
+// lands on it once authenticated.
+var publicRoutes=["home","private","government","colleges","institutes","teachers","register"];
 var adminOnlyRoutes=["admin","institutions","schools","institutesAdmin","collegesAdmin","teachersAdmin","students","bookings","verify","academic","locations","reports","access","settings","offers","ads","slides"];
 
 function handleLogout(){
@@ -3652,6 +4087,12 @@ function render(){
 
  // Reset public filters when navigating between routes (matches cascade reset rules)
  if(r!==prevRoute&&prevRoute!=="")resetFilters();
+ if(r!==prevRoute&&r==="home")orgPage.offset=0;
+ if(homeSearchPending&&r===(homeSearchPending.mode==="teachers"?"teachers":"private")){
+  if(r==="teachers")teacherQuery=homeSearchPending.q;
+  else filters.q=homeSearchPending.q;
+  homeSearchPending=null;
+ }
  prevRoute=r;
 
  // Load organizations per route (filter-aware, cacheKey-based, no refetch loops)
@@ -3667,12 +4108,15 @@ function render(){
  }
 
  // Load teachers for teachers directory page (query-aware)
- if(r==="teachers"){
-  var tck="q="+teacherQuery;
+ if(r==="teachers"||r==="home"){
+  var tck=r==="home"?"home":"q="+teacherQuery;
   if(!teacherData.loading&&teacherData.cacheKey!==tck){
    teacherData.cacheKey=tck;
-   loadTeachers(teacherQuery).then(function(){render()});
+   loadTeachers(r==="home"?"":teacherQuery).then(function(){render()});
   }
+ }
+ if(r==="home"&&locData.governorates===null&&!locPending.governorates){
+  loadGovernorates().then(function(){render()});
  }
 
  // Load single organization for detail page
@@ -3709,6 +4153,7 @@ function render(){
    html=registerPage();
   }
   else if(r==="owner")html=ownerDashboard();
+  else if(r==="client")html=window.clientDashboard?clientDashboard():adminShell("");
   else if(r==="verify")html=verifyPage();
  else if(r==="private")html=directory("private");
  else if(r==="government")html=directory("government");
@@ -3742,6 +4187,7 @@ function render(){
   // is applied after the paint rather than being lost with the previous DOM.
   ufApplyInvalid();
   if(publicRoutes.includes(r))syncFilterControls();
+  if(window.clientTrackRoute)clientTrackRoute(r);
   // Dynamic hero slider: mount ONLY on home, destroy everywhere else so no
   // duplicate intervals survive navigation (returning to #/home remounts once).
   try{
@@ -3770,7 +4216,7 @@ window.addEventListener("hashchange",function(){closeThemeMenu();closeLangMenu()
 // produce mixed URLs like /login#/register. Normalize once at startup to the
 // canonical /#/<route> form. The full hash (including ?query) is preserved.
 var V4_ROUTES=["home","private","government","colleges","institutes","teachers",
- "login","register","admin","schools","access","settings","verify","owner",
+ "login","register","admin","schools","access","settings","verify","owner","client",
  "detail","institutions","teachersAdmin","students","bookings","academic","locations",
  "reports","slides","ads","offers"];
 function normalizeV4Url(){

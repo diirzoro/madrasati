@@ -1046,6 +1046,49 @@ Android currently consumes none of these endpoints, so there is no Android
 contract to break. The only implemented advertisement placement is `ticker`;
 `banner`/`sidebar` were removed because no frontend rendered them.
 
+### 15.1 Advertisement Management Center (the screen, not the API)
+
+One module drives both audiences: `design-prototype-v4/ads-center.js` +
+`ads-center.css`, loaded **last** in `index.html` because it re-declares the
+advertisement screens `admin-marketing.js` already installed, and it adds the
+owner's area. Two entry points, one implementation:
+
+| Audience | Route | What they may do |
+|---|---|---|
+| Platform admin | `#/ads` | everything: review, lifecycle, delete |
+| Institution owner | `#/owner` → «إعلاناتي» | own rows only: create, edit, cancel, resubmit |
+
+The owner is never rendered an approve / reject / archive control; that
+separation is enforced server-side as well, so hiding it is defence in depth,
+not the mechanism.
+
+**Tabs are URL state**, not component state: `?tab=all|pending|active|scheduled|
+paused|rejected|expired|archived|report`, with `effective`, `status`, `q`,
+`adType`, `billing`, `from`, `to`, `placement`, `advertiser`, `sort` as query
+parameters. A refresh or a shared link reproduces the screen exactly.
+
+**The lifecycle tabs set `effective` themselves**, so that parameter is an
+artefact of which tab is open, not a filter the reader chose. The reports tab is
+the one exception: it renders its own distribution-across-states panel, so it
+ignores the implied `effective` and keeps only filters the reader actually set.
+Without that exception, opening «مؤرشف» and then «التقارير» produced an
+all-zero report with no visible cause. The overview deliberately keeps the value
+so the list and the summary never disagree.
+
+**The overview is three layers**: the hero (total, live share, impressions,
+clicks, CTR, and a distribution bar that doubles as a legend), the lifecycle
+strip, then what needs attention and which advertisement carries the traffic.
+Only states that actually have rows become cards; the rest collapse into one
+line of still-linked chips, because a wall of seven cards where five read «0»
+reads as unfinished rather than informative. The status donut is **not** on the
+overview — it re-drew the hero's bar a third time — it lives on the reports tab,
+where the breakdown is the subject.
+
+**No invented data.** The schema stores two aggregate counters per advertisement
+(impressions, clicks) and no daily log, so the center draws no timeline, no
+sparkline and no up/down arrow, and prints `—` instead of a fabricated rate. The
+summary reports `historyAvailable: false` and the UI says so in words.
+
 ## Reports & Analytics Center
 
 `#/reports` is one sidebar entry (the frozen 13th admin item) that opens a full
