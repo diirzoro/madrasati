@@ -797,15 +797,23 @@ forces fixed column counts: the capped `auto-fit` already lands on 2-up, 3-up or
 4-up, and a `≤1400px` rule forcing four stretched columns is what produced 227px
 cards on a 1000px screen.
 
-**Air is not a number to shrink under pressure.** Padding is `16px 18px` with a
-`min-height:126px` floor and `align-content:space-between` so the share meter
-pins to the bottom edge. Narrow layouts may shorten the *number* and the icon;
-they may not flatten the padding to `11px`.
+**Air steps down on narrow screens; it never collapses.** Desktop is
+`padding:16px 18px` with a `min-height:126px` floor and
+`align-content:space-between`, so the share meter pins to the bottom edge. Below
+560px the card is a single column and the block tightens in two documented steps
+— `14px 15px` / `112px` floor at ≤560px, `13px 14px` / `104px` at ≤400px — which
+is what a 265px-wide card should look like at 320px. What is forbidden is going
+edge-to-edge or near it: **no card padding below 12px**, and the value may step
+`30px → 26px → 24px` while the icon shrinks with it. An earlier draft flattened
+padding to `11px` on mobile, which is the cramped look this section exists to
+prevent. The 300×126 desktop box and the 265×104 320px box are both correct;
+an unaccounted third box is not.
 
-**Arabic type never goes below 12px.** The card label is `12.5px` (`12px` at
-≤400px) and the empty-state line `12px`. An earlier rule dropped the label to
-10.5px on mobile, which is exactly the small-Arabic-type this document forbids.
-Contrast for the 30px value is 6.65:1 light and 5.58:1 dark.
+**Arabic type never goes below 12px.** The card label is `12.5px` and it is
+*held* at `12.5px` by the ≤560px rule — only the number steps — dropping to
+`12px` at ≤400px, and the empty-state line is `12px`. An earlier rule dropped
+the label to 10.5px on mobile, which is exactly the small-Arabic-type this
+document forbids. Contrast for the 30px value is 6.65:1 light and 5.58:1 dark.
 
 **Only populated states become cards.** Each card is one clickable filter; the
 states with no rows collapse into a single line of small, still-linked chips so
@@ -828,4 +836,18 @@ decision.
    When a container's tokens are declared on that container, assert in review
    that `container.querySelectorAll(':scope > *')` still holds the whole body,
    and that one card's computed `background-color` is not `rgba(0, 0, 0, 0)`.
+
+**Measured card box by viewport** (the matrix these rules are checked against —
+re-measure it rather than reasoning about the breakpoints):
+
+| viewport | card | cards per row |
+|---|---|---|
+| 1425 / 1024 / 820 | 300×126 | 2 |
+| 560 | 505×112 | 1 |
+| 400 | 345×104 | 1 |
+| 360 | 305×104 | 1 |
+| 320 | 265×104 | 1 |
+
+No page-level horizontal scrolling at any of these widths, and no card is wider
+than its viewport.
 
