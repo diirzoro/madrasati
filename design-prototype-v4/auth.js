@@ -85,6 +85,7 @@ function getLoginRedirect(user) {
   if (!user) return 'home';
   if (user.role === 'admin') return 'admin';
   if (user.role === 'owner') return 'owner';
+  if (user.role === 'client') return 'client';
   return 'home';
 }
 

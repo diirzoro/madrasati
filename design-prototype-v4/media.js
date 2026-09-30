@@ -174,9 +174,16 @@
 
     var logo = (api && api.logo) || o.image || (m && m.logo) || (ref + "logo.svg");
 
-    // The gallery is REAL entity media only. It is never filled with unrelated
-    // stock/demo images; with no real gallery the view shows an empty state.
+    // The gallery is REAL entity media when it exists. With none, it falls back to
+    // a deterministic set of the repo's real campus photos, flagged illustrative —
+    // the same rule as the cover, so a school is never left with an empty gallery
+    // and a placeholder is never passed off as that school's own photo.
     var gallery = realGallery;
+    var illustrative = false;
+    if (!gallery.length && instPool().length) {
+      gallery = pick(instPool(), seed || "org", 5);
+      illustrative = true;
+    }
     var generic = !realGallery.length;
 
     var cover;
@@ -188,7 +195,7 @@
 
     return {
       root: orgRoot(o), logo: logo, cover: cover, gallery: gallery,
-      generic: generic, isGenericLogo: !(api && api.logo) && !o.image, ref: ref
+      generic: generic, illustrative: illustrative, isGenericLogo: !(api && api.logo) && !o.image, ref: ref
     };
   }
 

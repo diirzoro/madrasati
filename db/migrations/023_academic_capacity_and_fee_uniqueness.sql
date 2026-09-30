@@ -88,14 +88,40 @@ BEGIN
   END IF;
 END $$;
 
--- remaining_seats is always capacity - current_students. A generated column is
--- used so no caller can write a value that contradicts the formula; a NULL
--- capacity means "not declared" and yields a NULL remainder.
--- current_students may exceed capacity (over-enrolment is real), so the
--- remainder is deliberately allowed to go negative instead of being clamped.
-ALTER TABLE organization_stages ADD COLUMN IF NOT EXISTS remaining_seats INTEGER
-  GENERATED ALWAYS AS (capacity - current_students) STORED;
-ALTER TABLE organization_grades ADD COLUMN IF NOT EXISTS remaining_seats INTEGER
-  GENERATED ALWAYS AS (capacity - current_students) STORED;
+-- remaining_seats is always capacity - current_students. It is a derived value
+-- that no caller may write: PostgreSQL 12+ expresses this as GENERATED ALWAYS
+-- AS (...) STORED. The local development server is PostgreSQL 10, which predates
+-- generated columns, so the equivalent is a plain column kept in lock-step by a
+-- BEFORE INSERT OR UPDATE trigger that always overwrites it. A NULL capacity
+-- means "not declared" and yields a NULL remainder. current_students may exceed
+-- capacity (over-enrolment is real), so the remainder is deliberately allowed to
+-- go negative instead of being clamped.
+--
+-- (The contract for readers is identical: remaining_seats is read, never
+-- written by application code. Upgrade the server to PostgreSQL 12+ to switch
+-- these two columns to true generated columns.)
+ALTER TABLE organization_stages ADD COLUMN IF NOT EXISTS remaining_seats INTEGER;
+ALTER TABLE organization_grades ADD COLUMN IF NOT EXISTS remaining_seats INTEGER;
+
+CREATE OR REPLACE FUNCTION organization_remaining_seats_fn() RETURNS trigger AS $$
+BEGIN
+  NEW.remaining_seats := NEW.capacity - NEW.current_students;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'organization_stages_remaining_seats_trg') THEN
+    CREATE TRIGGER organization_stages_remaining_seats_trg
+      BEFORE INSERT OR UPDATE ON organization_stages
+      FOR EACH ROW EXECUTE PROCEDURE organization_remaining_seats_fn();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'organization_grades_remaining_seats_trg') THEN
+    CREATE TRIGGER organization_grades_remaining_seats_trg
+      BEFORE INSERT OR UPDATE ON organization_grades
+      FOR EACH ROW EXECUTE PROCEDURE organization_remaining_seats_fn();
+  END IF;
+END $$;
 
 COMMIT;

@@ -119,4 +119,5 @@ async function uploadImage({ actorUserId, originalName, scope }, fileBuffer) {
   return { path: rel, mime: type.mime, size: fileBuffer.length };
 }
 
-module.exports = { listAuditLogs, listSettings, getSetting, updateSetting, dashboardCounts, uploadImage, IMAGE_ROOT };
+module.exports = { listAuditLogs, listSettings, getSetting, updateSetting, dashboardCounts, uploadImage, IMAGE_ROOT,
+  listPendingRegistrations: repo.listPendingRegistrations };

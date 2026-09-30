@@ -25,6 +25,6 @@ end
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_institutions_search_vector BEFORE INSERT OR UPDATE
-  ON institutions FOR EACH ROW EXECUTE FUNCTION institutions_search_vector_trigger();
+  ON institutions FOR EACH ROW EXECUTE PROCEDURE institutions_search_vector_trigger();
 
 COMMIT;

@@ -162,14 +162,14 @@ async function createOrganization(fields) {
     'stage_availability', 'bio', 'teachers', 'students', 'reviews', 'rating',
     'subjects', 'stages', 'languages', 'teaching_methods', 'grades', 'fees',
     'fee_details', 'facilities', 'activities', 'offers', 'discounts',
-    'working_hours', 'governorate_code', 'district_code', 'neighborhood',
-    'video_url', 'website',
-  ];
-  const keys = allowed.filter((k) => fields[k] !== undefined);
-  const values = keys.map((k) => {
-    const v = fields[k];
-    return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
-  });
+      'working_hours', 'governorate_code', 'district_code', 'neighborhood',
+      'video_url', 'website', 'country_code',
+    ];
+    const keys = allowed.filter((k) => fields[k] !== undefined);
+    const values = keys.map((k) => {
+      const v = fields[k];
+      return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+    });
   const columns = keys.join(', ');
   const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
   const { rows } = await query(
@@ -189,11 +189,11 @@ async function updateOrganization(id, fields) {
     'stage_availability', 'bio', 'teachers', 'students', 'reviews', 'rating',
     'subjects', 'stages', 'languages', 'teaching_methods', 'grades', 'fees',
     'fee_details', 'facilities', 'activities', 'offers', 'discounts',
-    'working_hours', 'governorate_code', 'district_code', 'neighborhood',
-    'video_url', 'website',
-  ];
-  const keys = allowed.filter((k) => fields[k] !== undefined);
-  if (!keys.length) return null;
+      'working_hours', 'governorate_code', 'district_code', 'neighborhood',
+      'video_url', 'website', 'country_code',
+    ];
+    const keys = allowed.filter((k) => fields[k] !== undefined);
+    if (!keys.length) return null;
   const assignments = keys
     .map((k, i) => {
       const v = fields[k];
@@ -258,17 +258,21 @@ async function createMembership({ userId, organizationId, membershipRole, status
     `INSERT INTO organization_memberships (user_id, organization_id, membership_role, status)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (user_id, organization_id) DO UPDATE
-       SET membership_role = EXCLUDED.membership_role, status = EXCLUDED.status
+       SET membership_role = EXCLUDED.membership_role, status = EXCLUDED.status,
+           archived_at = NULL, archived_by_user_id = NULL, updated_at = now()
      RETURNING *`,
     [userId, organizationId, membershipRole || 'member', status || 'active']
   );
   return rows[0];
 }
 
-async function deleteMembership(userId, organizationId) {
+async function deleteMembership(userId, organizationId, actorUserId) {
   const { rows } = await query(
-    `DELETE FROM organization_memberships WHERE user_id = $1 AND organization_id = $2 RETURNING id`,
-    [userId, organizationId]
+    `UPDATE organization_memberships SET status='inactive', archived_at=now(),
+       archived_by_user_id=$3, updated_at=now()
+     WHERE user_id=$1 AND organization_id=$2 AND archived_at IS NULL
+     RETURNING id`,
+    [userId, organizationId, actorUserId || null]
   );
   return rows[0] || null;
 }
@@ -382,7 +386,11 @@ async function upsertCapability(organizationId, key, enabled) {
 
 async function isOrganizationOwner(userId, organizationId) {
   const { rows } = await query(
-    `SELECT 1 FROM organizations WHERE id = $1 AND owner_user_id = $2 AND deleted_at IS NULL`,
+    `SELECT 1 FROM organizations o WHERE o.id=$1 AND o.deleted_at IS NULL
+      AND (o.owner_user_id=$2 OR EXISTS (
+        SELECT 1 FROM organization_memberships m WHERE m.organization_id=o.id
+          AND m.user_id=$2 AND m.membership_role='owner'
+          AND m.status='active' AND m.archived_at IS NULL))`,
     [organizationId, userId]
   );
   return Boolean(rows[0]);

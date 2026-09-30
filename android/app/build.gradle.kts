@@ -5,11 +5,22 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-// The backend API base URL. The Android emulator reaches the host machine's
-// localhost via 10.0.2.2. Override per environment with:
+// Environment-aware API base URLs. The backend is server/pg-app.js (default port
+// 4003); Android calls the same /api/... routes as the web frontend and never
+// connects to PostgreSQL directly, so no database host/port/credentials live here.
+//
+// TEST / DEBUG — the emulator reaches the host machine's localhost via 10.0.2.2.
+// For a physical device, point it at your machine's LAN IP instead:
 //   gradlew assembleDebug -PMADRASATI_API_BASE_URL=http://192.168.1.10:4003/
-val apiBaseUrl: String = (project.findProperty("MADRASATI_API_BASE_URL") as String?)
+val debugApiBaseUrl: String = (project.findProperty("MADRASATI_API_BASE_URL") as String?)
     ?: "http://10.0.2.2:4003/"
+
+// PRODUCTION / RELEASE — must be HTTPS, set at build time:
+//   gradlew assembleRelease -PMADRASATI_PROD_API_BASE_URL=https://api.madrasati.example/
+// The placeholder below is deliberately non-routable and must be overridden
+// before any release build is shipped.
+val prodApiBaseUrl: String = (project.findProperty("MADRASATI_PROD_API_BASE_URL") as String?)
+    ?: "https://api.madrasati.example/"
 
 android {
     namespace = "com.madrasati.app"
@@ -21,17 +32,19 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
-
-        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
         }
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // db/migrate.js
 // Migration runner for PostgreSQL.
-// Usage: node db/migrate.js [up|status]
+// Usage: node db/migrate.js [up|up-no-seed|status]
 //
 // Reads .env via dotenv, connects to DATABASE_URL, and applies
 // unapplied migration files from db/migrations/ in lexicographic order.
@@ -61,7 +61,7 @@ async function runMigration(pool, filePath, name) {
   }
 }
 
-async function migrateUp() {
+async function migrateUp({ seedProtected = true } = {}) {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
     await ensureMigrationTable(pool);
@@ -83,11 +83,13 @@ async function migrateUp() {
     // Runs unconditionally, including when nothing was pending: the seven
     // protected test accounts (db/seed-fixed-users.js) must exist in every
     // environment, and re-seeding is what repairs a deleted or drifted one.
-    console.log('\nSeeding protected system accounts...');
-    const { seed } = require('./seed-fixed-users');
-    const summary = await seed(pool);
-    console.log(`  protected accounts: ${summary.accounts.length}`);
-    summary.links.forEach((link) => console.log(`  linked: ${link}`));
+    if (seedProtected) {
+      console.log('\nSeeding protected system accounts...');
+      const { seed } = require('./seed-fixed-users');
+      const summary = await seed(pool);
+      console.log(`  protected accounts: ${summary.accounts.length}`);
+      summary.links.forEach((link) => console.log(`  linked: ${link}`));
+    }
   } finally {
     await pool.end();
   }
@@ -116,9 +118,11 @@ async function showStatus() {
 const command = process.argv[2] || 'up';
 if (command === 'up') {
   migrateUp().catch(err => { console.error(err); process.exit(1); });
+} else if (command === 'up-no-seed') {
+  migrateUp({ seedProtected: false }).catch(err => { console.error(err); process.exit(1); });
 } else if (command === 'status') {
   showStatus().catch(err => { console.error(err); process.exit(1); });
 } else {
-  console.error('Usage: node db/migrate.js [up|status]');
+  console.error('Usage: node db/migrate.js [up|up-no-seed|status]');
   process.exit(1);
 }

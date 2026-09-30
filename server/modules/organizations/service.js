@@ -22,9 +22,10 @@ function mapOrganization(row) {
     description: row.description,
     governorate: row.governorate_name || row.governorate_code,
     district: row.district_name || row.district_code,
-    governorateCode: row.governorate_code,
-    districtCode: row.district_code,
-    neighborhood: row.neighborhood,
+     governorateCode: row.governorate_code,
+     districtCode: row.district_code,
+     countryCode: row.country_code,
+     neighborhood: row.neighborhood,
     address: row.address,
     phone: row.phone,
     whatsapp: row.whatsapp,
@@ -132,12 +133,13 @@ async function updateOrganization({ userId, userRole, id, data }) {
   }
   const allowed = [
     'name', 'description', 'address', 'phone', 'email', 'image', 'gender', 'curriculum',
-    'registration_status', 'registration_info', 'governorate_code', 'district_code',
-    'neighborhood', 'stages', 'fees', 'social_links', 'map_url', 'gallery',
-    'subjects', 'languages', 'teaching_methods', 'grades', 'fees', 'fee_details',
-    'facilities', 'activities', 'offers', 'discounts', 'seats_available',
-    'registration_open', 'bio', 'type', 'working_hours', 'video_url', 'website',
-  ];
+     'registration_status', 'registration_info', 'governorate_code', 'district_code',
+     'neighborhood', 'stages', 'fees', 'social_links', 'map_url', 'gallery',
+     'subjects', 'languages', 'teaching_methods', 'grades', 'fees', 'fee_details',
+     'facilities', 'activities', 'offers', 'discounts', 'seats_available',
+     'registration_open', 'bio', 'type', 'working_hours', 'video_url', 'website',
+     'country_code',
+   ];
   const mapped = {
     name: data.name,
     description: data.description,
@@ -149,9 +151,10 @@ async function updateOrganization({ userId, userRole, id, data }) {
     curriculum: data.curriculum,
     registration_status: data.registration_status,
     registration_info: data.registration_info,
-    governorate_code: data.governorate_code,
-    district_code: data.district_code,
-    neighborhood: data.neighborhood,
+     governorate_code: data.governorate_code,
+     district_code: data.district_code,
+     country_code: data.country_code,
+     neighborhood: data.neighborhood,
     stages: data.stages,
     fees: data.fees,
     social_links: data.social_links,
@@ -236,6 +239,14 @@ async function listMemberships(organizationId, { userId, userRole } = {}) {
 }
 
 async function addMembership(userId, organizationId, { membershipRole, status }, { actorUserId } = {}) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(userId || '')))
+    throw new ValidationError('A valid userId is required');
+  if (membershipRole !== undefined && !/^[a-z][a-z0-9_]{1,39}$/.test(String(membershipRole)))
+    throw new ValidationError('Invalid membership role');
+  if (status !== undefined && !['active','inactive','suspended','pending'].includes(status))
+    throw new ValidationError('Invalid membership status');
+  const target = await require('../identity/repository').findUserById(userId);
+  if (!target || target.deleted_at) throw new NotFoundError('User not found');
   const membership = await repo.createMembership({ userId, organizationId, membershipRole, status });
   await writeAudit({
     actorUserId: actorUserId || null,
@@ -249,11 +260,11 @@ async function addMembership(userId, organizationId, { membershipRole, status },
 }
 
 async function removeMembership(userId, organizationId, { actorUserId } = {}) {
-  const result = await repo.deleteMembership(userId, organizationId);
+  const result = await repo.deleteMembership(userId, organizationId, actorUserId);
   if (!result) throw new NotFoundError('Membership not found');
   await writeAudit({
     actorUserId: actorUserId || null,
-    action: 'remove_membership',
+    action: 'archive_membership',
     entityType: 'organization_membership',
     entityId: result.id,
     organizationId,

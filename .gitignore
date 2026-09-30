@@ -74,3 +74,6 @@ coverage/
 cache/
 build/
 dist/
+
+# opencode agent tooling
+.opencode/

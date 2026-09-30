@@ -9,6 +9,7 @@ const { ForbiddenError } = require('../common/errors');
 const { requireAuth, requireRole, requireOrgMember } = require('../identity/auth');
 
 const router = Router();
+router.use('/:id/staff', require('./staff-router'));
 
 // ---------- public listing ----------
 router.get(
@@ -107,16 +108,18 @@ router.get(
 router.post(
    '/:id/memberships',
    requireAuth,
+   requireOrgMember('id'),
    requireRole('admin', 'owner'),
    asyncHandler(async (req, res) => {
      // Check if user owns the organization (for owner role) or is admin
      if (req.user.role === 'owner') {
        const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
        if (!isOwner) {
-         throw new ForbiddenError('Not authorized to modify this organization');
+         return res.status(404).json({ error: 'Organization not found' });
        }
+       if (req.body.membershipRole === 'owner') throw new ForbiddenError('Only an admin may assign owner membership');
      }
-     const member = await service.addMembership(req.user.id, req.params.id, req.body, { actorUserId: req.user.id });
+     const member = await service.addMembership(req.body.userId, req.params.id, req.body, { actorUserId: req.user.id });
      res.status(201).json(member);
    })
  );
@@ -124,15 +127,21 @@ router.post(
 router.delete(
    '/:id/memberships/:userId',
    requireAuth,
+   requireOrgMember('id'),
    requireRole('admin', 'owner'),
    asyncHandler(async (req, res) => {
      // Check if user owns the organization (for owner role) or is admin
      if (req.user.role === 'owner') {
        const isOwner = await service.isOrganizationOwner(req.user.id, req.params.id);
        if (!isOwner) {
-         throw new ForbiddenError('Not authorized to modify this organization');
+         return res.status(404).json({ error: 'Organization not found' });
        }
+       const targetMembership = await require('./repository').findMembership(req.params.userId, req.params.id);
+       if (targetMembership && targetMembership.membership_role === 'owner')
+         throw new ForbiddenError('Only an admin may remove owner membership');
      }
+     const targetUser = await require('../identity/repository').findUserById(req.params.userId);
+     if (targetUser && targetUser.is_protected) throw new ForbiddenError('Protected account membership cannot be removed');
      const result = await service.removeMembership(req.params.userId, req.params.id, { actorUserId: req.user.id });
      res.json(result);
    })

@@ -3156,3 +3156,4 @@ img{max-width:100%}
 @media(max-width:1100px){.hero-banner-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-banner{min-height:170px}}
 @media(max-width:900px){.hero-banner-inner{padding:18px}.hero-banner h1{font-size:19px}.hero-banner p{font-size:12px}.hero-banner-mark{width:44px;height:44px;font-size:22px}.hero-banner{min-height:150px}}
 @media(max-width:480px){.hero-stat b{font-size:21px}.hero-banner-actions{width:100%}.hero-banner{min-height:132px}.hero-banner h1{font-size:18px}}
+

@@ -552,7 +552,6 @@
           { icon: "sparkle", value: num(s.summary && s.summary.total), labelAr: "إجمالي الإعلانات", labelEn: "Total advertisements", tone: "primary" },
           { icon: "check", value: num(c.active), labelAr: "نشطة", labelEn: "Active", tone: "pos" },
           { icon: "shield", value: num(c.pending), labelAr: "قيد المراجعة", labelEn: "Pending review", tone: "warn" },
-          { icon: "calendar", value: num(c.scheduled), labelAr: "مجدولة", labelEn: "Scheduled", tone: "info" },
           { icon: "x", value: num(c.expired), labelAr: "منتهية", labelEn: "Expired", tone: "neg" }
         ],
         donut: { title: { ar: "الإعلانات حسب الحالة", en: "Ads by status" }, center: { ar: "إعلان", en: "ads" },

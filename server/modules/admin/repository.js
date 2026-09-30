@@ -52,10 +52,11 @@ async function countPendingRegistrations() {
 
 async function listPendingRegistrations({ offset = 0, limit = 20 } = {}) {
   const { rows } = await query(
-    `SELECT id, name, email, role, status, created_at FROM users WHERE status = 'pending' ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-    [limit, offset]
+    `SELECT id, name, email, phone, role_requested AS "roleRequested", created_at AS "createdAt"
+     FROM pending_registrations ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+    [Math.min(100, Math.max(1, limit)), Math.max(0, offset)]
   );
-  return rows;
+  return { items: rows };
 }
 
 async function dashboardMetrics() {

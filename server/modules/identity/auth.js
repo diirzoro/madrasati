@@ -54,6 +54,31 @@ function destroySession(req) {
   return !sessions.has(token);
 }
 
+// These controls describe only sessions in this API process. No device history
+// is inferred from the token or persisted across restarts.
+function listUserSessions(userId, currentToken) {
+  const now = Date.now();
+  const result = [];
+  for (const [token, session] of sessions) {
+    if (session.expiresAt <= now) { sessions.delete(token); continue; }
+    if (String(session.id) !== String(userId)) continue;
+    result.push({ id: crypto.createHash('sha256').update(token).digest('hex'),
+      current: token === currentToken, expiresAt: new Date(session.expiresAt).toISOString() });
+  }
+  return result;
+}
+
+function revokeUserSessions(userId, sessionId) {
+  let count = 0;
+  for (const [token, session] of sessions) {
+    if (String(session.id) !== String(userId)) continue;
+    if (sessionId && crypto.createHash('sha256').update(token).digest('hex') !== sessionId) continue;
+    sessions.delete(token);
+    count += 1;
+  }
+  return count;
+}
+
 function sessionCookie(token) {
   const secure = isProduction() ? '; Secure' : '';
   return `madarasati_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400${secure}`;
@@ -109,6 +134,23 @@ function requireRole(...roles) {
   };
 }
 
+// Effective permission for the existing roles + direct user overrides. A
+// scoped override is considered only inside its organization; a direct deny
+// wins over every inherited or direct grant. Call requireOrgMember separately
+// on tenant routes so the resource itself remains isolated.
+function requirePermission(module, action, organizationParam) {
+  return async (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    const organizationId = organizationParam ? req.params[organizationParam] : null;
+    try {
+      const { rows } = await repo.permissionDecision(req.user.id, module, action, organizationId);
+      const d = rows[0];
+      if (d && d.allowed) return next();
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    } catch (err) { return next(err); }
+  };
+}
+
 // Tenant isolation guard for organization-scoped routes.
 //
 // Organization-owned data is keyed by organization_id, and hiding a section in
@@ -135,7 +177,7 @@ function requireOrgMember(paramName = 'orgId') {
         orgRepo.isOrganizationOwner(req.user.id, organizationId),
         orgRepo.findMembership(req.user.id, organizationId),
       ]);
-      if (isOwner || (membership && membership.status === 'active')) {
+      if (isOwner || (membership && membership.status === 'active' && !membership.archived_at)) {
         return next();
       }
       return res.status(404).json({ error: 'Organization not found' });
@@ -167,10 +209,13 @@ module.exports = {
   currentSession,
   createSession,
   destroySession,
+  listUserSessions,
+  revokeUserSessions,
   sessionCookie,
   clearSessionCookieHeader,
   requireAuth,
   requireRole,
+  requirePermission,
   requireOrgMember,
   optionalAuth,
 };

@@ -13,9 +13,11 @@ const {
   clearSessionCookieHeader,
   requireAuth,
   requireRole,
+  requirePermission,
 } = require('./auth');
 
 const router = Router();
+router.use('/access', require('./access-router'));
 
 // Explicit whitelist: nothing reaches the client that this list does not name.
 // The affiliation fields are the ones the admin directory renders as a column
@@ -27,6 +29,7 @@ const mapUserDto = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  clientKind: user.clientKind ?? 'unspecified',
   phone: user.phone,
   status: user.status,
   organizationId: user.organizationId ?? null,
@@ -35,6 +38,9 @@ const mapUserDto = (user) => ({
   organizationVerified: user.organizationVerified ?? null,
   membershipRole: user.membershipRole ?? null,
   membershipStatus: user.membershipStatus ?? null,
+  organizationCount: user.organizationCount ?? 0,
+  teacherProfileId: user.teacherProfileId ?? null,
+  teacherProfileStatus: user.teacherProfileStatus ?? null,
   teacherKind: user.teacherKind ?? null,
   isProtected: user.isProtected ?? false,
   createdAt: user.createdAt,
@@ -96,10 +102,24 @@ router.get(
 );
 
 // ---------- users ----------
+router.post(
+  '/users',
+  requireAuth,
+  requireRole('admin'),
+  requirePermission('access', 'create'),
+  asyncHandler(async (req, res) => {
+    const { name, email, password, phone, phoneCountryCode, countryIso, profile } = req.body || {};
+    const user = await service.registerUser({ name, email, password, phone,
+      phoneCountryCode, countryIso, profile, actorUserId: req.user.id });
+    res.status(201).json(mapUserDto(user));
+  })
+);
+
 router.get(
   '/users',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'view'),
   asyncHandler(async (req, res) => {
     const { role, status, search, organizationId, limit = 100, offset = 0 } = req.query;
     const { items, total } = await service.listUsers({
@@ -114,10 +134,21 @@ router.get(
   })
 );
 
+router.get(
+  '/users/:id',
+  requireAuth,
+  requireRole('admin'),
+  requirePermission('access', 'view'),
+  asyncHandler(async (req, res) => {
+    res.json(mapUserDto(await service.getUserByAdmin(req.params.id)));
+  })
+);
+
 router.patch(
   '/users/:id',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'update'),
   asyncHandler(async (req, res) => {
     const user = await service.updateUserByAdmin(req.params.id, { ...req.body, actorUserId: req.user.id });
     res.json(mapUserDto(user));
@@ -128,6 +159,7 @@ router.delete(
   '/users/:id',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'delete'),
   asyncHandler(async (req, res) => {
     if (String(req.params.id) === String(req.user.id)) {
       return res.status(400).json({ error: 'Cannot delete current user' });
@@ -141,6 +173,11 @@ router.delete(
 router.get(
   '/profiles/:userId',
   requireAuth,
+  (req, res, next) => {
+    if (String(req.user.id) === String(req.params.userId)) return next();
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Insufficient permissions' });
+    return requirePermission('access', 'view')(req, res, next);
+  },
   asyncHandler(async (req, res) => {
     const profile = await service.getProfile(req.params.userId);
     res.json(profile);
@@ -164,6 +201,7 @@ router.get(
   '/rbac/roles',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'view'),
   asyncHandler(async (req, res) => {
     res.json(await service.listRoles());
   })
@@ -173,6 +211,7 @@ router.get(
   '/rbac/permissions',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'view'),
   asyncHandler(async (req, res) => {
     res.json(await service.listPermissions());
   })
@@ -182,6 +221,7 @@ router.get(
   '/rbac/roles/:roleId/permissions',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'view'),
   asyncHandler(async (req, res) => {
     res.json(await service.listRolePermissions(req.params.roleId));
   })
@@ -191,9 +231,10 @@ router.post(
   '/rbac/roles/:roleId/permissions',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'update'),
   asyncHandler(async (req, res) => {
     const { module, action, description } = req.body || {};
-    const result = await service.grantPermissionToRole(req.params.roleId, { module, action, description });
+    const result = await service.grantPermissionToRole(req.params.roleId, { module, action, actorUserId: req.user.id });
     res.status(201).json(result);
   })
 );
@@ -202,13 +243,16 @@ router.delete(
   '/rbac/roles/:roleId/permissions/:permissionId',
   requireAuth,
   requireRole('admin'),
+  requirePermission('access', 'update'),
   asyncHandler(async (req, res) => {
-    const result = await service.revokePermissionFromRole(req.params.roleId, req.params.permissionId);
+    const result = await service.revokePermissionFromRole(req.params.roleId, req.params.permissionId, req.user.id);
     res.json(result);
   })
 );
 
 // For runtime-compat introspection of the session token (useful during dev)
+router.use(require('./client-router'));
+
 router.get('/auth/session', (req, res) => {
   const token = parseSessionToken(req);
   res.json({ hasSession: Boolean(token) });

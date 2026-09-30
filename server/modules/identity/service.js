@@ -21,6 +21,7 @@ function mapUser(row) {
     name: row.name,
     email: row.email,
     role,
+    clientKind: row.client_kind || 'unspecified',
     phone: row.phone,
     status: row.status || 'active',
     // Institution affiliation. A teacher who belongs to an institution is staff
@@ -33,7 +34,10 @@ function mapUser(row) {
     organizationVerified: row.organization_verified == null ? null : Boolean(row.organization_verified),
     membershipRole: row.membership_role || null,
     membershipStatus: row.membership_status || null,
-    teacherKind: role === 'teacher' ? (organizationId ? 'institutional' : 'freelancer') : null,
+    organizationCount: Number(row.organization_count || 0),
+    teacherProfileId: row.teacher_profile_id || null,
+    teacherProfileStatus: row.teacher_profile_status || null,
+    teacherKind: role === 'teacher' ? (organizationId && row.membership_status === 'active' ? 'institutional' : 'freelancer') : null,
     isProtected: Boolean(row.is_protected),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -61,13 +65,22 @@ function isStrongPassword(p) {
     /[^A-Za-z0-9\s]/.test(p);
 }
 
-async function registerUser({ name, email, password, phone, phoneCountryCode, countryIso, profile, metadata, actorUserId }) {
+// The ONE place an account row is created. `role` is a parameter of this
+// function, never a body field read off an untrusted caller: public registration
+// pins it to 'client' (see registerUser), and only createUserForAdmin — behind
+// requireRole('admin') — is allowed to choose. Keeping a single writer is what
+// stops the two doors from drifting apart on validation or hashing.
+async function createAccount({
+  name, email, password, phone, phoneCountryCode, countryIso, profile,
+  metadata, actorUserId, role, status, auditAction = 'create',
+}) {
   const safeName = sanitizeName(name);
   const safeEmail = sanitizeEmail(email);
-  // Public registration ALWAYS creates a plain client. Roles (owner/admin)
-  // are granted only through admin action or the ownership-approval workflow.
-  // The `role` body field is intentionally ignored here — never trust it.
-  const safeRole = 'client';
+  const safeRole = role || 'client';
+  if (!VALID_ROLES.includes(safeRole)) throw new ValidationError('Invalid role.');
+  if (status !== undefined && !VALID_STATUS.includes(status)) {
+    throw new ValidationError('Invalid user status');
+  }
   if (!isStrongPassword(password)) {
     throw new ValidationError('Password must be at least 8 characters with at least one capital letter and one symbol.');
   }
@@ -103,6 +116,7 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
         phoneNormalized: e164,
         roleId: roleRow.id,
         passwordHash,
+        status,
         metadata,
       }, client);
     } catch (err) {
@@ -118,7 +132,7 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
     // Written on the same client so the user row and its audit entry commit together.
     await writeAudit({
       actorUserId: actorUserId || created.id,
-      action: 'create',
+      action: auditAction,
       entityType: 'user',
       entityId: String(created.id),
       newValues: { email: safeEmail, role: safeRole },
@@ -134,6 +148,40 @@ async function registerUser({ name, email, password, phone, phoneCountryCode, co
   return mapUser(full);
 }
 
+// Public registration. Roles (owner / teacher / admin) are never granted here:
+// the role is pinned to 'client' and the `role` body field is ignored on purpose.
+// An owner or a teacher arrives through the admin screen or the approval
+// workflow, which is where an accountable actor exists.
+async function registerUser(args) {
+  return createAccount({ ...args, role: 'client' });
+}
+
+// Admin-created account. This is the only door that may choose a role, and it
+// sits behind requireRole('admin') on the route — see the router.
+async function createUserForAdmin(args) {
+  return createAccount({ ...args, auditAction: 'create' });
+}
+
+// An admin sets or resets a password. Separate from updateUserByAdmin on
+// purpose: a password never travels inside a general field patch, so it can
+// never be changed by a partial update that forgot to consider it.
+async function setUserPassword(userId, password, actorUserId) {
+  if (!isStrongPassword(password)) {
+    throw new ValidationError('Password must be at least 8 characters with at least one capital letter and one symbol.');
+  }
+  const existing = await repo.findUserById(userId);
+  if (!existing) throw new NotFoundError('User not found');
+  const passwordHash = await bcrypt.hash(password, 10);
+  await repo.updateUser(userId, { password_hash: passwordHash });
+  await writeAudit({
+    actorUserId: actorUserId || null,
+    action: 'password_reset',
+    entityType: 'user',
+    entityId: String(userId),
+  });
+  return { success: true };
+}
+
 // Validates + stores registration geography on user_profiles.
 // Reuses the locations catalog (FKs + parent/child consistency checks).
 async function saveRegistrationProfile(userId, profile, client) {
@@ -142,11 +190,20 @@ async function saveRegistrationProfile(userId, profile, client) {
   if (countryCode !== undefined) mapped.country_code = String(countryCode).toUpperCase();
   if (phoneCountryCode !== undefined) mapped.phone_country_code = String(phoneCountryCode).replace(/\D/g, '');
   const locRepo = require('../locations/repository');
+  if (countryCode) {
+    const country = await locRepo.findCountryByCode(String(countryCode).toUpperCase());
+    if (!country || country.is_active === false) throw new ValidationError('Selected country does not exist.');
+  }
   let govId = governorateId !== undefined && governorateId !== null && governorateId !== '' ? Number(governorateId) : null;
   let distId = districtId !== undefined && districtId !== null && districtId !== '' ? Number(districtId) : null;
+  if (governorateId !== undefined && govId === null) mapped.governorate_id = null;
+  if (districtId !== undefined && distId === null) mapped.district_id = null;
   if (govId !== null) {
     const gov = await locRepo.findGovernorateById(govId);
     if (!gov) throw new ValidationError('Selected governorate does not exist.');
+    if (countryCode && gov.country_code && gov.country_code !== String(countryCode).toUpperCase()) {
+      throw new ValidationError('Selected governorate does not belong to the selected country.');
+    }
     mapped.governorate_id = govId;
   }
   if (distId !== null) {
@@ -221,11 +278,32 @@ async function assertDeletable(userId) {
   if (target.is_protected) {
     throw new ForbiddenError('This is a protected system account and cannot be deleted.');
   }
+  if (target.role === 'teacher') {
+    throw new ForbiddenError('Teacher deletion must use the verified teacher deletion request workflow.');
+  }
+  if (target.role === 'owner') {
+    const { query } = require('../common/pool');
+    const active = await query(`SELECT 1 FROM organization_memberships WHERE user_id=$1
+      AND membership_role='owner' AND status='active' LIMIT 1`, [userId]);
+    if (active.rows[0]) throw new ForbiddenError('Transfer active institution ownership before deleting this account.');
+  }
   return target;
 }
 
 async function updateUserByAdmin(userId, { name, email, phone, role, status, institutionType, actorUserId }) {
   if (status === 'deleted') await assertDeletable(userId);
+
+  const current = await repo.findUserById(userId);
+  if (!current) throw new NotFoundError('User not found');
+  if (current.is_protected && ((status !== undefined && status !== current.status) ||
+      (role !== undefined && role !== current.role))) {
+    throw new ForbiddenError('Protected system account role and status cannot be changed.');
+  }
+  if (String(actorUserId) === String(userId) &&
+      ((role !== undefined && role !== current.role) ||
+       (status !== undefined && status !== current.status))) {
+    throw new ForbiddenError('You cannot change your own role or account status.');
+  }
 
   if (status && !VALID_STATUS.includes(status)) throw new ValidationError('Invalid user status');
   const fields = {};
@@ -256,10 +334,14 @@ async function updateUserByAdmin(userId, { name, email, phone, role, status, ins
     entityId: String(userId),
     newValues: { fields: Object.keys(fields) },
   });
+  if (status !== undefined && status !== 'active') {
+    require('./auth').revokeUserSessions(userId);
+  }
   return mapUser(full);
 }
 
 async function deleteUser(userId, actorUserId) {
+  if (String(userId) === String(actorUserId)) throw new ForbiddenError('You cannot delete your own account.');
   await assertDeletable(userId);
   const deleted = await repo.softDeleteUser(userId);
   if (!deleted) throw new NotFoundError('User not found');
@@ -269,6 +351,7 @@ async function deleteUser(userId, actorUserId) {
     entityType: 'user',
     entityId: String(userId),
   });
+  require('./auth').revokeUserSessions(userId);
   return { success: true };
 }
 
@@ -276,6 +359,12 @@ async function listUsers(filters) {
   const rows = await repo.listUsers(filters);
   const total = await repo.countUsers(filters);
   return { items: rows.map(mapUser), total };
+}
+
+async function getUserByAdmin(userId) {
+  const row = await repo.findUserWithAffiliationById(userId);
+  if (!row) throw new NotFoundError('User not found');
+  return mapUser(row);
 }
 
 async function getProfile(userId) {
@@ -310,20 +399,47 @@ async function listPermissions() {
   return repo.listPermissions();
 }
 
-async function grantPermissionToRole(roleId, { module, action, description }) {
+async function grantPermissionToRole(roleId, { module, action, actorUserId }) {
   if (!module || !action) throw new ValidationError('module and action are required.');
   const role = await repo.findRoleByRoleId(roleId);
   if (!role) throw new NotFoundError('Role not found');
-  const permission = await repo.createPermission({ module, action, description });
-  await repo.createRolePermission(roleId, permission.id);
-  await writeAudit({ action: 'grant', entityType: 'role_permission', entityId: String(permission.id), newValues: { role_id: roleId, module, action } });
+  const permission = await repo.findPermission(module, action);
+  if (!permission) throw new NotFoundError('Permission not found in the catalog');
+  const actorDecision = await repo.permissionDecision(actorUserId, module, action, null);
+  if (!actorDecision.rows[0].allowed)
+    throw new ForbiddenError('You cannot grant a permission you do not hold');
+  const { getClient } = require('../common/pool');
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const inserted = await client.query(`INSERT INTO role_permissions (role_id, permission_id)
+      VALUES ($1,$2) ON CONFLICT (role_id, permission_id) DO NOTHING RETURNING id`, [roleId, permission.id]);
+    if (inserted.rowCount) await writeAudit({ actorUserId, action: 'grant', entityType: 'role_permission',
+      entityId: String(permission.id), newValues: { role_id: roleId, module, action } }, client);
+    await client.query('COMMIT');
+  } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; }
+  finally { client.release(); }
   return { roleId, permission };
 }
 
-async function revokePermissionFromRole(roleId, permissionId) {
-  const deleted = await repo.deleteRolePermission(roleId, permissionId);
-  if (!deleted) throw new NotFoundError('Permission grant not found');
-  await writeAudit({ action: 'revoke', entityType: 'role_permission', entityId: String(permissionId), newValues: { role_id: roleId } });
+async function revokePermissionFromRole(roleId, permissionId, actorUserId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(permissionId)))
+    throw new ValidationError('Invalid permission id');
+  const role = await repo.findRoleByRoleId(roleId);
+  if (!role) throw new NotFoundError('Role not found');
+  if (role.name === 'admin') throw new ForbiddenError('The platform administrator role is protected');
+  const { getClient } = require('../common/pool');
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const deleted = await client.query(`DELETE FROM role_permissions WHERE role_id=$1 AND permission_id=$2 RETURNING id`,
+      [roleId, permissionId]);
+    if (!deleted.rowCount) throw new NotFoundError('Permission grant not found');
+    await writeAudit({ actorUserId, action: 'revoke', entityType: 'role_permission',
+      entityId: String(permissionId), newValues: { role_id: roleId } }, client);
+    await client.query('COMMIT');
+  } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; }
+  finally { client.release(); }
   return { success: true };
 }
 
@@ -334,6 +450,7 @@ async function listRolePermissions(roleId) {
 }
 
 module.exports = {
+  getUserByAdmin,
   registerUser,
   saveRegistrationProfile,
   checkEmailAvailable,

@@ -3,8 +3,8 @@
 (function () {
   "use strict";
   var ac={cache:{},loading:{},errors:{},institutionType:"private_school",institutionSearch:"",institutionsView:"cards",
-    userRole:"",userStatus:"",userSearch:"",userOrg:"",academicTab:"stages",
-    orgForm:null,teacherForm:null,teacherDetail:null,teachersView:"cards",teacherTab:"all",
+    userRole:"client",userStatus:"",userSearch:"",userOrg:"",userOffset:0,academicTab:"stages",
+    orgForm:null,teacherForm:null,teacherDetail:null,userDraft:null,teachersView:"cards",teacherTab:"all",
     teacherSearch:"",teacherSubject:"",teacherCountry:""};
   function t(ar,en){return lang==="ar"?ar:en}
   function errorText(e){return e&&e.data&&e.data.error||e&&e.message||t("تعذر تحميل البيانات.","Unable to load data.")}
@@ -19,8 +19,127 @@
   function badge(v){var ok=["active","verified","approved","accepted","completed","confirmed"].indexOf(v)>-1;
     var bad=["suspended","rejected","deleted","cancelled","inactive"].indexOf(v)>-1;
     return '<span class="badge '+(ok?"ok":bad?"bad":"wait")+'">'+esc(statusLabel(v))+'</span>'}
-  function head(title,desc,actions){return '<div class="welcome ac-welcome"><div><h1>'+esc(title)+'</h1><p>'+esc(desc)+
-    '</p></div><div class="sp-actions">'+(actions||"")+'</div></div>'}
+  // Every admin section opens on the shared image hero (see app.js
+  // sectionHero). The figures come from the live admin dashboard plus whatever
+  // this screen has already loaded, so a stat card never shows an invented
+  // number; a section with no data left to show simply omits the card.
+  function acSum(rows,key){return (rows||[]).reduce(function(n,x){return n+Number(x[key]||0)},0)}
+  function acByStatus(rows,st){return (rows||[]).filter(function(x){return (x.status||"")===st}).reduce(function(n,x){return n+Number(x.count||0)},0)}
+  function heroStats(r){
+    var d=ac.cache.dashboard||{};
+    var orgs=d.organizations||[],users=d.users||[],bks=d.bookings||[],adms=d.admissions||[];
+    var teachers=d.teachers||{};
+    var orgTotal=acSum(orgs,"count"),orgVerified=acSum(orgs,"verified_count"),orgPending=acSum(orgs,"pending_count");
+    var pending=Number(d.pendingOwnershipRequests||0)+Number(d.pendingLocationRequests||0)+Number(d.pendingDocuments||0);
+    var clientsTotal=(users||[]).filter(function(u){return u.role==="client"}).reduce(function(n,u){return n+Number(u.count||0)},0);
+    var clientsActive=(users||[]).filter(function(u){return u.role==="client"&&u.status==="active"}).reduce(function(n,u){return n+Number(u.count||0)},0);
+    var suspended=acByStatus(users,"suspended"),usersActive=acByStatus(users,"active"),usersTotal=acSum(users,"count");
+    var L=function(a,b){return lang==="ar"?a:b};
+    var stats=[];
+    if(r==="admin")stats=[
+      {icon:"school",value:orgTotal,labelAr:"المؤسسات",labelEn:"Institutions",sub:L(orgVerified+" موثّقة",orgVerified+" verified"),tone:"primary"},
+      {icon:"teacher",value:teachers.total,labelAr:"المعلمون",labelEn:"Teachers",sub:L((teachers.active||0)+" فعّال",(teachers.active||0)+" active"),tone:"info"},
+      {icon:"users",value:clientsTotal,labelAr:"العملاء",labelEn:"Clients",sub:L(clientsActive+" فعّال",clientsActive+" active"),tone:"pos"},
+      {icon:"shield",value:pending,labelAr:"بانتظار المراجعة",labelEn:"Pending review",tone:"warn"}];
+    else if(r==="schools"||r==="institutions"||r==="institutesAdmin"||r==="collegesAdmin")stats=[
+      {icon:"school",value:orgTotal,labelAr:"إجمالي المؤسسات",labelEn:"Total institutions",tone:"primary"},
+      {icon:"check",value:orgVerified,labelAr:"موثّقة",labelEn:"Verified",tone:"pos"},
+      {icon:"info",value:orgPending,labelAr:"قيد المراجعة",labelEn:"Pending verification",tone:"warn"},
+      {icon:"grid",value:(orgs||[]).filter(function(x){return Number(x.count)>0}).length,labelAr:"أنواع المؤسسات",labelEn:"Institution types",tone:"info"}];
+    else if(r==="teachersAdmin"||r==="teachers")stats=[
+      {icon:"teacher",value:teachers.total,labelAr:"المعلمون",labelEn:"Teachers",tone:"primary"},
+      {icon:"check",value:teachers.active,labelAr:"فعّالون",labelEn:"Active",tone:"pos"},
+      {icon:"info",value:teachers.pending,labelAr:"قيد التحقق",labelEn:"Pending verification",tone:"warn"}];
+    else if(r==="students")stats=[
+      {icon:"users",value:clientsTotal,labelAr:"إجمالي العملاء",labelEn:"Total clients",tone:"primary"},
+      {icon:"check",value:clientsActive,labelAr:"حسابات فعّالة",labelEn:"Active accounts",tone:"pos"},
+      {icon:"x",value:suspended,labelAr:"موقوفة",labelEn:"Suspended",tone:"neg"},
+      {icon:"school",value:orgTotal,labelAr:"المؤسسات",labelEn:"Institutions",tone:"info"}];
+    else if(r==="bookings")stats=[
+      {icon:"calendar",value:acSum(bks,"count"),labelAr:"إجمالي الحجوزات",labelEn:"Total bookings",tone:"primary"},
+      {icon:"check",value:acByStatus(bks,"confirmed"),labelAr:"مؤكدة",labelEn:"Confirmed",tone:"pos"},
+      {icon:"trophy",value:acByStatus(bks,"completed"),labelAr:"مكتملة",labelEn:"Completed",tone:"info"},
+      {icon:"x",value:acByStatus(bks,"cancelled")+acByStatus(bks,"rejected"),labelAr:"ملغاة/مرفوضة",labelEn:"Cancelled/rejected",tone:"neg"}];
+    else if(r==="verify")stats=[
+      {icon:"shield",value:Number(d.pendingOwnershipRequests||0),labelAr:"طلبات الملكية",labelEn:"Ownership requests",tone:"warn"},
+      {icon:"pin",value:Number(d.pendingLocationRequests||0),labelAr:"طلبات المواقع",labelEn:"Location requests",tone:"info"},
+      {icon:"doc",value:Number(d.pendingDocuments||0),labelAr:"وثائق",labelEn:"Documents",tone:"warn"},
+      {icon:"users",value:Number(d.pendingRegistrations||0),labelAr:"تسجيلات",labelEn:"Registrations",tone:"neg"}];
+    else if(r==="academic")stats=[
+      {icon:"college",value:(ac.cache["academic:stages"]||[]).length,labelAr:"المراحل",labelEn:"Stages",tone:"primary"},
+      {icon:"list",value:(ac.cache["academic:grades"]||[]).length,labelAr:"الصفوف",labelEn:"Grades",tone:"info"},
+      {icon:"book",value:(ac.cache["academic:subjects"]||[]).length,labelAr:"المواد",labelEn:"Subjects",tone:"pos"},
+      {icon:"globe",value:(ac.cache["academic:languages"]||[]).length,labelAr:"اللغات",labelEn:"Languages",tone:"info"}];
+    else if(r==="access")stats=[
+      {icon:"users",value:(ac.cache.accessUsers||[]).length,labelAr:"المستخدمون",labelEn:"Users",tone:"primary"},
+      {icon:"shield",value:(ac.cache.roles||[]).length,labelAr:"الأدوار",labelEn:"Roles",tone:"info"},
+      {icon:"check",value:(ac.cache.permissions||[]).length,labelAr:"الصلاحيات",labelEn:"Permissions",tone:"pos"}];
+    return stats;
+  }
+  var HERO_ORG_TYPES={private_school:{ar:"مدارس خاصة",en:"Private schools"},government_school:{ar:"مدارس حكومية",en:"Government schools"},
+    institute:{ar:"معاهد",en:"Institutes"},college:{ar:"كليات",en:"Colleges"},university:{ar:"جامعات",en:"Universities"}};
+  var HERO_STATUS={active:{ar:"فعّال",en:"Active"},pending:{ar:"قيد المراجعة",en:"Pending"},suspended:{ar:"موقوف",en:"Suspended"},
+    confirmed:{ar:"مؤكد",en:"Confirmed"},completed:{ar:"مكتمل",en:"Completed"},cancelled:{ar:"ملغي",en:"Cancelled"},
+    rejected:{ar:"مرفوض",en:"Rejected"},scheduled:{ar:"مجدول",en:"Scheduled"},expired:{ar:"منتهي",en:"Expired"},
+    paused:{ar:"متوقف",en:"Paused"},other:{ar:"أخرى",en:"Other"}};
+  var HERO_ROLES={admin:{ar:"مدير النظام",en:"Administrator"},owner:{ar:"مالك مؤسسة",en:"Institution owner"},
+    teacher:{ar:"معلم",en:"Teacher"},client:{ar:"عميل",en:"Client"},unassigned:{ar:"غير محدد",en:"Unassigned"}};
+  function hcat(label,value){return {label:label,value:Number(value)||0}}
+  function heroDonutFor(r){
+    var d=ac.cache.dashboard||{};
+    var orgs=d.organizations||[],users=d.users||[],bks=d.bookings||[],teachers=d.teachers||{};
+    var L=function(a,b){return lang==="ar"?a:b};
+    if(r==="admin"||r==="schools"||r==="institutions"||r==="institutesAdmin"||r==="collegesAdmin"){
+      return {title:{ar:"المؤسسات حسب النوع",en:"Institutions by type"},center:{ar:"مؤسسة",en:"inst."},
+        categories:(orgs||[]).map(function(o){return hcat(HERO_ORG_TYPES[o.type]||{ar:o.type,en:o.type},o.count)})};
+    }
+    if(r==="teachersAdmin"||r==="teachers"){
+      var act=Number(teachers.active||0),pend=Number(teachers.pending||0),tot=Number(teachers.total||0);
+      return {title:{ar:"حالة المعلمين",en:"Teacher status"},center:{ar:"معلم",en:"teachers"},
+        categories:[hcat(HERO_STATUS.active,act),hcat(HERO_STATUS.pending,pend),hcat(HERO_STATUS.other,Math.max(0,tot-act-pend))]};
+    }
+    if(r==="students"){
+      var cl=(users||[]).filter(function(u){return u.role==="client"});
+      function cs(st){return cl.filter(function(u){return u.status===st}).reduce(function(n,u){return n+Number(u.count||0)},0)}
+      var ca=cs("active"),csu=cs("suspended"),ct=cl.reduce(function(n,u){return n+Number(u.count||0)},0);
+      return {title:{ar:"حالة العملاء",en:"Client status"},center:{ar:"عميل",en:"clients"},
+        categories:[hcat(HERO_STATUS.active,ca),hcat(HERO_STATUS.suspended,csu),hcat(HERO_STATUS.other,Math.max(0,ct-ca-csu))]};
+    }
+    if(r==="bookings"){
+      return {title:{ar:"الحجوزات حسب الحالة",en:"Bookings by status"},center:{ar:"حجز",en:"bookings"},
+        categories:(bks||[]).map(function(x){return hcat(HERO_STATUS[x.status]||{ar:x.status,en:x.status},x.count)})};
+    }
+    if(r==="verify"){
+      return {title:{ar:"المعلّق حسب النوع",en:"Pending by kind"},center:{ar:"طلب",en:"items"},
+        categories:[hcat({ar:"الملكية",en:"Ownership"},d.pendingOwnershipRequests),
+          hcat({ar:"المواقع",en:"Locations"},d.pendingLocationRequests),
+          hcat({ar:"الوثائق",en:"Documents"},d.pendingDocuments),
+          hcat({ar:"التسجيلات",en:"Registrations"},d.pendingRegistrations)]};
+    }
+    if(r==="access"){
+      var byRole={};
+      (users||[]).forEach(function(u){var k=u.role||"unassigned";byRole[k]=(byRole[k]||0)+Number(u.count||0)});
+      return {title:{ar:"المستخدمون حسب الدور",en:"Users by role"},center:{ar:"مستخدم",en:"users"},
+        categories:Object.keys(byRole).map(function(k){return hcat(HERO_ROLES[k]||{ar:k,en:k},byRole[k])})};
+    }
+    if(r==="academic"){
+      return {title:{ar:"مكوّنات الكتالوج",en:"Catalog parts"},center:{ar:"عنصر",en:"items"},
+        categories:[hcat({ar:"المراحل",en:"Stages"},(ac.cache["academic:stages"]||[]).length),
+          hcat({ar:"الصفوف",en:"Grades"},(ac.cache["academic:grades"]||[]).length),
+          hcat({ar:"المواد",en:"Subjects"},(ac.cache["academic:subjects"]||[]).length),
+          hcat({ar:"اللغات",en:"Languages"},(ac.cache["academic:languages"]||[]).length)]};
+    }
+    return null;
+  }
+  function head(title,desc,actions){
+    var r=route();
+    dashboardLoad();
+    if(typeof sectionHero==="function"&&sectionHeroConfig(r)){
+      return sectionHero({route:r,title:title,subtitle:desc,actionHtml:actions,stats:heroStats(r),donut:heroDonutFor(r)});
+    }
+    return '<div class="welcome ac-welcome"><div><h1>'+esc(title)+'</h1><p>'+esc(desc)+
+      '</p></div><div class="sp-actions">'+(actions||"")+'</div></div>'}
+  function dashboardLoad(){ if(!ac.cache.dashboard && !ac.loading.dashboard) load("dashboard","/api/admin/dashboard"); }
   function state(key){if(ac.loading[key])return '<div class="loading-inline"><div class="loader"></div></div>';
     if(ac.errors[key])return '<div class="empty-state ac-error">'+esc(ac.errors[key])+'<div><button class="btn" onclick="acReload(\''+
       key+'\')">'+t("إعادة المحاولة","Retry")+'</button></div></div>';return ""}
@@ -82,9 +201,10 @@
   // Adding or editing happens on its own route (#/schools/new, #/schools/edit/:id),
   // never inside the list and never in a squeezed pop-up.
   function acOrgFormInit(mode,o){
-    ac.orgForm={mode:mode,row:o||null,gov:"",govId:"",dist:"",_error:null,draft:{},
+    ac.orgForm={mode:mode,row:o||null,countryCode:"",gov:"",govId:"",dist:"",_error:null,draft:{},
       tab:"basic",stages:[],subjects:[],docs:[],_refsLoaded:false};
-    if(mode==="edit"&&o){ac.orgForm.gov=o.governorate||"";ac.orgForm.dist=o.district||""}
+    if(mode==="edit"&&o){ac.orgForm.gov=o.governorateCode||"";ac.orgForm.dist=o.districtCode||"";ac.orgForm.countryCode=o.countryCode||""}
+    if(!ac.cache.locCountries)load("locCountries","/api/locations/countries",listOf);
     if(!ac.cache.locGovs)load("locGovs","/api/locations/governorates");
     acOrgLoadRefs();
   }
@@ -120,16 +240,43 @@
   }
   window.acOrgFormClose=function(){ac.orgForm=null;
     var target=route();if(("#/"+target)===location.hash)render();else go(target)};
-  window.acOrgGov=function(code){ac.orgForm.gov=code||"";ac.orgForm.govId="";ac.orgForm.dist="";
-    invalidate("locDist:");var list=ac.cache.locGovs||[];
-    for(var i=0;i<list.length;i++){if(list[i].code===code){ac.orgForm.govId=list[i].id;break}}
-    if(code&&ac.orgForm.govId)load("locDist:"+ac.orgForm.govId,"/api/locations/districts?governorateId="+ac.orgForm.govId);render()};
-  window.acOrgDist=function(code){ac.orgForm.dist=code||""};
-  function acOrgGovOptions(){var out=wOpt("",t("— بدون محافظة —","— No governorate —"),ac.orgForm.gov);
-    (ac.cache.locGovs||[]).forEach(function(g){out+=wOpt(g.code,g.name||g.code,ac.orgForm.gov)});return out}
-  function acOrgDistOptions(){if(!ac.orgForm.govId)return wOpt("",t("— بدون مديرية —","— No district —"),ac.orgForm.dist);
+  // The location cascade: country -> governorate -> district. Every step clears
+  // the levels below it, so a district belonging to another governorate (or to
+  // another country) can never be submitted. Each level is always a real select —
+  // a district field that only appears after a click is a field a reader misses.
+  window.acOrgCountry=function(){
+    var f=ac.orgForm;if(!f)return;
+    f.countryCode=wVal("ac-org-country")||"";f.gov="";f.govId="";f.dist="";
+    invalidate("locDist:");
+    delete f.draft["ac-org-gov"];delete f.draft["ac-org-dist"];
+    render()};
+  window.acOrgGov=function(){
+    var f=ac.orgForm;if(!f)return;
+    f.gov=wVal("ac-org-gov")||"";f.govId="";f.dist="";
+    invalidate("locDist:");
+    var list=ac.cache.locGovs||[];
+    for(var i=0;i<list.length;i++){if(list[i].code===f.gov){f.govId=list[i].id;break}}
+    if(f.govId)load("locDist:"+f.govId,"/api/locations/districts?governorateId="+f.govId,listOf);
+    delete f.draft["ac-org-dist"];
+    render()};
+  window.acOrgDist=function(){var f=ac.orgForm;if(!f)return;f.dist=wVal("ac-org-dist")||""};
+  function acOrgCountryOptions(){
+    var out=wOpt("",t("— بدون بلد —","— No country —"),ac.orgForm.countryCode);
+    (ac.cache.locCountries||[]).forEach(function(c){out+=wOpt(c.code,c.name||c.code,ac.orgForm.countryCode)});
+    return out}
+  function acOrgGovOptions(){
+    var out=wOpt("",t("— اختر البلد أولاً —","— Pick a country first —"),ac.orgForm.gov);
+    (ac.cache.locGovs||[]).forEach(function(g){
+      if(ac.orgForm.countryCode&&g.countryCode&&g.countryCode!==ac.orgForm.countryCode)return;
+      out+=wOpt(g.code,g.name||g.code,ac.orgForm.gov)});
+    return out}
+  function acOrgDistOptions(){
+    if(!ac.orgForm.govId)return wOpt("",t("— اختر المحافظة أولاً —","— Pick a governorate first —"),ac.orgForm.dist);
+    var rows=ac.cache["locDist:"+ac.orgForm.govId];
+    if(!rows)return wOpt("",t("— بانتظار التحميل —","— loading —"),ac.orgForm.dist);
     var out=wOpt("",t("— بدون مديرية —","— No district —"),ac.orgForm.dist);
-    (ac.cache["locDist:"+ac.orgForm.govId]||[]).forEach(function(d){out+=wOpt(d.code,d.name||d.code,ac.orgForm.dist)});return out}
+    rows.forEach(function(d){out+=wOpt(d.code,d.name||d.code,ac.orgForm.dist)});
+    return out}
 
   /* ---- step 2: the stages this institution teaches, with its own fee and seats ---- */
   function orgRefStages(){return ac.cache["orgRef:stages"]||[]}
@@ -271,6 +418,7 @@
       description:wVal("ac-org-desc"),address:wVal("ac-org-address"),neighborhood:wVal("ac-org-neigh"),
       registration_open:(wVal("ac-org-reg")||"open")==="open",
       image:ufUploadPath("ac-org-logo-upload")};
+    var country=wVal("ac-org-country");if(country)payload.country_code=country;
     var gov=wVal("ac-org-gov");if(gov){payload.governorate_code=gov;var dis=wVal("ac-org-dist");if(dis)payload.district_code=dis}
     f._busy=true;f._error=null;
     var req=f.mode==="edit"?apiPut("/api/organizations/"+f.row.id,payload):apiPost("/api/organizations",payload);
@@ -286,7 +434,7 @@
       f._busy=false;
       ac.orgForm=null;invalidate("institutions:");delete ac.cache.dashboard;
       if(res.failures.length){
-        ac.orgForm={mode:"edit",row:{id:res.orgId},gov:"",govId:"",dist:"",tab:"offering",
+        ac.orgForm={mode:"edit",row:{id:res.orgId},countryCode:"",gov:"",govId:"",dist:"",tab:"offering",
           stages:[],subjects:[],docs:[],draft:{},_busy:false,_refsLoaded:false,
           _error:t("حُفظت بيانات المؤسسة، لكن بعض الخطوات لم تكتمل: ","The institution was saved, but some steps did not complete: ")+res.failures.join(" · ")};
         var t2="schools/edit/"+encodeURIComponent(res.orgId);
@@ -363,10 +511,6 @@
     var typeSelVal=f.draft["ac-org-type"]!=null?f.draft["ac-org-type"]:(f.mode==="edit"?(f.row.type||"private_school"):ac.institutionType);
     var typeStr="";orgTypeOps.forEach(function(x){typeStr+=wOpt(x[0],orgTypeLabel(x[0]),typeSelVal)});
     var regOpen=f.draft["ac-org-reg"]!=null?f.draft["ac-org-reg"]:(f.mode==="edit"?(f.row.registrationOpen?"open":"closed"):"open");
-    var distSlot=f.govId?(ac.loading["locDist:"+f.govId]?
-      '<div class="loading-inline"><div class="loader"></div></div>':
-      '<select id="ac-org-dist" onchange="acOrgDist(this.value)">'+acOrgDistOptions()+'</select>'):
-      '<small class="ac-hint">'+t("اختر المحافظة أولاً.","Choose a governorate first.")+'</small>';
 
     var basicStep=
       wInput(t("اسم المؤسسة *","Institution name *"),"ac-org-name",fdv("ac-org-name"),t("اسم المؤسسة","Institution name"))+
@@ -380,8 +524,9 @@
       wInput(t("الموقع الإلكتروني","Website"),"ac-org-website",fdv("ac-org-website"),"https://")+
       '<div class="form-group"><label>'+t("التسجيل","Registration")+'</label><select id="ac-org-reg">'+
         wOpt("open",t("مفتوح","Open"),regOpen)+wOpt("closed",t("مغلق","Closed"),regOpen)+'</select></div>'+
-      wSel(t("المحافظة","Governorate"),"ac-org-gov",acOrgGovOptions(),true)+
-      '<div class="form-group ac-field-wide"><label>'+t("المديرية","District")+'</label>'+distSlot+'</div>'+
+      wSel(t("البلد","Country"),"ac-org-country",acOrgCountryOptions(),"","acOrgCountry()")+
+      wSel(t("المحافظة","Governorate"),"ac-org-gov",acOrgGovOptions(),"","acOrgGov()")+
+      wSel(t("المديرية","District"),"ac-org-dist",acOrgDistOptions(),"","acOrgDist()")+
       wInput(t("الحي","Neighborhood"),"ac-org-neigh",fdv("ac-org-neigh"),"",true)+
       wInput(t("العنوان","Address"),"ac-org-address",fdv("ac-org-address"),"",true)+
       wArea(t("الوصف","Description"),"ac-org-desc",fdv("ac-org-desc"));
@@ -510,10 +655,12 @@
         Object.keys(ac.cache).forEach(function(k){if(k.indexOf("institutions:")===0){
           ((ac.cache[k]||{}).items||[]).forEach(function(x){if(String(x.id)===String(id))row=x})}});
         if(row)acOrgFormInit("edit",row);
-        else{ac.orgForm={mode:"edit",row:null,gov:"",govId:"",dist:"",_error:null,draft:{},
-          tab:"basic",stages:[],subjects:[],docs:[],_refsLoaded:false,_loading:true};
+        // A deep link arrives with a cold cache, so the row is fetched; init still
+        // runs, otherwise the country/governorate/district selects have no options
+        // and the saved location silently disappears from the form.
+        else{acOrgFormInit("edit",null);ac.orgForm._loading=true;
           apiGet("/api/organizations/"+encodeURIComponent(id)).then(function(r){ac.orgForm.row=r;
-            ac.orgForm.gov=r.governorate||"";ac.orgForm.dist=r.district||"";
+            ac.orgForm.countryCode=r.countryCode||"";ac.orgForm.gov=r.governorateCode||"";ac.orgForm.dist=r.districtCode||"";
             ac.orgForm._loading=false;acOrgLoadRefs();render()})
             .catch(function(e){ac.orgForm._error=errorText(e);ac.orgForm._loading=false;render()})}
       } else acOrgFormInit("add",null);
@@ -1200,161 +1347,66 @@
 
   function adminTeacherDetail(d){
     var r=d.row||{};
-    var tabs=[["profile",t("الملف والتواصل","Profile and contact")],["subjects",t("المواد والأسعار","Subjects and pricing")],
-      ["documents",t("الوثائق والشهادات","Documents")],["lifecycle",t("الحالة والحذف","Status and deletion")]];
     var docs=d.docs||[];
-    var body='<div class="ac-teacher-detail"><section class="core-hero"><div class="core-hero-top">'+
-      '<button class="core-action" onclick="acTeacherDetailClose()">'+icon("back",15)+' <span>'+t("رجوع إلى القائمة","Back to the list")+'</span></button>'+
-      '<div class="core-hero-badges">'+teacherBadgeRow(r)+'</div>'+
-      '<div class="core-hero-actions">'+
-        '<button class="core-action" onclick="acTeacherEdit(\''+r.id+'\')">'+icon("edit",15)+' <span>'+t("تعديل","Edit")+'</span></button>'+
-        '<button class="core-action" onclick="acTeacherPublish(\''+r.id+'\',\''+(r.verificationStatus==="verified"?"pending":"verified")+'\')">'+
-          icon("shield",15)+' <span>'+(r.verificationStatus==="verified"?t("إلغاء التوثيق","Unverify"):t("توثيق","Verify"))+'</span></button>'+
-        '<button class="core-action" onclick="printTeacher()">'+icon("printer",15)+' <span>'+t("طباعة","Print")+'</span></button>'+
-        '<div class="export-group">'+icon("download",15)+
-          '<button class="core-action" onclick="exportTeacher(\'xlsx\')" title="'+t("Excel (.xlsx)","Excel (.xlsx)")+'">Excel</button>'+
-          '<button class="core-action" onclick="exportTeacher(\'pdf\')" title="'+t("PDF","PDF")+'">PDF</button>'+
-          '<button class="core-action" onclick="exportTeacher(\'docx\')" title="'+t("Word (.docx)","Word (.docx)")+'">Word</button>'+
-        '</div>'+
-      '</div></div>'+
-      '<div class="core-hero-main"><div class="core-logo">'+teacherAvatar(r)+'</div>'+
-      '<div class="core-hero-copy"><h2>'+esc(teacherName(r))+'</h2>'+
-      '<div class="core-sub">'+esc(r.headline||t("معلم مستقل","Freelance teacher"))+'</div>'+
-      '<div class="core-chips">'+
-        '<span class="core-chip">'+icon("pin",12)+' '+esc(teacherPlace(r)||"—")+'</span>'+
-        (r.experienceYears!=null?'<span class="core-chip">'+icon("chart",12)+' '+esc(r.experienceYears)+' '+t("سنوات خبرة","years")+'</span>':"")+
-        teacherModes(r).map(function(m){return '<span class="core-chip">'+icon("globe",12)+' '+esc(m)+'</span>'}).join("")+
-        '<span class="core-chip">'+icon("tag",12)+' '+esc(String((r.subjects||[]).length))+' '+t("مادة","subjects")+'</span>'+
+    // The admin detail is the SAME `teacherProfileHtml` document the public
+    // profile renders — one layout, no second teacher page. The admin tools are
+    // injected as extra sections and a side card, never as a different design.
+    var back='<button class="picon-btn" title="'+t("رجوع إلى القائمة","Back to the list")+'" onclick="acTeacherDetailClose()">'+icon("back",16)+'</button>';
+    var manage='<div class="ed-card"><h4>'+icon("settings",16)+' '+t("إدارة الحساب","Account management")+'</h4><div class="ed-actions">'+
+      '<button class="btn green" onclick="acTeacherEdit(\''+r.id+'\')">'+icon("edit",15)+' '+t("تعديل","Edit")+'</button>'+
+      '<button class="btn" onclick="acTeacherPublish(\''+r.id+'\',\''+(r.verificationStatus==="verified"?"pending":"verified")+'\')">'+icon("shield",15)+' '+(r.verificationStatus==="verified"?t("إلغاء التوثيق","Unverify"):t("توثيق","Verify"))+'</button>'+
+      (r.status==="suspended"
+        ?'<button class="btn" onclick="acTeacherStatus(\''+r.id+'\',\'active\')">'+icon("check",15)+' '+t("إعادة التفعيل","Reactivate")+'</button>'
+        :'<button class="btn brown" onclick="acTeacherStatus(\''+r.id+'\',\'suspended\')">'+icon("x",15)+' '+t("إيقاف","Suspend")+'</button>')+
+      (r.isProtected
+        ?'<div class="gated-note">'+icon("shield",14)+' '+t("حساب محمي — لا يمكن طلب حذفه.","Protected account — it cannot be deletion-requested.")+'</div>'
+        :(r.deletionRequestId
+          ?'<button class="btn brown" onclick="acTeacherDeletionDecision(\''+r.deletionRequestId+'\',\'approve\')">'+icon("check",15)+' '+t("اعتماد الحذف","Approve deletion")+'</button>'
+          :'<button class="btn" onclick="acTeacherDeleteRequest(\''+r.id+'\')">'+icon("trash",15)+' '+t("طلب حذف المعلم","Request teacher deletion")+'</button>'))+
+      '<button class="btn" onclick="exportTeacher(\'xlsx\')">Excel</button>'+
+      '<button class="btn" onclick="printTeacher()">'+icon("printer",15)+' '+t("طباعة","Print")+'</button>'+
+    '</div></div>';
+
+    var docRows=docs.map(function(doc){
+      return '<tr>'+
+        '<td><a href="/api/teachers/documents/'+esc(doc.id)+'/file" target="_blank" rel="noopener noreferrer" class="ltr-num" dir="ltr">'+icon("file",13)+' '+esc(doc.fileName)+'</a></td>'+
+        '<td>'+esc(teacherDocLabel(doc.docType))+'</td>'+
+        '<td>'+esc(doc.mimeType||"—")+'</td>'+
+        '<td>'+badge(doc.status||"pending")+'</td>'+
+        '<td class="crud-actions">'+
+          '<button class="crud edit" title="'+t("اعتماد","Approve")+'" onclick="acTeacherDocReview(\''+doc.id+'\',\'approved\')">'+icon("check",14)+'</button>'+
+          '<button class="crud" title="'+t("رفض","Reject")+'" onclick="acTeacherDocReview(\''+doc.id+'\',\'rejected\')">'+icon("x",14)+'</button>'+
+          '<button class="crud delete" title="'+t("حذف","Delete")+'" onclick="acTeacherDocDelete(\''+doc.id+'\')">'+icon("trash",14)+'</button>'+
+        '</td></tr>'}).join("");
+    var docTypes=(teacherCatalog()||{}).docTypes||["degree","experience","identity","certificate","other"];
+    var docsPanel='<section class="ed-sec" id="tgDocs"><div class="ed-sec-head"><h3>'+icon("doc",16)+' '+t("الوثائق والشهادات","Documents")+'</h3></div>'+
+      '<div class="ac-form"><div class="ac-form-grid">'+
+      wSel(t("نوع المستند","Document type"),"ac-t-doc-type",docTypes.map(function(x){return wOpt(x,teacherDocLabel(x),"degree")}).join(""))+
+      '<div class="form-group"><label>'+t("الملف (PDF أو صورة، 10 ميجابايت كحد أقصى)","File (PDF or image, up to 10 MB)")+'</label>'+
+      '<input id="ac-t-doc-file" type="file" accept="'+esc(TEACHER_DOC_ACCEPT)+'"></div></div>'+
+      '<div class="ac-form-actions"><button class="btn green" id="ac-t-doc-btn" onclick="acTeacherDocUpload(\''+r.id+'\')">'+
+      icon("download",14)+' '+t("رفع المستند","Upload document")+'</button></div></div>'+
+      '<div class="table-wrap"><table class="tbl"><thead><tr>'+
+      ['الملف','النوع','الصيغة','الحالة','إجراءات'].map(function(h){return '<th>'+t(h,h)+'</th>'}).join("")+
+      '</tr></thead><tbody>'+(docRows||'<tr><td colspan="5">'+t("لا وثائق مرفوعة.","No documents uploaded.")+'</td></tr>')+'</tbody></table></div></section>';
+
+    var lifecycle='<section class="ed-sec" id="tgLifecycle"><div class="ed-sec-head"><h3>'+icon("shield",16)+' '+t("الحالة والحذف","Status and deletion")+'</h3></div>'+
+      '<div class="ed-facts">'+
+       '<div class="ed-fact"><span>'+t("الحالة","Status")+'</span><b>'+badge(r.status)+'</b></div>'+
+       '<div class="ed-fact"><span>'+t("التحقق","Verification")+'</span><b>'+badge(r.verificationStatus||"pending")+'</b></div>'+
+       '<div class="ed-fact"><span>'+t("عدد الوثائق","Documents")+'</span><b>'+esc(String(r.documentCount||docs.length||0))+'</b></div>'+
+       '<div class="ed-fact"><span>'+t("حساب محمي","Protected account")+'</span><b>'+t(r.isProtected?"نعم":"لا",r.isProtected?"Yes":"No")+'</b></div>'+
+       '<div class="ed-fact"><span>'+t("أنشئ في","Created")+'</span><b>'+esc(fmt(r.createdAt))+'</b></div>'+
       '</div>'+
-      (r.bio?'<p>'+esc(r.bio)+'</p>':"")+
-      '<div class="core-hero-actions">'+
-        (teacherContact(r)?waButton(teacherContact(r),{size:15,label:t("محادثة واتساب","WhatsApp chat")}):"")+
-        (r.userPhone||r.phone?'<a class="core-action" dir="ltr" href="tel:'+esc(String(r.userPhone||r.phone).replace(/[^\d+]/g,""))+'">'+icon("phone",15)+' <span>'+esc(r.userPhone||r.phone)+'</span></a>':"")+
-        '<a class="core-action" href="'+esc(teacherMapsUrl(r))+'" target="_blank" rel="noopener noreferrer">'+icon("map",15)+' <span>'+t("فتح الموقع على الخريطة","Open location on the map")+'</span></a>'+
-        (r.userEmail?'<a class="core-action" dir="ltr" href="mailto:'+esc(r.userEmail)+'">'+icon("mail",15)+' <span>'+esc(r.userEmail)+'</span></a>':"")+
-      '</div></div></div></section>';
+      '<p class="ac-hint" style="margin-top:12px">'+t("لا يُحذف معلم بنقرة واحدة: يُسجَّل طلب بسبب مكتوب ثم يعتمده قسم التحقق والمراجعة.","A teacher is never deleted with one click: a written reason is recorded and verification and review approves it.")+'</p>'+
+      (r.deletionRequestId?'<div class="core-chips"><span class="core-chip"><b>'+t("طلب حذف مفتوح","Open deletion request")+'</b></span></div>':'')+
+    '</section>';
 
-    body+='<div class="ac-tabs">'+tabs.map(function(x){
-      return '<button class="'+(d.tab===x[0]?"active":"")+'" onclick="acTeacherDetailTab(\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>';
+    var extraTabs='<button onclick="scrollToProfile(\'tgDocs\')">'+icon("doc",15)+'<span>'+t("الوثائق","Documents")+'</span></button>'+
+      '<button onclick="scrollToProfile(\'tgLifecycle\')">'+icon("shield",15)+'<span>'+t("الحالة","Status")+'</span></button>';
 
-    if(d.tab==="profile"){
-      var qualRows=(r.qualifications||[]).map(function(q){
-        return '<div class="core-row"><span>'+esc(q.year||"—")+'</span><b>'+esc([q.title,q.institutionName,q.degree].filter(Boolean).join(" · "))+'</b></div>'}).join("");
-      var slots=(r.availability||[]).map(function(s){
-        return '<div class="core-row"><span>'+esc(acTeacherDayLabel(s.dayOfWeek))+' · '+esc(acTeacherSlotModeLabel(s.locationMode))+'</span>'+
-          '<b class="ltr-num" dir="ltr">'+esc(s.startTime)+' – '+esc(s.endTime)+'</b></div>'}).join("");
-      body+='<div class="core-grid">'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("بيانات الاتصال","Contact")+'</h3></div>'+
-          '<div class="core-rows">'+teacherContactRows(r)+'</div>'+
-          '<div class="core-map">'+(teacherContact(r)?waButton(teacherContact(r),{size:15,label:t("مراسلة واتساب","Message on WhatsApp")}):"")+'</div></div>'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("الموقع الجغرافي","Location")+'</h3></div>'+
-          '<div class="core-rows">'+teacherLocationRows(r)+'</div>'+
-          '<div class="core-map"><a class="core-action" target="_blank" rel="noopener noreferrer" href="'+esc(teacherMapsUrl(r))+'">'+
-          icon("map",15)+' <span>'+t("فتح على خرائط جوجل","Open in Google Maps")+'</span></a></div></div>'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("طرق التدريس والمستويات","Teaching modes and stages")+'</h3></div>'+
-          '<div class="core-rows">'+
-            '<div class="core-row"><span>'+t("طرق التدريس","Teaching modes")+'</span><b>'+esc(teacherModes(r).join(" / ")||"—")+'</b></div>'+
-            '<div class="core-row"><span>'+t("عن بعد","Online lessons")+'</span><b>'+t(r.offersOnline?"نعم":"لا",r.offersOnline?"Yes":"No")+'</b></div>'+
-            '<div class="core-row"><span>'+t("الانتقال إلى الطالب","Travels to the student")+'</span><b>'+t(r.travelsToStudentHome?"نعم":"لا",r.travelsToStudentHome?"Yes":"No")+'</b></div>'+
-            '<div class="core-row"><span>'+t("استقبال الطلاب","Receives students")+'</span><b>'+t(r.acceptsStudentHome?"نعم":"لا",r.acceptsStudentHome?"Yes":"No")+'</b></div>'+
-            '<div class="core-row"><span>'+t("سنوات الخبرة","Years of experience")+'</span><b>'+esc(r.experienceYears==null?"—":r.experienceYears)+'</b></div>'+
-          '</div><div class="core-chips">'+((r.stages||[]).map(function(s){return '<span class="core-chip">'+esc(s.name)+'</span>'}).join("")||
-            '<span class="gated-value">'+t("لا مستويات محددة","No stages declared")+'</span>')+'</div></div>'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("المهارات","Skills")+'</h3></div>'+
-          '<div class="core-chips">'+((r.skills||[]).map(function(s){return '<span class="core-chip">'+esc(s)+'</span>'}).join("")||
-            '<span class="gated-value">'+t("لا مهارات مسجلة","No skills recorded")+'</span>')+'</div></div>'+
-      '</div>'+
-      '<div class="panel core-panel"><div class="panel-title"><h3>'+t("أوقات التوفر","Weekly availability")+'</h3></div>'+
-        (slots?('<div class="core-rows">'+slots+'</div>'):'<div class="empty-state">'+t("لم تُسجّل أوقات توفر.","No availability recorded.")+'</div>')+'</div>'+
-      '<div class="panel core-panel"><div class="panel-title"><h3>'+t("المؤهلات والخبرات","Qualifications and experience")+'</h3></div>'+
-        (qualRows?('<div class="core-rows">'+qualRows+'</div>'):'<div class="empty-state">'+t("لم تُسجّل مؤهلات.","No qualifications recorded.")+'</div>')+'</div>';
-    }
-
-    if(d.tab==="subjects"){
-      var rows=(r.subjects||[]).map(function(s){
-        // The list price stays visible and the promotion is shown next to it, so
-        // a discounted subject can never look like a cheaper list price.
-        var price='<span dir="ltr" class="ltr-num">'+(s.amount==null?"—":esc(s.amount))+'</span>';
-        var promo="";
-        if(s.discountPercent!=null&&Number(s.discountPercent)>0){
-          var net=Number(s.amount||0)*(1-Number(s.discountPercent)/100);
-          promo='<div class="entity-sub"><span class="badge ok">'+esc(String(s.discountPercent))+'%</span> '+
-            '<span dir="ltr" class="ltr-num">'+esc(net.toFixed(2))+'</span></div>'+
-            (s.promoLabel?'<div class="entity-sub">'+esc(s.promoLabel)+'</div>':"");
-        }
-        return '<tr><td><b>'+esc(s.name)+'</b></td>'+
-          // Where this subject is taught sits next to its price: the two are one
-          // offer, so the reader never has to look in a different panel for it.
-          '<td>'+esc(s.locationMode?acTeacherSlotModeLabel(s.locationMode):"—")+'</td>'+
-          '<td>'+price+promo+'</td>'+
-          '<td>'+esc(s.currency||"—")+'</td>'+
-          '<td>'+esc(teacherPeriodLabel(s.billingPeriod))+'</td>'+
-          '<td>'+esc(teacherLangLabel(s.languageCode))+'</td>'+
-          '<td>'+(s.isActive===false?badge("inactive"):badge("active"))+'</td></tr>'}).join("");
-      body+='<div class="panel core-panel"><div class="panel-title"><h3>'+t("المواد الدراسية والأسعار","Subjects and pricing")+'</h3>'+
-        '<button class="btn green" onclick="acTeacherEdit(\''+r.id+'\')">'+icon("edit",14)+' '+t("تعديل الأسعار","Edit prices")+'</button></div>'+
-        '<p class="ac-hint">'+t("كل مادة يحملها المعلم لها مكان تدريسها وسعرها وعملتها ودوريتها ولغتها الخاصة — الرسوم ليست على مستوى المنصة.",
-          "Every subject a teacher carries has its own teaching place, price, currency, billing period and language — nothing is priced at platform level.")+'</p>'+
-        '<div class="table-wrap"><table class="tbl"><thead><tr>'+
-        ['المادة','مكان التدريس','السعر','العملة','الدورية','لغة التدريس','الحالة'].map(function(h){return '<th>'+t(h,h)+'</th>'}).join("")+
-        '</tr></thead><tbody>'+(rows||'<tr><td colspan="7">'+t("لا مواد مسجلة.","No subjects recorded.")+'</td></tr>')+'</tbody></table></div></div>';
-    }
-
-    if(d.tab==="documents"){
-      var docRows=docs.map(function(doc){
-        return '<tr><td><a href="/api/teachers/documents/'+esc(doc.id)+'/file" target="_blank" rel="noopener noreferrer" class="ltr-num" dir="ltr">'+icon("file",13)+' '+esc(doc.fileName)+'</a></td>'+
-          '<td>'+esc(teacherDocLabel(doc.docType))+'</td>'+
-          '<td>'+esc(doc.mimeType||"—")+'</td>'+
-          '<td>'+badge(doc.status||"pending")+'</td>'+
-          '<td class="crud-actions">'+
-            '<button class="crud edit" title="'+t("اعتماد","Approve")+'" onclick="acTeacherDocReview(\''+doc.id+'\',\'approved\')">'+icon("check",14)+'</button>'+
-            '<button class="crud" title="'+t("رفض","Reject")+'" onclick="acTeacherDocReview(\''+doc.id+'\',\'rejected\')">'+icon("x",14)+'</button>'+
-            '<button class="crud delete" title="'+t("حذف","Delete")+'" onclick="acTeacherDocDelete(\''+doc.id+'\')">'+icon("trash",14)+'</button>'+
-          '</td></tr>'}).join("");
-      var docTypes=(teacherCatalog()||{}).docTypes||["degree","experience","identity","certificate","other"];
-      body+='<div class="panel core-panel"><div class="panel-title"><h3>'+t("الوثائق والشهادات","Documents and certificates")+'</h3></div>'+
-        '<div class="ac-form"><div class="ac-form-grid">'+
-        wSel(t("نوع المستند","Document type"),"ac-t-doc-type",docTypes.map(function(x){return wOpt(x,teacherDocLabel(x),"degree")}).join(""))+
-        '<div class="form-group"><label>'+t("الملف (PDF أو صورة، 10 ميجابايت كحد أقصى)","File (PDF or image, up to 10 MB)")+'</label>'+
-        '<input id="ac-t-doc-file" type="file" accept="'+esc(TEACHER_DOC_ACCEPT)+'"></div></div>'+
-        '<div class="ac-form-actions"><button class="btn green" id="ac-t-doc-btn" onclick="acTeacherDocUpload(\''+r.id+'\')">'+
-        icon("download",14)+' '+t("رفع المستند","Upload document")+'</button></div></div>'+
-        '<div class="table-wrap"><table class="tbl"><thead><tr>'+
-        ['الملف','النوع','الصيغة','الحالة','إجراءات'].map(function(h){return '<th>'+t(h,h)+'</th>'}).join("")+
-        '</tr></thead><tbody>'+(docRows||'<tr><td colspan="5">'+t("لا وثائق مرفوعة.","No documents uploaded.")+'</td></tr>')+'</tbody></table></div></div>';
-    }
-
-    if(d.tab==="lifecycle"){
-      body+='<div class="core-grid">'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("حالة الحساب","Account lifecycle")+'</h3></div>'+
-          '<div class="core-rows">'+
-          '<div class="core-row"><span>'+t("الحالة","Status")+'</span><b>'+badge(r.status)+'</b></div>'+
-          '<div class="core-row"><span>'+t("التحقق","Verification")+'</span><b>'+badge(r.verificationStatus||"pending")+'</b></div>'+
-          '<div class="core-row"><span>'+t("عدد الوثائق","Documents")+'</span><b>'+esc(String(r.documentCount||docs.length||0))+'</b></div>'+
-          '<div class="core-row"><span>'+t("حساب محمي","Protected account")+'</span><b>'+t(r.isProtected?"نعم":"لا",r.isProtected?"Yes":"No")+'</b></div>'+
-          '<div class="core-row"><span>'+t("أنشئ في","Created")+'</span><b>'+esc(fmt(r.createdAt))+'</b></div>'+
-          '</div>'+
-          '<div class="core-row-actions">'+
-            (r.status==="suspended"
-              ?'<button class="btn green" onclick="acTeacherStatus(\''+r.id+'\',\'active\')">'+icon("check",14)+' '+t("إعادة التفعيل","Reactivate")+'</button>'
-              :'<button class="btn" onclick="acTeacherStatus(\''+r.id+'\',\'suspended\')">'+icon("x",14)+' '+t("إيقاف","Suspend")+'</button>')+
-            '<button class="btn" onclick="acTeacherPublish(\''+r.id+'\',\''+(r.verificationStatus==="verified"?"pending":"verified")+'\')">'+
-              icon("shield",14)+' '+(r.verificationStatus==="verified"?t("إلغاء التوثيق","Unverify"):t("توثيق المعلم","Verify teacher"))+'</button>'+
-          '</div></div>'+
-        '<div class="panel core-panel"><div class="panel-title"><h3>'+t("طلب الحذف","Deletion request")+'</h3></div>'+
-          '<p class="ac-hint">'+t("لا يُحذف معلم بنقرة واحدة: يُسجَّل طلب بسبب مكتوب ثم يعتمده قسم التحقق والمراجعة.",
-            "A teacher is never deleted with one click: a written reason is recorded and verification and review approves it.")+'</p>'+
-          (r.deletionRequestId
-            ?'<div class="core-chips"><span class="core-chip"><b>'+t("طلب حذف مفتوح","Open deletion request")+'</b></span></div>'+
-             '<div class="core-row-actions">'+
-             '<button class="btn green" onclick="acTeacherDeletionDecision(\''+r.deletionRequestId+'\',\'approve\')">'+icon("check",14)+' '+t("اعتماد الحذف","Approve deletion")+'</button>'+
-             '<button class="btn" onclick="acTeacherDeletionDecision(\''+r.deletionRequestId+'\',\'reject\')">'+icon("x",14)+' '+t("رفض الطلب","Reject request")+'</button></div>'
-            :(r.isProtected
-              ?'<div class="gated-note">'+icon("shield",14)+' '+t("حساب محمي — لا يمكن طلب حذفه.","Protected account — it cannot be deletion-requested.")+'</div>'
-              :'<div class="core-row-actions"><button class="btn" onclick="acTeacherDeleteRequest(\''+r.id+'\')">'+icon("trash",14)+' '+t("طلب حذف المعلم","Request teacher deletion")+'</button></div>'))+
-        '</div></div>';
-    }
-    return body+'</div>'}
+    return teacherProfileHtml(r,{back:back,extraSide:manage,extraMain:docsPanel+lifecycle,extraTabs:extraTabs});
+  }
 
   // ---- reports: print, Excel, Word, PDF ----
   function teacherReportData(){
@@ -1447,7 +1499,9 @@
 
   function teacherCardList(rows){
     if(!rows.length)return '<div class="empty-state">'+t("لا معلمين مطابقين للتصفية الحالية.","No teachers match the current filter.")+'</div>';
-    return '<div class="org-grid">'+rows.map(teacherCard).join("")+'</div>'}
+    // The same card the public teacher directory renders; the dashboard only adds
+    // its management buttons (see teacherCard).
+    return '<div class="directory-grid">'+rows.map(function(r){return teacherCard(r,{admin:true})}).join("")+'</div>'}
   function teacherTable(rows){
     var head=['المعلم','الموقع','المواد والأسعار','الاتصال','الحالة','إجراءات'];
     var body=rows.map(function(r){
@@ -1532,14 +1586,15 @@
     if(rows===null)load("teachers:"+listUrl,listUrl,listOf);
     if(ac.teacherTab==="deletions")load("teacherDeletions","/api/teachers/deletion-requests",listOf);
     var cat=teacherCatalog();
-    var body='<div class="panel-title"><div><h2>'+t("المعلمون","Teachers")+'</h2>'+
-      '<p class="ac-hint">'+t("المعلم مستقل: له حساب دخول حقيقي، ومواد بأسعارها، ووثائقه، وموقعه. الرسوم تُحدَّد لكل مادة وليست على مستوى المنصة.",
-        "A teacher is independent: a real login account, per-subject prices, their own documents and their own location. Prices sit on the subject, never on the platform.")+'</p></div>'+
-      '<button class="btn green" onclick="acTeacherFormOpen(\'add\')">'+icon("plus",14)+' '+t("إضافة معلم","Add teacher")+'</button>'+
+    var teacherActions='<button class="btn green" onclick="acTeacherFormOpen(\'add\')">'+icon("plus",14)+' '+t("إضافة معلم","Add teacher")+'</button>'+
       '<div class="view-toggle">'+
         '<button class="'+(ac.teachersView==="cards"?"active":"")+'" onclick="acTeacherViewSet(\'cards\')">'+icon("grid",14)+' '+t("كروت","Cards")+'</button>'+
         '<button class="'+(ac.teachersView==="table"?"active":"")+'" onclick="acTeacherViewSet(\'table\')">'+icon("list",14)+' '+t("جدول","Table")+'</button>'+
-      '</div></div>';
+      '</div>';
+    var body=head(t("المعلمون","Teachers"),
+      t("المعلم مستقل: له حساب دخول حقيقي، ومواد بأسعارها، ووثائقه، وموقعه. الرسوم تُحدَّد لكل مادة وليست على مستوى المنصة.",
+        "A teacher is independent: a real login account, per-subject prices, their own documents and their own location. Prices sit on the subject, never on the platform."),
+      teacherActions);
     body+='<div class="ac-tabs">'+TEACHER_TABS.map(function(x){
       return '<button class="'+(ac.teacherTab===x[0]?"active":"")+'" onclick="acTeacherTabSet(\''+x[0]+'\')">'+t(x[1],x[2])+'</button>'}).join("")+'</div>';
     body+='<div class="ac-filter-bar">'+
@@ -1584,7 +1639,7 @@
     if(!d)return adminShell(body+state("dashboard"));
     var cards=[[sum(d.organizations,"count"),t("المؤسسات التعليمية","Institutions"),"institutions"],
       [Number((d.teachers||{}).total||0),t("المدرسون","Teachers"),"teachersAdmin"],
-      [sum(d.users,"count"),t("المستخدمون","Users"),"students"],[sum(d.bookings,"count"),t("الحجوزات","Bookings"),"bookings"],
+      [sum((d.users||[]).filter(function(u){return u.role==="client"}),"count"),t("العملاء","Clients"),"students"],[sum(d.bookings,"count"),t("الحجوزات","Bookings"),"bookings"],
       [sum(d.admissions,"count"),t("طلبات القبول","Admissions"),"reports"],
       [Number(d.pendingOwnershipRequests||0)+Number(d.pendingLocationRequests||0)+Number(d.pendingDocuments||0),t("بانتظار المراجعة","Pending review"),"verify"]];
     body+='<div class="ac-kpis">'+cards.map(function(x){return '<button class="ac-kpi" onclick="go(\''+x[2]+'\')"><strong>'+
@@ -1618,6 +1673,9 @@
   // what identifies an institution at a glance — logo, type, owner avatar and
   // name, location, and a direct WhatsApp channel. Phone and email carry
   // dir="ltr" so the leading "+967" stays on the left in the Arabic (RTL) shell.
+  // The institution card is the single shared `orgCard` from app.js, used by both
+  // the public directory and this dashboard grid. `avatarFor` / `contactLine` stay
+  // because the table view below still renders the owner and contact cells.
   function orgOwnerName(o){return o.principalName||o.ownerName||""}
   function avatarFor(o){
     var name=orgOwnerName(o);
@@ -1645,32 +1703,8 @@
     if(u.teacherKind==="institutional")return '<span class="badge ok">'+t("مدرس مؤسسة","Institution teacher")+'</span>';
     return "—";
   }
-  function orgCard(o){
-    var place=[o.governorate,o.district,o.neighborhood].filter(Boolean).join(" · ");
-    var wa=o.whatsapp||o.phone;
-    var owner=orgOwnerName(o);
-    // The whole card is the target: a click anywhere opens the institution, and
-    // the action buttons inside stop propagation so a verify or archive never
-    // doubles as a visit. tabindex + Enter keeps that reachable by keyboard.
-    var open="go('detail?id="+o.id+"')";
-    return '<article class="org-card" tabindex="0" role="link" onclick="'+open+
-      '" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+open+'}" aria-label="'+esc(o.name)+'">'+
-      '<div class="org-card-head"><div class="org-card-logo"><img src="'+esc(orgLogo(o))+'" alt="'+esc(o.name)+'" loading="lazy"></div>'+
-      '<div class="org-card-id"><h3>'+esc(o.name)+'</h3><div class="entity-sub">'+esc(orgTypeLabel(o.type))+'</div>'+
-      '<div class="org-card-badges">'+badge(o.verified?"verified":o.verificationStatus||"pending")+
-      badge(o.registrationOpen?"active":"inactive")+'</div></div></div>'+
-      '<div class="org-card-owner">'+avatarFor(o)+'<div><span class="owner-role">'+
-      esc(t("المالك / المدير","Owner / principal"))+'</span><b>'+esc(owner||t("غير مرتبط بمالك","No owner linked"))+'</b></div></div>'+
-      '<div class="org-card-meta">'+
-      '<div class="org-card-line">'+icon("pin",13)+'<span>'+esc(place||"—")+'</span></div>'+
-      contactLine(o)+
-      '</div>'+
-      '<div class="org-card-actions">'+
-      '<button class="btn green" onclick="event.stopPropagation();'+open+'">'+icon("eye",14)+' '+t("التفاصيل","Details")+'</button>'+
-      (wa?'<span onclick="event.stopPropagation()">'+waButton(wa,{compact:true,size:14,label:t("واتساب","WhatsApp")})+'</span>':"")+
-      '<button class="crud edit" title="'+t("تعديل","Edit")+'" onclick="event.stopPropagation();acOrgEdit(\''+o.id+'\')">'+icon("edit",14)+'</button>'+
-      '</div></article>';
-  }
+  // (the shared institution card lives in app.js as `orgCard`; this IIFE no longer
+  // keeps a second copy, so the landing and the dashboard render one card.)
   window.acInstitutionsView=function(v){ac.institutionsView=v;render()};
 
   window.adminInstitutionsPage=function(group){
@@ -1701,7 +1735,8 @@
       '<button type="button" class="'+(ac.institutionsView==="table"?"active":"")+
       '" onclick="acInstitutionsView(\'table\')">'+icon("list",13)+' '+t("جدول","Table")+'</button></div></form>';
     var d=ac.cache[key];if(!d)body+=state(key);else if(!d.items.length)body+='<div class="empty-state">'+t("لا توجد مؤسسات.","No institutions.")+'</div>';
-    else if(ac.institutionsView==="cards")body+='<div class="org-grid">'+d.items.map(orgCard).join("")+'</div>';
+    else     if(ac.institutionsView==="cards")body+='<div class="directory-grid">'+d.items.map(function(o){
+      return orgCard(orgCardFromApi(o),{admin:true})}).join("")+'</div>';
     else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المؤسسة","Institution")+'</th><th>'+
       t("المالك / المدير","Owner / principal")+'</th><th>'+t("الموقع","Location")+'</th><th>'+t("الاتصال","Contact")+'</th><th>'+
       t("التحقق","Verification")+'</th><th></th></tr></thead><tbody>'+d.items.map(function(o){
@@ -1725,14 +1760,132 @@
     return adminShell(body+'</section>')
   };
 
-  window.acUserFilters=function(e){e.preventDefault();ac.userRole=(document.getElementById("ac-user-role")||{}).value||"";
+  window.acUserFilters=function(e){e.preventDefault();ac.userRole="client";ac.userOffset=0;
     ac.userStatus=(document.getElementById("ac-user-status")||{}).value||"";ac.userSearch=(document.getElementById("ac-user-q")||{}).value||"";
     ac.userOrg=(document.getElementById("ac-user-org")||{}).value||"";
     invalidate("users:");render()};
+  window.acUserPage=function(delta){ac.userOffset=Math.max(0,ac.userOffset+delta*25);render()};
   window.acUserStatus=function(id,status){apiPatch("/api/users/"+id,{status:status}).then(function(){
-    invalidate("users:");delete ac.cache.dashboard;render()}).catch(function(e){alert(errorText(e))})};
+    invalidate("users:");delete ac.cache["user:"+id];delete ac.cache.dashboard;render()}).catch(function(e){alert(errorText(e))})};
+  function clientKindLabel(kind){return ({visitor:t("زائر مسجل","Registered visitor"),student:t("طالب","Student"),parent:t("ولي أمر","Parent"),both:t("طالب وولي أمر","Student and parent"),other:t("أخرى","Other"),unspecified:t("غير محدد","Unspecified")})[kind]||t("غير محدد","Unspecified")}
+  function clientFeedbackLabel(kind){return ({suggestion:t("اقتراح","Suggestion"),complaint:t("شكوى","Complaint"),inquiry:t("استفسار","Inquiry")})[kind]||kind}
+  window.acUserDelete=function(id){
+    var u=ac.cache["user:"+id];
+    if(u&&u.isProtected){alert(t("هذا حساب تجريبي محمي ولا يمكن حذفه.","This protected fixture account cannot be deleted."));return}
+    if(!confirm(t("حذف حساب العميل؟ سيُغلق الحساب ويُخفى من القائمة مع بقاء سجل المراجعة.","Delete this client account? It will be closed and hidden while its audit record remains.")))return;
+    apiDelete("/api/users/"+encodeURIComponent(id)).then(function(){invalidate("users:");delete ac.cache["user:"+id];delete ac.cache.dashboard;go("students");render()}).catch(function(e){alert(errorText(e))});
+  };
+  window.acFeedbackStatus=function(userId,feedbackId,status){apiPatch("/api/clients/"+encodeURIComponent(userId)+"/feedback/"+encodeURIComponent(feedbackId),{status:status}).then(function(){delete ac.cache["client-feedback:"+userId];render()}).catch(function(e){alert(errorText(e))})};
+  window.acClientRefresh=function(id){delete ac.cache["client-profile:"+id];delete ac.cache["client-insights:"+id];delete ac.cache["client-feedback:"+id];render()};
+  window.acClientCountry=function(){var cc=(document.getElementById("ac-u-country")||{}).value||"";
+    var gov=document.getElementById("ac-u-gov"),dist=document.getElementById("ac-u-dist");
+    if(gov)gov.innerHTML=wOpt("",t("اختر المحافظة","Select governorate"))+((ac.cache["client-govs"]||[]).filter(function(g){return !!cc&&g.countryCode===cc})).map(function(g){return wOpt(g.id,g.name)}).join("");
+    if(dist)dist.innerHTML=wOpt("",t("اختر المديرية","Select district"))};
+  window.acClientGov=function(){var id=(document.getElementById("ac-u-gov")||{}).value||"",dist=document.getElementById("ac-u-dist");
+    if(dist)dist.innerHTML=wOpt("",t("اختر المديرية","Select district"));if(!id)return;
+    apiGet("/api/locations/districts?governorateId="+encodeURIComponent(id)).then(function(rows){if(dist&&String((document.getElementById("ac-u-gov")||{}).value)===String(id))dist.innerHTML=wOpt("",t("اختر المديرية","Select district"))+(rows||[]).map(function(d){return wOpt(d.id,d.name)}).join("")})};
+  function adminAccountDetail(u){
+    var id=u.id,profileKey="client-profile:"+id,insightKey="client-insights:"+id,feedbackKey="client-feedback:"+id;
+    load(profileKey,"/api/clients/"+encodeURIComponent(id)+"/profile");
+    load(insightKey,"/api/clients/"+encodeURIComponent(id)+"/insights");
+    load(feedbackKey,"/api/clients/"+encodeURIComponent(id)+"/feedback");
+    var p=ac.cache[profileKey]||{},insights=ac.cache[insightKey]||{},feedback=ac.cache[feedbackKey]||[];
+    var pairs=function(rows,key,value,format){return rows&&rows.length?rows.map(function(x){return '<div class="ed-fact"><span>'+esc(format?format(x[key]):x[key])+'</span><b>'+esc(x[value])+'</b></div>'}).join(""):'<div class="empty-state">'+t("لا توجد بيانات مسجلة بعد.","No recorded data yet.")+'</div>'};
+    var sectionLabel=function(s){return ({home:t("الرئيسية","Home"),private:t("المدارس الخاصة","Private schools"),government:t("المدارس الحكومية","Government schools"),colleges:t("الكليات","Colleges"),institutes:t("المعاهد","Institutes"),teachers:t("المدرسون","Teachers"),detail:t("تفاصيل مؤسسة","Institution details"),teacher:t("تفاصيل معلم","Teacher details")})[s]||s};
+    var place=[p.country_code,p.governorate_name,p.district_name].filter(Boolean).join(" · ")||"—";
+    var title=t("تفاصيل حساب العميل","Client account details");
+    var roleText=u.role==="client"?t("عميل مسجل","Registered client"):u.role==="teacher"?t("معلم","Teacher"):u.role==="owner"?t("مالك مؤسسة","Institution owner"):u.role||"—";
+    var initial=esc(String(u.name||"؟").trim().charAt(0)||"؟");
+    var detail='<div class="ptopbar"><div class="pcrumbs"><a href="#/students">'+t("العملاء","Clients")+'</a><span class="psep">›</span><b>'+esc(u.name||"—")+'</b></div></div>'+
+      '<div class="ed tv-detail account-detail"><header class="ed-cover tv-cover"><div class="ed-cover-top"><span class="badge ok">'+esc(title)+'</span><button class="btn" onclick="go(\'students\')">'+t("العودة للقائمة","Back to list")+'</button></div><div class="ed-identity"><div class="ed-logo ed-logo-initial">'+initial+'</div><div class="ed-id-copy"><div class="ed-badges">'+badge(u.status)+'</div><h1>'+esc(u.name||"—")+'</h1><p class="ed-tagline">'+esc(u.email||"—")+'</p></div></div></header>'+
+      '<div class="ed-strip"><div class="ed-stat"><b>'+esc(roleText)+'</b><span>'+t("نوع الحساب","Account type")+'</span></div><div class="ed-stat"><b>'+esc(statusLabel(u.status))+'</b><span>'+t("الحالة","Status")+'</span></div><div class="ed-stat"><b>'+esc(u.organizationName||"—")+'</b><span>'+t("المؤسسة المرتبطة","Institution")+'</span></div></div>'+
+      '<div class="ed-body"><div class="ed-main"><section class="ed-sec"><div class="ed-sec-head"><h3>'+icon("user",18)+' '+t("معلومات الحساب","Account information")+'</h3></div><div class="ed-facts">'+
+      '<div class="ed-fact"><span>'+t("الاسم","Name")+'</span><b>'+esc(u.name||"—")+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("البريد الإلكتروني","Email")+'</span><b dir="ltr">'+esc(u.email||"—")+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("الهاتف","Phone")+'</span><b dir="ltr">'+esc(u.phone||"—")+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("تاريخ الإنشاء","Created")+'</span><b>'+esc(fmt(u.createdAt))+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("آخر تحديث","Updated")+'</span><b>'+esc(fmt(u.updatedAt))+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("التصنيف","Classification")+'</span><b>'+esc(clientKindLabel(p.client_kind))+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("الموقع المسجل","Registered location")+'</span><b>'+esc(place)+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("أماكن الاهتمام","Preferred locations")+'</span><b>'+esc(p.preferred_locations||"—")+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("الاهتمامات","Interests")+'</span><b>'+esc(p.interests||"—")+'</b></div>'+
+      '<div class="ed-fact"><span>'+t("طريقة التواصل المفضلة","Preferred contact")+'</span><b>'+esc(p.contact_preference||"—")+'</b></div></div></section>'+
+      '<section class="ed-sec"><div class="ed-sec-head"><h3>'+t("نشاط آخر 90 يوماً","Activity in the last 90 days")+'</h3><button class="btn" onclick="acClientRefresh(\''+id+'\')">'+t("تحديث البيانات","Refresh data")+'</button></div>'+
+      '<p>'+t("يظهر النشاط بعد موافقة العميل على التحليلات.","Activity appears after client analytics consent.")+'</p>'+
+      '<h4>'+t("الأقسام الأكثر زيارة","Most visited sections")+'</h4>'+pairs(insights.sections,"section","count",sectionLabel)+
+      '<h4>'+t("ساعات النشاط (توقيت الرياض)","Active hours (Riyadh time)")+'</h4>'+pairs(insights.hours,"hour","count",function(h){return String(h).padStart(2,"0")+":00"})+
+      '<h4>'+t("أماكن البحث المتكررة","Repeated search locations")+'</h4>'+pairs(insights.places,"location","count")+
+      '<h4>'+t("كلمات البحث المتكررة","Repeated searches")+'</h4>'+pairs(insights.searches,"term","count")+'</section>'+
+      '<section class="ed-sec"><div class="ed-sec-head"><h3>'+t("التعاملات المسجلة","Recorded interactions")+'</h3></div>'+
+      '<div class="ed-fact"><span>'+t("آخر دخول","Last login")+'</span><b>'+esc(fmt(insights.lastLogin))+'</b></div>'+
+      '<h4>'+t("الحجوزات","Bookings")+'</h4>'+pairs(insights.bookings,"status","count",statusLabel)+
+      '<h4>'+t("طلبات القبول","Admission applications")+'</h4>'+pairs(insights.admissions,"status","count",statusLabel)+'</section>'+
+      '<section class="ed-sec"><div class="ed-sec-head"><h3>'+t("اقتراحات وشكاوى واستفسارات","Suggestions, complaints and inquiries")+'</h3></div>'+
+      (feedback.length?feedback.map(function(f){return '<article class="ed-fact"><span>'+esc(clientFeedbackLabel(f.kind))+' · '+esc(fmt(f.created_at))+'</span><b>'+esc(f.body)+'</b><select onchange="acFeedbackStatus(\''+id+'\',\''+f.id+'\',this.value)">'+[["open",t("مفتوح","Open")],["in_progress",t("قيد المعالجة","In progress")],["closed",t("مغلق","Closed")]].map(function(s){return wOpt(s[0],s[1],f.status)}).join("")+'</select></article>'}).join(""):'<div class="empty-state">'+t("لا توجد طلبات بعد.","No submissions yet.")+'</div>')+'</section></div>'+
+      '<aside class="ed-side"><div class="ed-card tv-booking"><h4>'+icon("edit",16)+' '+t("إدارة الحساب","Manage account")+'</h4><p>'+t("الملاحظات الداخلية: ","Internal notes: ")+esc(p.admin_notes||"—")+'</p><button class="btn green tv-contact-btn" onclick="go(\'students/edit/'+encodeURIComponent(u.id)+'\')">'+icon("edit",15)+' '+t("تعديل الحساب","Edit account")+'</button>'+
+      '<button class="btn" onclick="acUserStatus(\''+id+'\',\''+(u.status==="suspended"?"active":"suspended")+'\')">'+(u.status==="suspended"?t("تفعيل","Activate"):t("إيقاف","Suspend"))+'</button>'+
+      (u.isProtected?"":'<button class="btn" onclick="acUserDelete(\''+id+'\')">'+t("حذف الحساب","Delete account")+'</button>')+'</div></aside></div></div>';
+    return adminShell(detail);
+  }
+  window.acUserSave=function(){
+    var id=routeSubId(),isNew=routeSub()==="new",base=isNew?"user:new":"user:"+id,u=isNew?{}:ac.cache[base];if(!u)return;
+    var val=function(x){return document.getElementById(x).value.trim()};
+    var payload={name:val("ac-u-name"),email:val("ac-u-email"),phone:val("ac-u-phone")};
+    if(isNew){payload.password=val("ac-u-password");var country=(ac.cache["client-countries"]||[]).filter(function(c){return c.code===(val("ac-u-country")||"YE")})[0];
+      payload.countryIso=country?country.code:"YE";payload.phoneCountryCode=country?country.callingCode:"967"}
+    else payload.status=val("ac-u-status");
+    var profile={clientKind:val("ac-u-kind"),interests:val("ac-u-interests"),preferredLocations:val("ac-u-places"),
+      contactPreference:val("ac-u-contact"),adminNotes:val("ac-u-notes"),countryCode:val("ac-u-country"),
+      governorateId:val("ac-u-gov")||null,districtId:val("ac-u-dist")||null};
+    ac.userDraft={id:id,values:payload,profile:profile};
+    var issue=ufValidate([{id:"ac-u-name",label:t("الاسم","Name"),tab:"basic"},{id:"ac-u-email",label:t("البريد الإلكتروني","Email"),tab:"basic"}]);
+    if(issue){ac.errors[base]=t("أكمل الحقل المطلوب: ","Complete required field: ")+issue.label;render();var bad=document.getElementById(issue.id);if(bad)bad.focus();return}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)){ac.errors[base]=t("البريد الإلكتروني غير صالح.","Enter a valid email address.");render();return}
+    if(isNew&&(!payload.password||payload.password.length<8||!/[A-Z]/.test(payload.password)||!/[^A-Za-z0-9\s]/.test(payload.password))){ac.errors[base]=t("كلمة المرور تحتاج 8 أحرف وحرفاً كبيراً ورمزاً.","Password needs 8 characters, an uppercase letter and a symbol.");render();return}
+    var createdId=null,request=isNew?apiPost("/api/users",payload):apiPatch("/api/users/"+encodeURIComponent(id),payload);
+    request.then(function(saved){var savedId=isNew?saved.id:id;if(isNew)createdId=savedId;return apiPut("/api/clients/"+encodeURIComponent(savedId)+"/profile",profile).then(function(){return savedId})}).then(function(savedId){
+      delete ac.cache[base];delete ac.cache["client-profile:"+savedId];delete ac.errors[base];ac.userDraft=null;invalidate("users:");delete ac.cache.dashboard;go("students/view/"+encodeURIComponent(savedId));render();
+    }).catch(function(e){if(isNew&&createdId){ac.errors["user:"+createdId]=errorText(e);ac.userDraft=null;go("students/edit/"+encodeURIComponent(createdId))}
+      else ac.errors[base]=errorText(e);render()});
+  };
+  function adminAccountEdit(u,id){
+    if(ac.userDraft&&ac.userDraft.id===id)u=Object.assign({},u,ac.userDraft.values);
+    var isNew=!id,p={};
+    if(!isNew){var pk="client-profile:"+id;load(pk,"/api/clients/"+encodeURIComponent(id)+"/profile");p=ac.cache[pk]||{}}
+    if(ac.userDraft&&ac.userDraft.id===id&&ac.userDraft.profile){var draft=ac.userDraft.profile;
+      p=Object.assign({},p,{client_kind:draft.clientKind,interests:draft.interests,preferred_locations:draft.preferredLocations,
+        contact_preference:draft.contactPreference,admin_notes:draft.adminNotes,country_code:draft.countryCode,
+        governorate_id:draft.governorateId,district_id:draft.districtId})}
+    load("client-countries","/api/locations/countries");load("client-govs","/api/locations/governorates");
+    if(p.governorate_id)load("client-dists:"+p.governorate_id,"/api/locations/districts?governorateId="+p.governorate_id);
+    var countries=ac.cache["client-countries"]||[],govs=ac.cache["client-govs"]||[],dists=ac.cache["client-dists:"+p.governorate_id]||[];
+    var body=wInput(t("الاسم الكامل","Full name"),"ac-u-name",u.name,"",true)+
+      wInput(t("البريد الإلكتروني","Email"),"ac-u-email",u.email,"",true)+
+      wInput(t("الهاتف","Phone"),"ac-u-phone",u.phone,"",true)+
+      (isNew?'<div class="form-group ac-field-wide"><label>'+t("كلمة المرور الأولية","Initial password")+'</label><input id="ac-u-password" type="password" autocomplete="new-password"></div>':
+      wSel(t("حالة الحساب","Account status"),"ac-u-status",["active","pending","suspended"].map(function(s){return wOpt(s,statusLabel(s),u.status)}).join(""),true))+
+      wSel(t("التصنيف","Classification"),"ac-u-kind",["unspecified","visitor","student","parent","both","other"].map(function(s){return wOpt(s,clientKindLabel(s),p.client_kind||"unspecified")}).join(""),true)+
+      wSel(t("البلد","Country"),"ac-u-country",wOpt("",t("اختر البلد","Select country"))+countries.map(function(c){return wOpt(c.code,c.name,p.country_code||(isNew?"YE":""))}).join(""),true,"acClientCountry()")+
+      wSel(t("المحافظة","Governorate"),"ac-u-gov",wOpt("",t("اختر المحافظة","Select governorate"))+govs.filter(function(g){return g.countryCode===(p.country_code||(isNew?"YE":""))}).map(function(g){return wOpt(g.id,g.name,p.governorate_id)}).join(""),true,"acClientGov()")+
+      wSel(t("المديرية","District"),"ac-u-dist",wOpt("",t("اختر المديرية","Select district"))+dists.map(function(d){return wOpt(d.id,d.name,p.district_id)}).join(""),true)+
+      wInput(t("الاهتمامات","Interests"),"ac-u-interests",p.interests||"",t("مواد، مراحل، مؤسسات...","Subjects, stages, institutions..."),true)+
+      wInput(t("أماكن الاهتمام","Preferred locations"),"ac-u-places",p.preferred_locations||"",t("مدينة أو مديرية","City or district"),true)+
+      wSel(t("طريقة التواصل المفضلة","Preferred contact"),"ac-u-contact",[["none",t("لا تفضيل","No preference")],["phone",t("هاتف","Phone")],["email",t("بريد إلكتروني","Email")],["whatsapp",t("واتساب","WhatsApp")]].map(function(s){return wOpt(s[0],s[1],p.contact_preference||"none")}).join(""),true)+
+      wArea(t("ملاحظات الإدارة","Internal notes"),"ac-u-notes",p.admin_notes||"");
+    return formPage({back:isNew?"students":"students/view/"+encodeURIComponent(id),title:isNew?t("إضافة عميل","Add client"):t("تعديل حساب العميل","Edit client account"),
+      subtitle:t("بيانات الحساب والتصنيف والاهتمامات وطريقة التواصل.","Account details, classification, interests and contact preference."),
+      error:ac.errors[isNew?"user:new":"user:"+id],body:body,onSave:"acUserSave()"});
+  }
   window.adminAccountsPage=function(){
-    var key="users:"+ac.userRole+":"+ac.userStatus+":"+ac.userSearch+":"+ac.userOrg,qs=["limit=100"];
+    var sub=routeSub(),id=routeSubId();
+    if(sub==="new")return adminAccountEdit({},"");
+    if((sub==="view"||sub==="edit")&&id){
+      var detailKey="user:"+id;load(detailKey,"/api/users/"+encodeURIComponent(id));
+      var account=ac.cache[detailKey];
+      if(!account)return adminShell(state(detailKey)||'<div class="loading-inline"><div class="loader"></div></div>');
+      return sub==="edit"?adminAccountEdit(account,id):adminAccountDetail(account);
+    }
+    var key="users:"+ac.userRole+":"+ac.userStatus+":"+ac.userSearch+":"+ac.userOrg+":"+ac.userOffset,qs=["limit=25","offset="+ac.userOffset];
     if(ac.userRole)qs.push("role="+encodeURIComponent(ac.userRole));if(ac.userStatus)qs.push("status="+encodeURIComponent(ac.userStatus));
     if(ac.userSearch)qs.push("search="+encodeURIComponent(ac.userSearch));
     if(ac.userOrg)qs.push("organizationId="+encodeURIComponent(ac.userOrg));
@@ -1744,23 +1897,26 @@
     var orgs=ac.cache["orgs:filter"]||[];
     var orgOpts='<option value="">'+t("كل المؤسسات","All institutions")+'</option>'+orgs.map(function(o){
       return '<option value="'+esc(o.id)+'"'+(ac.userOrg===o.id?" selected":"")+'>'+esc(o.name)+'</option>'}).join("");
-    var body=head(t("العملاء والطلاب","Clients and students"),
-      t("إدارة الحسابات الحالية وربطها بالمؤسسة التي تنتمي إليها. علاقات الأسرة والطلاب مرحلة مستقلة.","Manage current accounts and the institution each one belongs to. Family/student relationships are a separate phase."))+
+    var body=head(t("العملاء","Clients"),
+      t("إدارة حسابات العملاء المسجلين وبياناتهم وحالتهم.","Manage registered client accounts, details, and status."),'<button class="btn green" onclick="go(\'students/new\')">'+icon("plus",15)+' '+t("إضافة عميل","Add client")+'</button>')+
       '<section class="panel"><form class="toolbar" onsubmit="acUserFilters(event)"><input id="ac-user-q" value="'+esc(ac.userSearch)+
-      '" placeholder="'+t("بحث...","Search...")+'"><select id="ac-user-role"><option value="">'+t("كل الأدوار","All roles")+
-      '</option><option value="client">Client</option><option value="teacher">Teacher</option><option value="owner">Owner</option></select>'+
+      '" placeholder="'+t("بحث...","Search...")+'">'+
       '<select id="ac-user-status"><option value="">'+t("كل الحالات","All statuses")+'</option><option value="active">Active</option>'+
       '<option value="pending">Pending</option><option value="suspended">Suspended</option></select>'+
       '<select id="ac-user-org">'+orgOpts+'</select><button class="btn green">'+
       t("تطبيق","Apply")+'</button></form>';
     var d=ac.cache[key];if(!d)body+=state(key);else if(!d.items.length)body+='<div class="empty-state">'+t("لا توجد حسابات.","No accounts.")+'</div>';
-    else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("المستخدم","User")+'</th><th>'+t("الدور","Role")+
+    else body+='<div class="table-wrap"><table class="tbl"><thead><tr><th>'+t("العميل","Client")+'</th><th>'+t("التصنيف","Classification")+
       '</th><th>'+t("المؤسسة","Institution")+'</th><th>'+t("الهاتف","Phone")+'</th><th>'+t("الحالة","Status")+'</th><th></th></tr></thead><tbody>'+
-      d.items.map(function(u){return '<tr><td><b>'+esc(u.name)+'</b><div class="entity-sub">'+esc(u.email)+'</div></td><td>'+
-      esc(u.role||"—")+'</td><td>'+userAffiliationCell(u)+'</td><td dir="ltr">'+esc(u.phone||"—")+'</td><td>'+badge(u.status)+
-      '</td><td><button class="btn" onclick="acUserStatus(\''+
+      d.items.map(function(u){return '<tr class="row-click" role="link" tabindex="0" onclick="go(\'students/view/'+encodeURIComponent(u.id)+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}"><td><b>'+esc(u.name)+'</b><div class="entity-sub">'+esc(u.email)+'</div></td><td>'+
+      clientKindLabel(u.clientKind)+'</td><td>'+userAffiliationCell(u)+'</td><td dir="ltr">'+esc(u.phone||"—")+'</td><td>'+badge(u.status)+
+      '</td><td><button class="btn" onclick="event.stopPropagation();go(\'students/edit/'+encodeURIComponent(u.id)+'\')">'+icon("edit",14)+' '+t("تعديل","Edit")+'</button><button class="btn" onclick="event.stopPropagation();acUserStatus(\''+
       u.id+'\',\''+(u.status==="suspended"?"active":"suspended")+'\')">'+(u.status==="suspended"?t("تفعيل","Activate"):t("إيقاف","Suspend"))+
-      '</button></td></tr>'}).join("")+'</tbody></table></div>';return adminShell(body+'</section>')
+      '</button>'+(u.isProtected?"":'<button class="btn" onclick="event.stopPropagation();acUserDelete(\''+u.id+'\')">'+t("حذف","Delete")+'</button>')+'</td></tr>'}).join("")+'</tbody></table></div>';
+    if(d)body+='<div class="sp-actions" style="padding:16px"><span>'+esc((d.total?ac.userOffset+1:0)+"–"+Math.min(ac.userOffset+25,d.total)+" / "+d.total)+'</span>'+
+      '<button class="btn" onclick="acUserPage(-1)"'+(ac.userOffset?"":" disabled")+'>'+t("السابق","Previous")+'</button>'+
+      '<button class="btn" onclick="acUserPage(1)"'+(ac.userOffset+25<d.total?"":" disabled")+'>'+t("التالي","Next")+'</button></div>';
+    return adminShell(body+'</section>')
   };
 
   window.acBookingStatus=function(id,status){if(!status)return;apiPatch("/api/bookings/"+id+"/status",{status:status}).then(function(){
